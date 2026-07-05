@@ -47,6 +47,9 @@ _(preenchido pelo escriba conforme o código nasce — caminho → responsabilid
 
 | Caminho | Responsabilidade | Seções da spec |
 |---------|------------------|-----------------|
+| `src/core/types.ts` | Interfaces de domínio: Recipe, Ingredient, Sourdough, BakeEntry, Pricing, etc. Cópia 1:1 da seção 6. Campos derivados marcados readonly. Sem lógica, sem DOM. | §6 (estrutura de dados) |
+| `src/core/format.ts` | Parsing e formatação numérica pt-BR: parseDecimal (aceita vírgula OU ponto), formatPercent/Weight/Currency/CostPerGram (Intl.NumberFormat), formatDate (aaaa-mm-dd). Arredonda SOMENTE exibição (§9). | §6, §7.1, §9 (entrada/exibição) |
+| `src/core/format.test.ts` | TDD: 23 casos parseDecimal, formatters, formatDate. Golden §12 validado (1041,7; R$ 8,86). | §7.1, §9, §12 |
 | `src/ui/pages/calculadora.ts` | Entry da página Calculadora (index.html) · carrega design-system.css · será UI completa da calculadora | §1–6, §9, §10 (app MPA client-side) |
 | `src/ui/pages/receitas.ts` | Entry da página Minhas Receitas (receitas.html) · carrega design-system.css | §2.F (gestão de receitas) |
 | `src/ui/pages/historico.ts` | Entry da página Histórico de Fornadas (historico.html) · carrega design-system.css | §14 (histórico de fornadas) |
@@ -59,3 +62,4 @@ _(preenchido pelo escriba conforme o código nasce — caminho → responsabilid
 | 2026-07-04 | Vanilla TS, sem framework | Fidelidade aos mockups HTML/CSS; escopo v1 pequeno; spec já em TS |
 | 2026-07-04 | Issues locais em `issues/`, não GitHub | Loop noturno sem dependência de rede/permissões do `gh` |
 | 2026-07-05 | Caminhos relativos no vite.config.ts | Evita dependência `@types/node` · Vite resolve naturalmente paths da raiz · desvia conscientemente do plano original com `import.meta.dirname + node:path` |
+| 2026-07-05 | Intl.NumberFormat ('pt-BR') + halfExpand vs toFixed manual | toFixed erra half-up (ex.: 2.675→2.67 instead of 2.68) · Intl.NumberFormat aplica rounding decimal correto, já entrega vírgula/símbolo/locale · halfExpand = half-up em todo domínio ≥ 0 do app · roundingMode passado explicitamente para auto-documentar §9 |
