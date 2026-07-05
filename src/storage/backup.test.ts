@@ -44,7 +44,7 @@ function recipeA(): Recipe {
       percentageOfTotalFlour: 20,
       parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
-      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' },
     },
     pricing: {
       quantity: 2,
@@ -71,7 +71,7 @@ function recipeB(): Recipe {
       percentageOfTotalFlour: 15,
       parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
-      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' },
     },
     pricing: {
       quantity: 4,
@@ -210,5 +210,57 @@ describe('backup', () => {
       data = collectBackupData({ recipeStore: store, storage });
     }).not.toThrow();
     expect(data.bakeHistory).toEqual([]);
+  });
+
+  // Migração de volume → peso na restauração de backup (issue 030, GAP 2):
+  // backups antigos trazem packageUnit ∈ {'L','mL'} e inputUnit:'volume'.
+  // reviveRecipeDates deve aplicar migrateVolumeUnits (relabel: 'L'→'kg',
+  // 'mL'→'g', packageSize intocado; inputUnit removido).
+  it('13. importBackup migra unidades de volume: L→kg, mL→g, inputUnit removido', () => {
+    const envelope = {
+      app: BACKUP_APP_ID,
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: FIXED_ISO,
+      recipes: [
+        {
+          id: 'old-vol',
+          name: 'Backup Antigo',
+          calculationMode: 'percentage-to-weight',
+          batchPlanningMode: 'per-unit',
+          flourTotalWeight: 1000,
+          ingredients: [
+            {
+              id: 'water-1',
+              name: 'Água',
+              category: 'liquid',
+              weight: 700,
+              percentage: 70,
+              packageCost: { pricePaid: 0, packageSize: 2, packageUnit: 'L' },
+              inputUnit: 'volume',
+            },
+          ],
+          sourdough: {
+            percentageOfTotalFlour: 20,
+            parts: { isca: 1, water: 1 },
+            flours: [
+              { flourId: 'f1', name: 'Branca', proportion: 1, packageCost: { pricePaid: 8, packageSize: 500, packageUnit: 'mL' }, weight: 0 },
+            ],
+            waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+          },
+          pricing: { quantity: 1, salePrice: 0, profitMargin: 40, profitPerUnit: 0, priceInputMode: 'margin' },
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      bakeHistory: [],
+    };
+    const restored = importBackup(JSON.stringify(envelope));
+    const r = restored.recipes[0] as any;
+    expect(r.ingredients[0].packageCost.packageUnit).toBe('kg');
+    expect(r.ingredients[0].packageCost.packageSize).toBe(2); // packageSize intocado
+    expect(r.ingredients[0]).not.toHaveProperty('inputUnit');
+    expect(r.sourdough.waterPackageCost.packageUnit).toBe('kg');
+    expect(r.sourdough.flours[0].packageCost.packageUnit).toBe('g');
+    expect(r.sourdough.flours[0].packageCost.packageSize).toBe(500);
   });
 });

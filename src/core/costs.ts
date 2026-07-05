@@ -4,7 +4,7 @@
  * O que faz: deriva TODO custo a partir da única entrada de custo — Preço Pago
  * + Peso do Produto (§2.A.1). Custo por grama nunca é digitado: é sempre
  * Preço Pago ÷ Peso do Produto (decisão 18/23). Normaliza o PackageCost para
- * gramas com densidade 1:1 (§2.A: kg→×1000, L→×1000, mL→×1, g→×1). Compõe o
+ * gramas (issue 030: só peso — kg→×1000, g→×1; volume eliminado). Compõe o
  * custo do fermento (Σ farinhas + água) com a Isca SEMPRE fora (custo zero,
  * §2.B.2/§3.B) e o custo total da receita (§3.E).
  *
@@ -47,18 +47,16 @@ function compensatedSum(values: readonly number[]): number {
 }
 
 /**
- * Peso do Produto normalizado para gramas. §2.A (densidade declarada 1 g/mL):
- * kg→×1000, L→×1000, mL→×1, g→×1. Só converte a unidade, não valida.
+ * Peso do Produto normalizado para gramas. issue 030 (divergência aprovada da
+ * spec §2.A: sem volume): kg→×1000, g→×1. Só converte a unidade, não valida.
  */
 export function packageSizeInGrams(cost: PackageCost): number {
   switch (cost.packageUnit) {
     case 'kg':
-    case 'L':
-      return cost.packageSize * 1000; // §2.A: massa ou volume (densidade 1:1)
-    case 'mL':
+      return cost.packageSize * 1000; // kg → g
     case 'g':
     default:
-      return cost.packageSize; // §2.A: mL≡g por densidade 1:1
+      return cost.packageSize; // g já é a unidade canônica
   }
 }
 

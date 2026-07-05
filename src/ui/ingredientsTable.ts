@@ -9,8 +9,8 @@
  * `parseDecimal` (002) + `store.update` (que roda `recalculate`, 008); a
  * repintura de células derivadas/tfoot acontece via `store.subscribe` — os
  * elementos `<input>` em foco NUNCA são recriados nesse caminho (só em
- * mudança estrutural: add/remove/alternância g-mL/unidade, que chamam
- * `fullRender()`). `blur` valida via `validation.ts` (010): bloqueio reverte
+ * mudança estrutural: add/remove/alternância de unidade do peso do produto,
+ * que chamam `fullRender()`). `blur` valida via `validation.ts` (010): bloqueio reverte
  * o campo (e o estado) ao último valor válido e sinaliza erro nativo via
  * `setCustomValidity`/`reportValidity`; aviso apenas anota, sem reverter.
  *
@@ -95,6 +95,10 @@ import type { AppStateStore } from './state';
 // Extraídos para cellHelpers.ts (issue 015, regra de ouro 2) — reusados também
 // por sourdoughTable.ts/batchPanel.ts. Comportamento idêntico ao anterior, só de local.
 import { UNIT_OPTIONS, moneyPlain, applyValidation, setDerivedDisplay } from './cellHelpers';
+// issue 030 (divergência aprovada — sem volume): removida a coluna "Unidade"
+// e o alternador g/mL (`buildUnitToggle`); todo peso de produto é sempre "g"
+// (comunicado pelo header "Peso do produto"/select kg-g), então uma coluna
+// dedicada de unidade virou ruído sem informação (brandbook §4.1, decisão 24).
 
 /**
  * Referências às células derivadas de uma linha — únicas repintadas via
@@ -199,8 +203,9 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   function buildThead(): HTMLTableSectionElement {
     // Ordem das colunas (diretiva de layout do coordenador — desvio consciente
     // vs `mockups/calculadora.html`/spec §2.A.2): as colunas de dados/custo
-    // vêm primeiro; "Unidade" foi movida para logo depois de "Custo" e antes da
-    // coluna de ações (botão remover), que é sempre a última da linha (§10).
+    // vêm primeiro; a coluna de ações (botão remover) é sempre a última da
+    // linha (§10). Issue 030: coluna "Unidade" removida (sem volume, toda
+    // linha era sempre "g" — ruído sem informação, ver nota de importação acima).
     const thead = h('thead');
     thead.appendChild(
       h('tr', {}, [
@@ -211,39 +216,10 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
         h('th', { className: 'num cost-col' }, ['Peso do produto']),
         h('th', { className: 'num cost-col' }, ['Custo/g']),
         h('th', { className: 'num cost-col' }, ['Custo']),
-        h('th', {}, ['Unidade']),
         h('th', { className: 'col-actions', 'aria-label': 'Ações' }),
       ]),
     );
     return thead;
-  }
-
-  function buildUnitToggle(ing: Ingredient, index: number): HTMLElement {
-    const label = ing.name || 'ingrediente';
-    const span = h('span', { className: 'unit-toggle' });
-    const gBtn = h('button', { type: 'button', 'aria-label': `Usar gramas para ${label}` }, ['g']) as HTMLButtonElement;
-    const mlBtn = h('button', { type: 'button', 'aria-label': `Usar mililitros para ${label}` }, ['mL']) as HTMLButtonElement;
-    const isVolume = ing.inputUnit === 'volume';
-    gBtn.classList.toggle('active', !isVolume);
-    mlBtn.classList.toggle('active', isVolume);
-    gBtn.setAttribute('aria-pressed', String(!isVolume));
-    mlBtn.setAttribute('aria-pressed', String(isVolume));
-    // g/mL só troca o rótulo/inputUnit — densidade 1:1, canônico em g inalterado (§2.A).
-    on(gBtn, 'click', () => {
-      store.update((draft) => {
-        draft.ingredients[index].inputUnit = 'weight';
-      });
-      fullRender(); // mudança estrutural (troca de unidade) — plano da issue 014
-    });
-    on(mlBtn, 'click', () => {
-      store.update((draft) => {
-        draft.ingredients[index].inputUnit = 'volume';
-      });
-      fullRender();
-    });
-    span.appendChild(gBtn);
-    span.appendChild(mlBtn);
-    return span;
   }
 
   /**
@@ -289,14 +265,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     // linha (diretiva de layout do coordenador — última ação horizontal, §10).
     const nameCell = h('td', {}, [nameInput]);
     const actionsCell = h('td', { className: 'col-actions' }, [removeBtn]);
-
-    // Unidade — sólidos "g" fixo; líquidos/gorduras alternador g/mL (§2.A.2).
-    const unitCell = h('td');
-    if (ing.category === 'liquid' || ing.category === 'fat') {
-      unitCell.appendChild(buildUnitToggle(ing, index));
-    } else {
-      unitCell.textContent = 'g';
-    }
 
     // Modo de cálculo (§1.3/§4, ver cabeçalho do arquivo): decide qual dos
     // dois campos (% ou Peso) é a fonte de verdade editável desta linha.
@@ -485,8 +453,9 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const costCell = h('td', { className: 'num cost-col readonly' });
     costCell.textContent = ing.recipeCost !== undefined ? formatCurrency(ing.recipeCost) : '—';
 
-    // Ordem: Ingrediente · % · Peso · [custos] · Unidade · Ações (diretiva do
-    // coordenador — Unidade após Custo, botão remover na extrema direita).
+    // Ordem: Ingrediente · % · Peso · [custos] · Ações (diretiva do
+    // coordenador — botão remover na extrema direita; issue 030 removeu a
+    // coluna "Unidade" que ficava entre Custo e Ações).
     tr.appendChild(nameCell);
     tr.appendChild(pctCell);
     tr.appendChild(weightCell);
@@ -494,7 +463,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
-    tr.appendChild(unitCell);
     tr.appendChild(actionsCell);
 
     // §1.3/§4: só um dos dois é derivado por vez, conforme o modo vigente
@@ -532,7 +500,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
 
     const nameValue = h('span', {}, [ing.name]);
     const nameCell = h('td', {}, [nameValue, ' ', h('small', { className: 'note-muted' }, ['(↑ vem da Ancoragem)'])]);
-    const unitCell = h('td', {}, ['g']); // farinha é sempre g (§2.A.2)
 
     const pctCell = h('td', { className: 'num readonly' });
     pctCell.textContent = formatPercent(ing.percentage);
@@ -559,7 +526,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
-    tr.appendChild(unitCell);
     tr.appendChild(h('td', { className: 'col-actions' }));
 
     return {
@@ -587,7 +553,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.dataset.ingredientId = 'fermento'; // âncora estável (mesma convenção das linhas de ingrediente)
 
     const nameCell = h('td', {}, ['Fermento']);
-    const unitCell = h('td', {}, ['g']);
 
     // §1.3: o Fermento é sempre por proporção, nos dois modos — a %
     // permanece editável (nunca derivada); a classe `pct` só reflete o
@@ -650,7 +615,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.appendChild(dashPw);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
-    tr.appendChild(unitCell);
     tr.appendChild(h('td', { className: 'col-actions' }));
 
     // §1.3: peso do fermento é SEMPRE derivado, nos dois modos.
@@ -677,7 +641,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       });
       fullRender(); // add/remove é mudança estrutural
     });
-    tr.appendChild(h('td', { colspan: 9, className: 'table-add-cell' }, [addBtn])); // colspan = nº de colunas (com Unidade + Ações)
+    tr.appendChild(h('td', { colspan: 8, className: 'table-add-cell' }, [addBtn])); // colspan = nº de colunas (issue 030: 9→8, sem "Unidade")
     return tr;
   }
 
@@ -687,7 +651,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const weightCell = h('td', { className: 'num' });
     const costCell = h('td', { className: 'num cost-col' });
     // Colunas: Ingrediente · % · Peso · [Preço·PesoProduto·Custo/g] · Custo ·
-    // Unidade · Ações. As duas últimas (Unidade/Ações) não têm total (colspan 2).
+    // Ações. A última (Ações) não tem total (issue 030: colspan 2→1, sem "Unidade").
     tfoot.appendChild(
       h('tr', {}, [
         h('td', {}, ['Total da massa']),
@@ -695,7 +659,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
         weightCell,
         h('td', { className: 'cost-col', colspan: 3 }),
         costCell,
-        h('td', { colspan: 2 }),
+        h('td', {}),
       ]),
     );
     return { tfoot, refs: { pctCell, weightCell, costCell } };
@@ -744,8 +708,8 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
 
   /** Assinatura estável da lista de ingredientes (ids na ordem atual) — usada só
    *  para detectar add/remove estrutural vindo de OUTRO módulo (ex.: tabela de
-   *  Farinhas em batchPanel.ts), já que o toggle g/mL e o "+ ingrediente"/remover
-   *  locais já chamam `fullRender()` diretamente. */
+   *  Farinhas em batchPanel.ts), já que a troca de unidade do peso do produto e
+   *  o "+ ingrediente"/remover locais já chamam `fullRender()` diretamente. */
   function ingredientIdsSignature(): string {
     return store
       .getState()

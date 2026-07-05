@@ -156,11 +156,11 @@ describe('validation §5 — camada de mensagens sobre predicados puros', () => 
     expect(validatePriceVsUnitCost(8, 4.43)).toBeNull();
   });
 
-  // 11. §5.C peso/volume do produto > 0
+  // 11. §5.C peso do produto > 0 (issue 030: só peso, sem volume)
   it('§5.C: peso do produto 0 bloqueia; 1000 é OK', () => {
     const bad = validatePackageSize(0);
     expect(bad?.level).toBe('block');
-    expect(bad?.message).toBe('O peso/volume do produto deve ser maior que zero.');
+    expect(bad?.message).toBe('O peso do produto deve ser maior que zero.');
     expect(validatePackageSize(1000)).toBeNull();
   });
 

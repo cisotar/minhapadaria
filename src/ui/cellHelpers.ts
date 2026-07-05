@@ -29,15 +29,15 @@ import type { MarginStatus } from '../core/pricing';
 
 /**
  * Opções de unidade da coluna "Peso do produto" por categoria (§2.A.1/§7):
- * sólidos em massa (kg/g); líquidos em volume (L/mL); gorduras podem ser
- * compradas por massa OU volume (g/kg/mL/L, como o Azeite do mockup).
+ * issue 030 (divergência aprovada — sem volume): toda categoria compra em
+ * massa (kg/g), inclusive líquido/gordura — não há mais alternador g/mL.
  */
 export const UNIT_OPTIONS: Record<Ingredient['category'], PackageCost['packageUnit'][]> = {
   flour: ['kg', 'g'],
   salt: ['kg', 'g'],
   extra: ['kg', 'g'],
-  liquid: ['L', 'mL'],
-  fat: ['g', 'kg', 'mL', 'L'],
+  liquid: ['kg', 'g'],
+  fat: ['kg', 'g'],
 };
 
 /** Classe de chip (design-system.css) para cada faixa de `marginStatus` (§4).

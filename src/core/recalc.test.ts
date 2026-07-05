@@ -27,7 +27,7 @@ function pkg(pricePaid: number, packageSize: number, packageUnit: PackageCost['p
   return { pricePaid, packageSize, packageUnit };
 }
 
-const FREE_WATER: PackageCost = pkg(0, 1, 'L'); // torneira R$0,00/L
+const FREE_WATER: PackageCost = pkg(0, 1, 'kg'); // torneira R$0,00/kg
 
 /** Recipe do exemplo validado §12, modo %→peso, estado puro. */
 function goldenRecipe(): Recipe {

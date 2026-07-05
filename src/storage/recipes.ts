@@ -54,7 +54,7 @@ function defaultRecipe(): Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> {
       percentageOfTotalFlour: 0,
       parts: { isca: 1, water: 7 }, // refactor §5.3: proporção por linha (farinhas em flours[])
       flours: [],
-      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' }, // issue 030: torneira em peso (era 'L')
     },
     pricing: {
       quantity: 1,
@@ -80,6 +80,7 @@ function reviveDates(raw: unknown): Recipe | null {
   if (typeof r.createdAt === 'string') r.createdAt = new Date(r.createdAt);
   if (typeof r.updatedAt === 'string') r.updatedAt = new Date(r.updatedAt);
   migrateSourdough(r);
+  migrateVolumeUnits(r);
   return r as unknown as Recipe;
 }
 
@@ -114,6 +115,46 @@ function migrateSourdough(r: Record<string, unknown>): void {
 
   if (parts && typeof parts === 'object') {
     sd.parts = { isca: Number(parts.isca) || 0, water: Number(parts.water) || 0 };
+  }
+}
+
+/**
+ * Migração de unidade de volume → peso (issue 030 — divergência aprovada da
+ * spec §2.A/§6). Receitas salvas antes da eliminação de volume têm
+ * `packageCost.packageUnit ∈ {'L','mL'}` e possivelmente `ingredient.inputUnit`.
+ * Como a densidade declarada é 1 g/mL (§2.A), é RELABEL, não conversão: o
+ * `packageSize` numérico NÃO muda — 'L'→'kg', 'mL'→'g' (mesma magnitude em
+ * gramas ⇒ custo/g idêntico, sem perda de precisão). `inputUnit` é removido de
+ * cada ingrediente (campo deixou de existir no modelo). Percorre os três pontos
+ * de custo: `ingredients[].packageCost`, `sourdough.waterPackageCost` e
+ * `sourdough.flours[].packageCost`. Idempotente: receitas já em 'kg'/'g' e sem
+ * `inputUnit` passam intactas. Exportada para reuso pela restauração de backup
+ * (backup.ts, GAP 2 — regra de ouro 2, sem duplicar a lógica).
+ */
+export function migrateVolumeUnits(r: Record<string, unknown>): void {
+  // 'L' e 'kg' representam a mesma magnitude (densidade 1:1), assim como 'mL' e 'g'.
+  const relabel = (cost: unknown): void => {
+    if (!cost || typeof cost !== 'object') return;
+    const c = cost as Record<string, unknown>;
+    if (c.packageUnit === 'L') c.packageUnit = 'kg';
+    else if (c.packageUnit === 'mL') c.packageUnit = 'g';
+    // packageSize intocado — é relabel, não conversão.
+  };
+
+  const ingredients = Array.isArray(r.ingredients)
+    ? (r.ingredients as Record<string, unknown>[])
+    : [];
+  for (const ing of ingredients) {
+    if (!ing || typeof ing !== 'object') continue;
+    relabel(ing.packageCost);
+    if ('inputUnit' in ing) delete ing.inputUnit; // campo removido do modelo (issue 030)
+  }
+
+  const sd = r.sourdough as Record<string, unknown> | undefined;
+  if (sd && typeof sd === 'object') {
+    relabel(sd.waterPackageCost);
+    const flours = Array.isArray(sd.flours) ? (sd.flours as Record<string, unknown>[]) : [];
+    for (const f of flours) relabel(f?.packageCost);
   }
 }
 

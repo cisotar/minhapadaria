@@ -20,7 +20,7 @@ import type { Recipe, PackageCost } from './types';
 function pkg(pricePaid: number, packageSize: number, packageUnit: PackageCost['packageUnit']): PackageCost {
   return { pricePaid, packageSize, packageUnit };
 }
-const FREE_WATER: PackageCost = pkg(0, 1, 'L');
+const FREE_WATER: PackageCost = pkg(0, 1, 'kg');
 
 function goldenRecipe(): Recipe {
   return {

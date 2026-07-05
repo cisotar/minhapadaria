@@ -24,7 +24,7 @@ import type { Recipe, PackageCost, BakeEntry } from '../core/types';
 function pkg(pricePaid: number, packageSize: number, packageUnit: PackageCost['packageUnit']): PackageCost {
   return { pricePaid, packageSize, packageUnit };
 }
-const FREE_WATER: PackageCost = pkg(0, 1, 'L');
+const FREE_WATER: PackageCost = pkg(0, 1, 'kg');
 
 // Gabarito §12 EXATO (sem o azeite do seed) → custo total 8,86 / preço 7,3833.
 function goldenRecipe(): Recipe {

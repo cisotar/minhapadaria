@@ -15,8 +15,10 @@ export type CalculationMode = 'percentage-to-weight' | 'weight-to-percentage';
 // produto; custo por grama é sempre derivado, nunca digitado diretamente.
 export interface PackageCost {
   pricePaid: number;                    // R$ pago pelo produto
-  packageSize: number;                  // peso/volume do produto, na unidade abaixo
-  packageUnit: 'g' | 'kg' | 'mL' | 'L';
+  packageSize: number;                  // peso do produto, na unidade abaixo
+  // issue 030 (divergência aprovada da spec §2.A/§6): sem volume — todo
+  // ingrediente é peso (g/kg). Migração relabel 'L'→'kg', 'mL'→'g' em storage.
+  packageUnit: 'g' | 'kg';
 }
 
 export interface Ingredient {
@@ -28,7 +30,8 @@ export interface Ingredient {
   packageCost: PackageCost;
   costPerGram?: number;        // derivado: R$/g, somente-leitura
   recipeCost?: number;         // derivado: weight × costPerGram
-  inputUnit?: 'weight' | 'volume'; // apenas para category 'liquid' ou 'fat'; padrão 'weight'
+  // issue 030: campo `inputUnit` (peso/volume) removido — sem alternador de
+  // volume, todo ingrediente é sempre peso em gramas.
 }
 
 export interface SourdoughFlour {
@@ -54,7 +57,7 @@ export interface Sourdough {
   parts: SourdoughParts;
   hydration?: number;      // derivada, somente-leitura: waterWeight / flourWeight × 100
   flours: SourdoughFlour[];
-  waterPackageCost: PackageCost;  // padrão: R$0,00 / 1L (torneira)
+  waterPackageCost: PackageCost;  // padrão: R$0,00 / 1kg (torneira)
   waterCostPerGram?: number;      // derivado
   totalWeight?: number;    // W_ferm = iscaWeight + flourWeight + waterWeight
   iscaWeight?: number;     // Isca — custo sempre zero (Seção 2.B.2)

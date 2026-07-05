@@ -155,10 +155,10 @@ export function validatePriceVsUnitCost(salePrice: number, unitCost: number): Va
   return warn('O preço de venda não cobre o custo unitário (prejuízo).');
 }
 
-/** Peso/Volume do produto > 0 (§5.C). */
+/** Peso do produto > 0 (§5.C; issue 030: só peso, sem volume). */
 export function validatePackageSize(packageSize: number): ValidationResult {
   if (packageSize > 0) return null; // §5.C
-  return block('O peso/volume do produto deve ser maior que zero.');
+  return block('O peso do produto deve ser maior que zero.');
 }
 
 // ── §5.D / §14.6 — histórico de fornadas ──

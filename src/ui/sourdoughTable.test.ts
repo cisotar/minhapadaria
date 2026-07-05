@@ -357,7 +357,7 @@ describe('sourdoughTable (jsdom)', () => {
     const recipe = goldenSeed();
     recipe.sourdough.flours[0].proportion = 1;
     recipe.sourdough.flours[0].packageCost = { pricePaid: 8, packageSize: 1, packageUnit: 'kg' }; // R$0,008/g
-    recipe.sourdough.waterPackageCost = { pricePaid: 2, packageSize: 1, packageUnit: 'L' }; // R$0,002/g (1L=1000g)
+    recipe.sourdough.waterPackageCost = { pricePaid: 2, packageSize: 1, packageUnit: 'kg' }; // R$0,002/g (unidade nativa, issue 030)
     const store = createAppState(recipe, prefs);
     const root = document.createElement('div');
     renderSourdoughTable(root, store, new Set());
@@ -379,7 +379,7 @@ describe('sourdoughTable (jsdom)', () => {
     const recipe = goldenSeed();
     recipe.sourdough.flours[0].proportion = 1;
     recipe.sourdough.flours[0].packageCost = { pricePaid: 8, packageSize: 1, packageUnit: 'kg' }; // R$0,008/g
-    recipe.sourdough.waterPackageCost = { pricePaid: 2, packageSize: 1, packageUnit: 'L' }; // R$0,002/g
+    recipe.sourdough.waterPackageCost = { pricePaid: 2, packageSize: 1, packageUnit: 'kg' }; // R$0,002/g (unidade nativa, issue 030)
     const store = createAppState(recipe, prefs);
     const root = document.createElement('div');
     renderSourdoughTable(root, store, new Set());

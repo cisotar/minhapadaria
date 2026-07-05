@@ -74,11 +74,11 @@ describe('ingredientsTable (jsdom)', () => {
     expect(setShowCostsSpy).toHaveBeenCalledWith(true);
   });
 
-  it('5. ordem das colunas do <thead> — Unidade após Custo, Ações por último (diretiva de layout)', () => {
+  it('5. ordem das colunas do <thead> — Ações por último (diretiva de layout)', () => {
     const { root } = mount();
     const headers = Array.from(root.querySelectorAll('thead th')).map((th) => th.textContent);
-    // Desvio consciente vs spec §2.A.2/mockup: "Unidade" foi movida para logo
-    // depois de "Custo" e a coluna de ações (botão remover) é a última da linha.
+    // issue 030 (divergência aprovada — sem volume): coluna "Unidade" removida
+    // (toda linha era sempre "g" — ruído sem informação, brandbook §4.1).
     expect(headers).toEqual([
       'Ingrediente',
       '%',
@@ -87,26 +87,8 @@ describe('ingredientsTable (jsdom)', () => {
       'Peso do produto',
       'Custo/g',
       'Custo',
-      'Unidade',
       '', // coluna de ações (aria-label "Ações", sem texto visível)
     ]);
-  });
-
-  it('6. alternador g/mL da Água: clicar "mL" não muda o Peso (canônico em g, §2.A)', () => {
-    const { root } = mount();
-    const row = root.querySelector('tr[data-ingredient-id="water-1"]') as HTMLTableRowElement;
-    const weightCell = row.querySelector('td.readonly') as HTMLElement;
-    expect(weightCell.textContent).toBe('700,0');
-
-    const mlBtn = row.querySelector('button[aria-label="Usar mililitros para Água"]') as HTMLButtonElement;
-    mlBtn.click(); // troca só o rótulo/inputUnit — densidade 1:1 (§2.A), dispara fullRender()
-
-    // fullRender() recria a linha — precisa reobter os nós após o clique.
-    const rowAfter = root.querySelector('tr[data-ingredient-id="water-1"]') as HTMLTableRowElement;
-    const weightCellAfter = rowAfter.querySelector('td.readonly') as HTMLElement;
-    expect(weightCellAfter.textContent).toBe('700,0'); // peso canônico em g inalterado
-    const mlBtnAfter = rowAfter.querySelector('button[aria-label="Usar mililitros para Água"]') as HTMLButtonElement;
-    expect(mlBtnAfter.classList.contains('active')).toBe(true); // rótulo trocou
   });
 
   it('7. farinha (linha consumida): Peso do Produto e Preço Pago são texto plano, sem <input> (edição migrou para a Ancoragem)', () => {

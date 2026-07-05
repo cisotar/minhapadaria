@@ -33,7 +33,7 @@ function seed(): Partial<Recipe> {
       percentageOfTotalFlour: 20,
       parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
-      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' },
     },
     pricing: {
       quantity: 10,
@@ -202,7 +202,7 @@ describe('recipes store', () => {
           { flourId: 'f1', name: 'Branca', percentage: 60, packageCost: { pricePaid: 8, packageSize: 1, packageUnit: 'kg' }, weight: 0 },
           { flourId: 'f2', name: 'Integral', percentage: 40, packageCost: { pricePaid: 12, packageSize: 1, packageUnit: 'kg' }, weight: 0 },
         ],
-        waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+        waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' },
       },
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -244,5 +244,80 @@ describe('recipes store', () => {
     expect(store.get('m')!.sourdough.flours[0].proportion).toBe(0); // ausente → 0
     expect(store.get('n')!.sourdough.flours[0].proportion).toBe(3); // novo intacto
     expect(store.get('n')!.sourdough.parts).toEqual({ isca: 1, water: 1 });
+  });
+
+  // Migração de unidade de volume → peso (issue 030): receitas salvas antes da
+  // eliminação de volume têm packageUnit ∈ {'L','mL'} e possivelmente
+  // inputUnit:'volume'. Como densidade é 1:1, é RELABEL (packageSize numérico
+  // não muda): 'L'→'kg', 'mL'→'g'; inputUnit é removido do objeto.
+  function volumeRecipe(): unknown {
+    return {
+      id: 'vol-1',
+      name: 'Com Volume',
+      calculationMode: 'percentage-to-weight',
+      batchPlanningMode: 'per-unit',
+      flourTotalWeight: 1000,
+      ingredients: [
+        {
+          id: 'water-1',
+          name: 'Água',
+          category: 'liquid',
+          weight: 700,
+          percentage: 70,
+          packageCost: { pricePaid: 0, packageSize: 2, packageUnit: 'L' },
+          inputUnit: 'volume',
+        },
+        {
+          id: 'oil-1',
+          name: 'Azeite',
+          category: 'fat',
+          weight: 40,
+          percentage: 4,
+          packageCost: { pricePaid: 80, packageSize: 250, packageUnit: 'mL' },
+          inputUnit: 'volume',
+        },
+      ],
+      pricing: { quantity: 1, salePrice: 0, profitMargin: 40, profitPerUnit: 0, priceInputMode: 'margin' },
+      sourdough: {
+        percentageOfTotalFlour: 20,
+        parts: { isca: 1, water: 1 },
+        flours: [
+          { flourId: 'f1', name: 'Branca', proportion: 1, packageCost: { pricePaid: 8, packageSize: 3, packageUnit: 'L' }, weight: 0 },
+        ],
+        waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+  }
+
+  it('13. migração volume→peso: L→kg, mL→g (mesmo packageSize); inputUnit removido', () => {
+    const backend = createMemoryStorage();
+    backend.setItem('mp.recipes.v1', JSON.stringify([volumeRecipe()]));
+    const got = makeStore(backend).get('vol-1')! as any;
+    // ingrediente água: 'L' → 'kg', packageSize intocado (2)
+    expect(got.ingredients[0].packageCost.packageUnit).toBe('kg');
+    expect(got.ingredients[0].packageCost.packageSize).toBe(2);
+    expect(got.ingredients[0]).not.toHaveProperty('inputUnit');
+    // ingrediente azeite: 'mL' → 'g', packageSize intocado (250)
+    expect(got.ingredients[1].packageCost.packageUnit).toBe('g');
+    expect(got.ingredients[1].packageCost.packageSize).toBe(250);
+    expect(got.ingredients[1]).not.toHaveProperty('inputUnit');
+    // sourdough: waterPackageCost e flours[].packageCost também migram
+    expect(got.sourdough.waterPackageCost.packageUnit).toBe('kg');
+    expect(got.sourdough.waterPackageCost.packageSize).toBe(1);
+    expect(got.sourdough.flours[0].packageCost.packageUnit).toBe('kg');
+    expect(got.sourdough.flours[0].packageCost.packageSize).toBe(3);
+  });
+
+  it('14. migração volume→peso é idempotente: receita só com kg/g e sem inputUnit passa intacta', () => {
+    const backend = createMemoryStorage();
+    const clean = seed(); // já usa 'kg' e não tem inputUnit
+    const store = makeStore(backend);
+    const r = store.create(clean);
+    const got = store.get(r.id)! as any;
+    expect(got.ingredients[0].packageCost.packageUnit).toBe('kg');
+    expect(got.ingredients[0]).not.toHaveProperty('inputUnit');
+    expect(got.sourdough.waterPackageCost.packageUnit).toBe('kg');
   });
 });

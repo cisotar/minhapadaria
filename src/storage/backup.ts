@@ -27,7 +27,7 @@
  */
 import type { Recipe, BakeEntry } from '../core/types';
 import { type StorageLike, defaultStorage } from './local';
-import type { RecipeStore } from './recipes';
+import { type RecipeStore, migrateVolumeUnits } from './recipes';
 import { downloadBlob } from '../export/download';
 
 // --- Constantes (fonte única; issue 013 importa BAKES_STORAGE_KEY daqui) ---
@@ -75,10 +75,15 @@ export function exportBackup(
 
 // Reviver dirigido por campo (nunca genérico): só coage datas conhecidas do
 // domínio (§2.F / §14.3) de volta a Date. Mesma disciplina de recipes.ts.
+// issue 030 (GAP 2): backups antigos podem trazer unidades de volume ('L'/'mL')
+// e `inputUnit` — aplica a MESMA migração de recipes.ts (regra de ouro 2, sem
+// duplicar). Débito pré-existente separado: `migrateSourdough` ainda NÃO é
+// chamada aqui (fora do escopo desta issue).
 function reviveRecipeDates(raw: unknown): Recipe {
   const r = raw as Record<string, unknown>;
   if (typeof r.createdAt === 'string') r.createdAt = new Date(r.createdAt);
   if (typeof r.updatedAt === 'string') r.updatedAt = new Date(r.updatedAt);
+  migrateVolumeUnits(r);
   return r as unknown as Recipe;
 }
 

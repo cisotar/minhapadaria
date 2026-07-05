@@ -49,12 +49,11 @@ function ing(weight: number, cost: PackageCost): Ingredient {
   };
 }
 
-describe('packageSizeInGrams (spec §2.A — kg/L→×1000, mL/g→×1, densidade 1:1)', () => {
-  it('1. g→×1, kg→×1000, L→×1000, mL→×1', () => {
+describe('packageSizeInGrams (spec §2.A — kg→×1000, g→×1; só peso, issue 030)', () => {
+  it('1. g→×1, kg→×1000', () => {
     expect(packageSizeInGrams(pkg(0, 1250, 'g'))).toBe(1250);
     expect(packageSizeInGrams(pkg(0, 1, 'kg'))).toBe(1000);
-    expect(packageSizeInGrams(pkg(0, 1, 'L'))).toBe(1000);
-    expect(packageSizeInGrams(pkg(0, 500, 'mL'))).toBe(500);
+    expect(packageSizeInGrams(pkg(0, 500, 'g'))).toBe(500);
   });
 });
 
@@ -66,7 +65,7 @@ describe('costPerGram (spec §2.A.1 — Preço Pago ÷ Peso do Produto, derivado
   it('3. farinha R$8/kg → 0.008; sal R$3/kg → 0.003; água R$0/L → 0 (§12)', () => {
     expect(costPerGram(pkg(8, 1, 'kg'))).toBe(0.008);
     expect(costPerGram(pkg(3, 1, 'kg'))).toBe(0.003);
-    expect(costPerGram(pkg(0, 1, 'L'))).toBe(0);
+    expect(costPerGram(pkg(0, 1, 'kg'))).toBe(0);
   });
 
   it('4. normalização equivalente: R$8/1kg === R$8/1000g === 0.008 (§2.A)', () => {
@@ -86,7 +85,7 @@ describe('ingredientRecipeCost (spec §2.A.1 — peso × custo/g)', () => {
   it('6. azeite 40g→2.56; farinha 1000g→8; água 700g→0; packageSize 0→null (§5.C)', () => {
     expect(ingredientRecipeCost(40, pkg(80, 1250, 'g'))).toBe(2.56);
     expect(ingredientRecipeCost(1000, pkg(8, 1, 'kg'))).toBe(8);
-    expect(ingredientRecipeCost(700, pkg(0, 1, 'L'))).toBe(0);
+    expect(ingredientRecipeCost(700, pkg(0, 1, 'kg'))).toBe(0);
     expect(ingredientRecipeCost(40, pkg(80, 0, 'g'))).toBeNull();
   });
 });
@@ -94,13 +93,13 @@ describe('ingredientRecipeCost (spec §2.A.1 — peso × custo/g)', () => {
 describe('sourdoughCost (spec §3.E — Σ farinhas + água; Isca SEMPRE fora)', () => {
   it('7. golden §12: [100g] @R$8/kg + 100g água @R$0/L → 0.80', () => {
     const flours = [sflour(100, pkg(8, 1, 'kg'))];
-    expect(sourdoughCost([100], flours, 100, pkg(0, 1, 'L'))).toBe(0.8);
+    expect(sourdoughCost([100], flours, 100, pkg(0, 1, 'kg'))).toBe(0.8);
   });
 
   it('8. Isca (Partes 1:7:7, iscaWeight>0) fora: só FarinhaFerm + ÁguaFerm somam (§2.B.2)', () => {
     // W_ferm=300, 1:7:7 → isca=20, farinha=140, água=140. Isca não entra.
     const flours = [sflour(100, pkg(8, 1, 'kg'))];
-    const custo = sourdoughCost([140], flours, 140, pkg(0, 1, 'L'));
+    const custo = sourdoughCost([140], flours, 140, pkg(0, 1, 'kg'));
     // 140×0.008 + 140×0 = 1.12; isca (20g) não contribui.
     expect(custo).toBe(1.12);
   });
@@ -108,7 +107,7 @@ describe('sourdoughCost (spec §3.E — Σ farinhas + água; Isca SEMPRE fora)',
   it('9. água @R$0 contribui 0; múltiplas farinhas do fermento somam por peso', () => {
     const flours = [sflour(50, pkg(8, 1, 'kg')), sflour(50, pkg(10, 1, 'kg'))];
     // farinhas: 50×0.008 + 50×0.010 = 0.4 + 0.5 = 0.9; água 100g @R$0 → 0.
-    expect(sourdoughCost([50, 50], flours, 100, pkg(0, 1, 'L'))).toBe(0.9);
+    expect(sourdoughCost([50, 50], flours, 100, pkg(0, 1, 'kg'))).toBe(0.9);
   });
 });
 
@@ -125,7 +124,7 @@ describe('totalRecipeCost (spec §3.E — Σ ingredientes + Custo_fermento; gold
   it('11. golden §12: farinha+água+sal + fermento 0.80 → 8.86 exato', () => {
     const ingredients = [
       ing(1000, pkg(8, 1, 'kg')), // farinha → 8
-      ing(700, pkg(0, 1, 'L')), // água → 0
+      ing(700, pkg(0, 1, 'kg')), // água → 0
       ing(20, pkg(3, 1, 'kg')), // sal → 0.06
     ];
     expect(totalRecipeCost(ingredients, 0.8)).toBe(8.86);
@@ -148,7 +147,7 @@ describe('pureza (spec §1.6)', () => {
 
     costPerGram(cost);
     ingredientRecipeCost(40, cost);
-    sourdoughCost([100], flours, 100, pkg(0, 1, 'L'));
+    sourdoughCost([100], flours, 100, pkg(0, 1, 'kg'));
     totalRecipeCost(ingredients, 0.8);
 
     expect(cost).toEqual(costSnap);

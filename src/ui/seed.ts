@@ -5,7 +5,7 @@
  * preenche pesos/custos é `recalculate`, §1.6) reproduzindo o gabarito da §12
  * (Farinha Branca 1000g/100% · Água 700g/70% · Sal 20g/2% · Fermento 20%,
  * Partes 0:1:1) mais o Azeite 40g/4% do mockup `mockups/calculadora.html`
- * (usado ali para exercitar a categoria `fat`/g-mL — plano da issue 014).
+ * (usado ali para exercitar a categoria `fat` — plano da issue 014).
  * Só dados — zero lógica, zero fórmula. Serve de estado inicial até existir o
  * fluxo "abrir receita" (telas de Receitas, issue 017/`src/storage/recipes.ts`).
  *
@@ -53,8 +53,7 @@ export function goldenSeed(): Recipe {
         category: 'liquid',
         weight: 0,
         percentage: 70,
-        packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
-        inputUnit: 'weight',
+        packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' }, // issue 030: torneira em peso (era 'L')
       },
       {
         id: 'oil-1',
@@ -63,7 +62,6 @@ export function goldenSeed(): Recipe {
         weight: 0,
         percentage: 4,
         packageCost: { pricePaid: 80, packageSize: 1250, packageUnit: 'g' },
-        inputUnit: 'weight',
       },
       {
         id: 'salt-1',
@@ -86,7 +84,7 @@ export function goldenSeed(): Recipe {
           weight: 0,
         },
       ],
-      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' }, // torneira (§2.B.4)
+      waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' }, // torneira (§2.B.4); issue 030: peso (era 'L')
     },
     pricing: {
       quantity: 2, // §12: precificação com 2 unidades
