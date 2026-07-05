@@ -90,6 +90,20 @@
 
 ---
 
+## Iteração 029 — 2026-07-05 20:54 (teste gate "Imprimir Custos" + fix design-system.html)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 029-gate-print-costs-design-system-doc |
+| **Timestamp** | 2026-07-05 20:54 |
+| **O que foi feito** | **Fix documentação + teste do gate "Imprimir Custos" da calculadora.** (1) `src/ui/pages/calculadora.test.ts` — novo caso TDD (caso 5): montagem completa calculadora via `renderCalculadora(...)`, verificação de que botão "Imprimir Custos" existe e estão presentes 2 botões "Imprimir Receita" + "Imprimir Custos"; validação de gate via `store.subscribe` + `showCosts` pref (botão Custos `.hidden` sse showCosts=false, visível sse true). (2) `references/design-system.html` — seção "Impressão/PDF" (L ~950–1050) atualizada com documentação sobre padrão de **2 botões por tela**: calculadora monta "Imprimir Receita" (sempre visível, zero $) + "Imprimir Custos" (gated por `showCosts`, com $ contábil); histórico monta "Imprimir Fornadas" (sempre visível, zero $) + "Imprimir Financeiro" (gated por `showCosts`, com $ período). Padrão explicado: gate simples via pref global sincronizada 5× (calculadora + histórico + recipesList + XLSX + impressão, decisão 019.4). Notas visual: classe `.hidden` no HTML (display:none design-system.css), nunca `display:none` hardcoded. Exemplo mockup renomear buttons (issue 028 v2 com `mountPrintButton` parametrizado, label terceiro param). (3) Cabeçalho referência `src/ui/pages/calculadora.ts` — comentário citando issue 029 gate showCosts e 2 botões (§2.A.2 pref global, §8 impressão PDF). |
+| **Hash do commit** | (implementado e testado) |
+| **Testes** | Vitest: `calculadora.test.ts` novo caso 5 (renderização completa, 2 botões, gate showCosts) + suite anterior 367/367 = **368/368 pass**. `tsc --noEmit` limpo. `npm run build` sem erro. Verificação manual: calculadora com showCosts=false → botão "Imprimir Custos" invisível; showCosts=true → visível. |
+| **Reviews** | **revisor-spec**: APROVADO (§2.A.2 pref global, §8 impressão/PDF, 2 botões padrão implementados; teste gate cobrindo). **guardiao-design**: 1 achado MÉDIO (nota incorreta em design-system.html sobre "reatividade do PDF Financeiro no Histórico" — texto sugeria PDF seria reativo/dinâmico, mas é estático snapshot §14.2; correção: notas PDF não são reativas, são snapshots época). Achado registrado issue 037 (fix tipo, não bloqueia 029). |
+| **Observações** | Sem divergências spec (030/028/032 deixaram achados abertos; 029 fecha-os). Cabeçalho de referência adicionado em calculadora.ts (issue 029, §2.A.2/§8). Design-system.html agora documenta padrão 2 botões consistente (reuso regra 2: mountPrintButton parametrizado aplicado identicamente em 2 telas). Teste gate em calculadora.test.ts fecha achado MÉDIO de issue 028 (calculadora sem teste showCosts — agora tem). Mapa de módulos (architecture.md) sem mudança estrutural (só cabeçalho referência adicionado). |
+
+---
+
 ## Iteração 028 — 2026-07-05 ~16:00 (refactor visual PDFs)
 
 | Campo | Valor |

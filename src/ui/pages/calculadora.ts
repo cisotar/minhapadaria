@@ -1,5 +1,5 @@
 /**
- * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028.
+ * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028/029.
  *
  * O que faz: instancia `createPrefsStore` (011), o estado inicial via
  * `goldenSeed` (§12) + `createAppState` (§1.6) — com o `normalize` opcional

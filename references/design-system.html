@@ -442,7 +442,7 @@
   </section>
 
   <section class="card">
-    <h2>Impressão / Salvar em PDF (issue 019/028, refactor v2 issue 034, §8)</h2>
+    <h2>Impressão / Salvar em PDF (issue 019/028/029, refactor v2 issue 034, §8)</h2>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
       Relatório imprimível montado por <code>src/export/print.ts</code> —
       <code>renderRecipePrintView</code>/<code>renderRecipeCostsPrintView</code>
@@ -460,15 +460,34 @@
     </p>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
       A barra de ações reusa <code>.row.row--mb.row--sticky</code> e fica fixa
-      no topo (spec §8) — hospeda Exportar XLSX + Imprimir/Salvar em PDF;
-      <code>window.print()</code> dispara apenas no clique (nunca automático, §8).
+      no topo (spec §8) — hospeda Exportar XLSX + os 2 botões de impressão por
+      contexto (issue 028: Calculadora → Imprimir Receita/Custos; Histórico →
+      Imprimir Fornadas/Financeiro); <code>window.print()</code> dispara apenas
+      no clique (nunca automático, §8).
     </p>
     <div class="row row--mb row--sticky" style="position:static">
       <button class="btn btn-secondary">Exportar XLSX</button>
-      <button class="btn btn-secondary">Imprimir / Salvar em PDF</button>
+      <button class="btn btn-secondary">Imprimir Receita</button>
+      <button class="btn btn-secondary hidden">Imprimir Custos</button>
+    </div>
+    <div class="row row--mb row--sticky" style="position:static">
+      <button class="btn btn-secondary">Exportar XLSX</button>
+      <button class="btn btn-secondary">Imprimir Fornadas</button>
+      <button class="btn btn-secondary hidden">Imprimir Financeiro</button>
     </div>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
-      (exemplo acima com <code>position:static</code> só para não fixar dentro
+      O segundo botão de cada par ("Imprimir Custos"/"Imprimir Financeiro") é
+      *gated* por <code>.hidden</code> conforme a pref global "Exibir custos"
+      (<code>prefs.getShowCosts()</code>, §2.A.2): oculto por padrão
+      (<code>showCosts=false</code>, como nos dois exemplos acima) e
+      re-exibido reativamente via <code>store.subscribe</code> quando o
+      usuário liga o toggle "Exibir custos" da tabela de Ingredientes/filtros
+      — sem re-mount da tela (coberto em <code>calculadora.test.ts</code>/
+      <code>historyView.test.ts</code>). O primeiro botão de cada par (sem
+      valores monetários) fica sempre visível.
+    </p>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      (exemplos acima com <code>position:static</code> só para não fixar dentro
       do style guide — nas telas reais é <code>position:sticky</code>, herdada
       de <code>.row--sticky</code>.)
     </p>
