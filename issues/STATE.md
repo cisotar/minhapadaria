@@ -31,5 +31,5 @@
 | 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | done | f567a9c |
 | 028 | Refactor — estilo dos PDFs (visual tipo tela) + split Receita/Custos | export | 019, 027 | done | 708372c |
 | 029 | Fix — achados da revisão da issue 028 (refactor PDF) | fix | 028 | todo | — |
-| 030 | Eliminar unidades de volume (mL/L) — todo ingrediente em peso (g/kg) | mista | 002, 006, 010, 011, 014, 015 | done | — |
+| 030 | Eliminar unidades de volume (mL/L) — todo ingrediente em peso (g/kg) | mista | 002, 006, 010, 011, 014, 015 | done | 979d639 |
 | 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | todo | — |
