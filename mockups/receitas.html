@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minhas Receitas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  .page { max-width: 1080px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
+</style>
+</head>
+<body>
+
+<nav class="app-nav">
+  <a href="calculadora.html">Calculadora</a>
+  <a href="receitas.html" class="active">Receitas</a>
+  <a href="historico.html">Histórico</a>
+</nav>
+
+<header class="page-header">
+  <div class="inner">
+    <h1>📖 Minhas Receitas</h1>
+    <p class="subtitle">4 receitas cadastradas</p>
+    <div class="actions">
+      <input class="input" placeholder="Buscar receita…" style="width:200px">
+      <button class="btn btn-primary">+ Nova receita</button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+  <section class="recipe-grid">
+
+    <div class="recipe-card">
+      <h3>Pão Rústico de Azeite</h3>
+      <div class="meta">Editado 2026-07-03 · F total 1.000 g</div>
+      <div class="stats">
+        <div><span class="stat-label">Custo unit.</span><span class="stat-value">R$ 5,71</span></div>
+        <div><span class="stat-label">Margem</span><span class="chip chip-ok">40,0%</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="calculadora.html">Abrir</a>
+        <button class="btn btn-secondary">Duplicar</button>
+        <button class="btn btn-secondary">Renomear</button>
+        <button class="btn btn-danger">Excluir</button>
+      </div>
+    </div>
+
+    <div class="recipe-card">
+      <h3>Pão de Centeio</h3>
+      <div class="meta">Editado 2026-07-02 · F total 800 g</div>
+      <div class="stats">
+        <div><span class="stat-label">Custo unit.</span><span class="stat-value">R$ 5,10</span></div>
+        <div><span class="stat-label">Margem</span><span class="chip chip-crit">8,3%</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="calculadora.html">Abrir</a>
+        <button class="btn btn-secondary">Duplicar</button>
+        <button class="btn btn-secondary">Renomear</button>
+        <button class="btn btn-danger">Excluir</button>
+      </div>
+    </div>
+
+    <div class="recipe-card">
+      <h3>Focaccia Genovesa</h3>
+      <div class="meta">Editado 2026-06-28 · F total 1.200 g</div>
+      <div class="stats">
+        <div><span class="stat-label">Custo unit.</span><span class="stat-value">R$ 6,72</span></div>
+        <div><span class="stat-label">Margem</span><span class="chip chip-warn">22,5%</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="calculadora.html">Abrir</a>
+        <button class="btn btn-secondary">Duplicar</button>
+        <button class="btn btn-secondary">Renomear</button>
+        <button class="btn btn-danger">Excluir</button>
+      </div>
+    </div>
+
+    <div class="recipe-card">
+      <h3>Baguete Tradicional</h3>
+      <div class="meta">Editado 2026-06-20 · F total 500 g</div>
+      <div class="stats">
+        <div><span class="stat-label">Custo unit.</span><span class="stat-value">R$ 2,15</span></div>
+        <div><span class="stat-label">Margem</span><span class="chip chip-ok">38,2%</span></div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="calculadora.html">Abrir</a>
+        <button class="btn btn-secondary">Duplicar</button>
+        <button class="btn btn-secondary">Renomear</button>
+        <button class="btn btn-danger">Excluir</button>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+</body>
+</html>

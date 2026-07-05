@@ -1,0 +1,380 @@
+/* ============================================================
+   Design System — Calculadora de Pão com Fermento Natural (v5)
+   Fonte única de tokens e componentes base para todos os mockups.
+   Paleta oficial: brand/brandbook.md
+   ============================================================ */
+
+:root {
+  /* ---- Paleta bruta ---- */
+  --verde-floresta: #283618;
+  --verde-oliva:    #606C38;
+  --creme:          #FEFAE0;
+  --areia:          #C3A87F;
+  --caramelo:       #87551D;
+  --ferrugem:       #6A2C0F;
+  --chocolate:      #44270D;
+  --tinta:          #14120E;
+
+  /* ---- Papéis semânticos ---- */
+  /* Fundo neutro e discreto; o creme da paleta vira cor de acento
+     (texto sobre botões escuros, destaques), não fundo de página. */
+  --bg:             #F5F3EC;
+  --surface:        #FFFFFF;
+  --surface-2:      #F3F0E4;          /* campos somente-leitura, zebra de tabela */
+  --border:         #E3D9BC;
+  --border-strong:  var(--areia);
+
+  --text:           var(--tinta);
+  --text-2:         var(--chocolate);
+  --text-muted:     #7A6A55;
+
+  --primary:        var(--verde-floresta);
+  --primary-soft:   var(--verde-oliva);
+  --primary-tint:   rgba(96, 108, 56, 0.14);
+
+  --accent:         var(--caramelo);
+  --accent-tint:    rgba(195, 168, 127, 0.28);
+
+  --danger:         var(--ferrugem);
+  --danger-tint:    rgba(106, 44, 15, 0.10);
+
+  /* ---- Cores de gráfico (marcas) ----
+     Mesma família de matiz do verde/caramelo da marca, com croma elevado —
+     as cores de texto da marca são desaturadas demais para servir de marca
+     de dado (falham no piso de croma do validador). Validado:
+     node scripts/validate_palette.js "#4F7A23,#C1721A" --mode light → PASS.
+     CVD ~8-12 (piso legal só com rótulo direto — por isso os rótulos nas
+     linhas do gráfico, nunca cor isolada). */
+  --mark-revenue: #4F7A23;
+  --mark-profit:  #C1721A;
+
+  /* ---- Status de margem (brandbook §2.1) ---- */
+  --status-ok-text:    var(--verde-floresta);  /* margem > 30% */
+  --status-ok-bg:      var(--primary-tint);
+  --status-warn-text:  var(--caramelo);        /* 15–30% */
+  --status-warn-bg:    var(--accent-tint);
+  --status-crit-text:  var(--ferrugem);        /* < 15%, prejuízo, bloqueio */
+  --status-crit-bg:    var(--danger-tint);
+
+  /* ---- Modo alternativo peso→% (brandbook §2.2) ---- */
+  --mode-alt-bg:       var(--areia);
+  --mode-alt-text:     var(--tinta);
+  --mode-alt-field:    #F3E6CC;                /* destaque nos campos de % */
+
+  /* ---- Fornada planejada (brandbook §2.3) ---- */
+  --planned-border:    var(--areia);
+  --planned-bg:        rgba(195, 168, 127, 0.12);
+  --planned-text:      var(--caramelo);
+
+  /* ---- Tipografia: sem serifa em toda a aplicação ---- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+
+  --fs-display: 1.75rem;   /* título da página */
+  --fs-title:   1.25rem;   /* título de módulo/card */
+  --fs-sub:     1rem;      /* subtítulo de resumo */
+  --fs-body:    0.9375rem; /* texto e dados */
+  --fs-small:   0.8125rem; /* rótulos, legendas */
+
+  /* ---- Espaçamento e forma ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(20, 18, 14, 0.08), 0 4px 14px rgba(20, 18, 14, 0.05);
+  --focus-ring: 0 0 0 3px rgba(96, 108, 56, 0.35);
+}
+
+/* ============ Base ============ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+h1, h2, h3 { color: var(--primary); margin: 0 0 var(--sp-3); }
+h1 { font-size: var(--fs-display); font-weight: 700; }
+h2 { font-size: var(--fs-title); font-weight: 650; }
+h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
+
+/* Toda célula/valor numérico: alinhamento perfeito de decimais */
+.num, td.num, input.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  text-align: right;
+}
+
+/* ============ Navegação entre telas ============ */
+.app-nav {
+  background: var(--primary); display: flex; gap: var(--sp-2);
+  padding: 0 var(--sp-5);
+}
+.app-nav a {
+  color: var(--creme); text-decoration: none; font-weight: 600;
+  font-size: var(--fs-small); padding: var(--sp-3) var(--sp-3);
+  border-bottom: 3px solid transparent; opacity: .75;
+}
+.app-nav a:hover { opacity: 1; }
+.app-nav a.active { opacity: 1; border-bottom-color: var(--creme); }
+
+/* ============ Cabeçalho de página (padrão de todas as telas) ============ */
+.page-header {
+  background: var(--surface);
+  border-bottom: 3px solid var(--primary);
+  padding: var(--sp-4) var(--sp-5);
+}
+.page-header .inner {
+  max-width: 1080px; margin: 0 auto;
+  display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap;
+}
+.page-header h1 {
+  font-size: var(--fs-title); font-weight: 700; margin: 0;
+}
+.page-header .subtitle {
+  font-size: var(--fs-small); color: var(--text-muted); margin: 0;
+}
+.page-header .actions { margin-left: auto; display: flex; gap: var(--sp-2); }
+
+/* ============ Card / Módulo ============ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--sp-5);
+}
+
+.card > h2 {
+  padding-bottom: var(--sp-3);
+  border-bottom: 2px solid var(--border);
+}
+
+/* ============ Botões ============ */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font: inherit; font-weight: 600;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.btn-primary { background: var(--primary); color: var(--creme); }
+.btn-primary:hover { background: var(--primary-soft); }
+.btn-secondary {
+  background: var(--surface); color: var(--primary);
+  border-color: var(--border-strong);
+}
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-danger { background: var(--danger); color: var(--creme); }
+.btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ============ Inputs ============ */
+.field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.field label {
+  font-size: var(--fs-small); font-weight: 600; color: var(--text-2);
+}
+
+.input {
+  font: inherit;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}
+.input:focus { outline: none; border-color: var(--primary-soft); box-shadow: var(--focus-ring); }
+
+/* Campo derivado — texto plano, sem box (brandbook §4.1: minimalismo,
+   sinal invertido — só o editável tem borda) */
+.input[readonly], .readonly {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+  cursor: default;
+}
+
+/* Campo de % em destaque durante modo alternativo */
+.mode-alt .input.pct { background: var(--mode-alt-field); border-color: var(--areia); }
+
+/* ============ Banner modo alternativo ============ */
+.banner-mode-alt {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: var(--sp-3);
+  background: var(--mode-alt-bg); color: var(--mode-alt-text);
+  padding: var(--sp-3) var(--sp-5);
+  font-weight: 600;
+  border-bottom: 2px solid var(--caramelo);
+}
+
+/* ============ Status chips (margem) ============ */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  font-size: var(--fs-small); font-weight: 700;
+  padding: 2px 10px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.chip-ok   { color: var(--status-ok-text);   background: var(--status-ok-bg); }
+.chip-warn { color: var(--status-warn-text); background: var(--status-warn-bg); }
+.chip-crit { color: var(--status-crit-text); background: var(--status-crit-bg); }
+
+/* Valor financeiro em prejuízo */
+.loss { color: var(--danger); font-weight: 700; }
+
+/* ============ Tabela de insumos ============ */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  font-size: var(--fs-small); font-weight: 700; color: var(--chocolate);
+  text-transform: uppercase; letter-spacing: .04em;
+  text-align: left; padding: var(--sp-2) var(--sp-3);
+  border-bottom: 2px solid var(--border-strong);
+}
+.table th.num { text-align: right; }
+.table td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
+/* Sem zebra — tabelas minimalistas (brandbook §4.1) */
+.table tfoot td { font-weight: 700; border-top: 2px solid var(--border-strong); border-bottom: none; }
+
+/* Edição inline em célula de tabela (Seção 4: sem modal, direto na linha).
+   Sinal invertido (brandbook §4.1): editável tem box visível; derivado é texto plano. */
+.cell-input {
+  width: 100%; font: inherit; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-strong); background: var(--surface); color: inherit;
+  padding: 2px 6px; border-radius: 4px; text-align: inherit;
+}
+.cell-input:focus { outline: none; border-color: var(--primary-soft); box-shadow: var(--focus-ring); }
+.cell-input[readonly] {
+  border-color: transparent; background: transparent;
+  color: var(--text-2); cursor: default; box-shadow: none;
+}
+
+/* Linha consolidada do fermento (sub-receita à parte) — sem cor de fundo,
+   distinção só pelo link de composição */
+.row-fermento { background: transparent; }
+.expand-link {
+  font-size: var(--fs-small); font-weight: 700; color: var(--primary);
+  background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline;
+}
+.sub-recipe-note {
+  font-size: var(--fs-small); color: var(--text-muted); margin: calc(var(--sp-3) * -1) 0 var(--sp-3);
+}
+
+/* Colunas de custo: ocultas por padrão, toggle "Exibir custos" as revela */
+.table .cost-col { display: none; }
+.table.show-costs .cost-col { display: table-cell; }
+
+/* Toggle g/mL compacto por linha (líquidos) */
+.unit-toggle {
+  display: inline-flex; border: 1px solid var(--border-strong);
+  border-radius: 999px; overflow: hidden; font-size: var(--fs-small);
+}
+.unit-toggle button {
+  font: inherit; border: none; background: var(--surface);
+  padding: 2px 10px; cursor: pointer; color: var(--text-2);
+}
+.unit-toggle button.active { background: var(--primary); color: var(--creme); font-weight: 700; }
+
+/* ============ Fornada planejada ============ */
+.planned {
+  background: var(--planned-bg);
+  border: 1px dashed var(--planned-border);
+}
+.badge-planned {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  font-size: var(--fs-small); font-weight: 700;
+  color: var(--planned-text);
+  border: 1px dashed var(--planned-border);
+  border-radius: 999px; padding: 1px 10px;
+  background: var(--surface);
+}
+
+/* ============ Painel de hidratação (lado a lado) ============ */
+.metric-pair { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.metric {
+  flex: 1; min-width: 140px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+}
+.metric .label { font-size: var(--fs-small); font-weight: 600; color: var(--text-muted); }
+.metric .value {
+  font-size: 1.5rem; font-weight: 700; color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ Grid de receitas (Seção 2.F) ============ */
+.recipe-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-4);
+}
+.recipe-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.recipe-card h3 { color: var(--primary); font-size: var(--fs-sub); margin: 0; }
+.recipe-card .meta { font-size: var(--fs-small); color: var(--text-muted); }
+.recipe-card .stats { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0; }
+.recipe-card .stats .stat-label { font-size: var(--fs-small); color: var(--text-muted); display: block; }
+.recipe-card .stats .stat-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.recipe-card .actions { display: flex; gap: var(--sp-2); margin-top: auto; flex-wrap: wrap; }
+.recipe-card .actions .btn { font-size: var(--fs-small); padding: 4px 10px; }
+
+/* ============ Barra de filtros (Histórico, Seção 14.5) ============ */
+.filter-bar {
+  display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap;
+}
+.filter-bar .field label { font-size: var(--fs-small); }
+.period-toggle { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.period-toggle button {
+  font: inherit; font-size: var(--fs-small); font-weight: 600;
+  border: none; background: var(--surface); color: var(--text-2);
+  padding: var(--sp-2) var(--sp-3); cursor: pointer;
+}
+.period-toggle button.active { background: var(--primary); color: var(--creme); }
+
+/* ============ KPIs do dashboard (Seção 14.4) ============ */
+.kpi-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-3);
+}
+.kpi-tile {
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+}
+.kpi-tile .label { font-size: var(--fs-small); color: var(--text-muted); font-weight: 600; }
+.kpi-tile .value {
+  font-size: 1.375rem; font-weight: 700; color: var(--primary);
+  font-variant-numeric: tabular-nums; display: block; margin-top: 2px;
+}
+.kpi-tile .delta { font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-tile .delta.up { color: var(--status-ok-text); }
+.kpi-tile .delta.down { color: var(--status-crit-text); }
+
+/* ============ Gráfico de tendência (legenda + rótulos diretos) ============ */
+.chart-legend { display: flex; gap: var(--sp-4); margin-bottom: var(--sp-2); font-size: var(--fs-small); font-weight: 600; }
+.chart-legend .swatch-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.chart-svg .gridline { stroke: var(--border); stroke-width: 1; }
+.chart-svg .axis-label { fill: var(--text-muted); font-size: 11px; font-family: var(--font-sans); }
+.chart-svg .line-revenue { fill: none; stroke: var(--mark-revenue); stroke-width: 2; stroke-linecap: round; }
+.chart-svg .line-profit { fill: none; stroke: var(--mark-profit); stroke-width: 2; stroke-linecap: round; }
+.chart-svg .dot-revenue { fill: var(--mark-revenue); }
+.chart-svg .dot-profit { fill: var(--mark-profit); }
+.chart-svg .direct-label { font-size: 11px; font-weight: 700; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+
+/* ============ Indicador melhor/pior período ============ */
+.best-worst { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.best-worst .card-mini {
+  flex: 1; min-width: 180px; border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-4);
+}
+.best-worst .best  { background: var(--status-ok-bg); }
+.best-worst .worst { background: var(--status-crit-bg); }
+.best-worst .card-mini .label { font-size: var(--fs-small); font-weight: 700; }
+.best-worst .best .label  { color: var(--status-ok-text); }
+.best-worst .worst .label { color: var(--status-crit-text); }
+.best-worst .card-mini .value { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }

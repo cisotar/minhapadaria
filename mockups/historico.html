@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histórico de Fornadas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  .page { max-width: 1080px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
+  .row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+  .chart-svg { width: 100%; height: auto; overflow: visible; }
+</style>
+</head>
+<body>
+
+<nav class="app-nav">
+  <a href="calculadora.html">Calculadora</a>
+  <a href="receitas.html">Receitas</a>
+  <a href="historico.html" class="active">Histórico</a>
+</nav>
+
+<header class="page-header">
+  <div class="inner">
+    <h1>📊 Histórico de Fornadas</h1>
+    <p class="subtitle">2026-06-28 – 2026-07-03</p>
+    <div class="actions">
+      <button class="btn btn-secondary">Exportar (com custos)</button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Filtros -->
+  <section class="card">
+    <div class="filter-bar">
+      <div class="field">
+        <label>Receita</label>
+        <select class="input" style="width:200px"><option>Todas as receitas</option><option>Pão Rústico de Azeite</option><option>Pão de Centeio</option></select>
+      </div>
+      <div class="field">
+        <label>De</label>
+        <input class="input" type="date" value="2026-06-28" style="width:150px">
+      </div>
+      <div class="field">
+        <label>Até</label>
+        <input class="input" type="date" value="2026-07-03" style="width:150px">
+      </div>
+      <div class="field">
+        <label>Período</label>
+        <div class="period-toggle">
+          <button class="active">Dia</button><button>Semana</button><button>Mês</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="card">
+    <h2>Resumo do período</h2>
+    <div class="kpi-row">
+      <div class="kpi-tile"><span class="label">Produzido</span><span class="value">130 pães</span></div>
+      <div class="kpi-tile"><span class="label">Vendido</span><span class="value">115 pães</span></div>
+      <div class="kpi-tile"><span class="label">Custo total</span><span class="value">R$ 496,00</span></div>
+      <div class="kpi-tile"><span class="label">Faturamento</span><span class="value">R$ 753,00 <span class="delta up">↑ 12%</span></span></div>
+      <div class="kpi-tile"><span class="label">Lucro</span><span class="value">R$ 257,00 <span class="delta up">↑ 8%</span></span></div>
+      <div class="kpi-tile"><span class="label">Margem média</span><span class="value">34,1%</span></div>
+      <div class="kpi-tile"><span class="label">Desperdício</span><span class="value">11,5% <span class="delta down">↓ 3pp</span></span></div>
+    </div>
+    <p style="font-size:var(--fs-small);color:var(--text-muted);margin-top:var(--sp-3)">vs. semana anterior (2026-06-21 – 2026-06-27)</p>
+  </section>
+
+  <!-- Melhor / Pior dia -->
+  <section class="best-worst">
+    <div class="card-mini best">
+      <div class="label">✓ Melhor dia — 07-03</div>
+      <div class="value">Lucro R$ 61,00</div>
+    </div>
+    <div class="card-mini worst">
+      <div class="label">✕ Pior dia — 07-01</div>
+      <div class="value">Lucro R$ 18,00 (desperdício alto)</div>
+    </div>
+  </section>
+
+  <!-- Gráfico de tendência -->
+  <section class="card">
+    <h2>Faturamento e Lucro no período</h2>
+    <div class="chart-legend">
+      <span><span class="swatch-dot" style="background:var(--mark-revenue)"></span>Faturamento</span>
+      <span><span class="swatch-dot" style="background:var(--mark-profit)"></span>Lucro</span>
+    </div>
+    <svg class="chart-svg" viewBox="0 0 600 220" role="img" aria-label="Gráfico de tendência de faturamento e lucro por dia">
+      <!-- gridlines -->
+      <line class="gridline" x1="40" y1="180" x2="560" y2="180"/>
+      <line class="gridline" x1="40" y1="135.6" x2="560" y2="135.6"/>
+      <line class="gridline" x1="40" y1="91.1" x2="560" y2="91.1"/>
+      <line class="gridline" x1="40" y1="46.7" x2="560" y2="46.7"/>
+      <text class="axis-label" x="8" y="184">R$0</text>
+      <text class="axis-label" x="4" y="139">R$50</text>
+      <text class="axis-label" x="0" y="95">R$100</text>
+      <text class="axis-label" x="0" y="50">R$150</text>
+
+      <!-- eixo X -->
+      <text class="axis-label" x="40" y="200" text-anchor="middle">06-28</text>
+      <text class="axis-label" x="136" y="200" text-anchor="middle">06-29</text>
+      <text class="axis-label" x="232" y="200" text-anchor="middle">06-30</text>
+      <text class="axis-label" x="328" y="200" text-anchor="middle">07-01</text>
+      <text class="axis-label" x="424" y="200" text-anchor="middle">07-02</text>
+      <text class="axis-label" x="520" y="200" text-anchor="middle">07-03</text>
+
+      <!-- Faturamento -->
+      <path class="line-revenue" d="M40,73.3 L136,95.6 L232,55.6 L328,82.2 L424,64.4 L520,39.6"/>
+      <circle class="dot-revenue" cx="40" cy="73.3" r="4"><title>06-28 · Faturamento R$ 120,00</title></circle>
+      <circle class="dot-revenue" cx="136" cy="95.6" r="4"><title>06-29 · Faturamento R$ 95,00</title></circle>
+      <circle class="dot-revenue" cx="232" cy="55.6" r="4"><title>06-30 · Faturamento R$ 140,00</title></circle>
+      <circle class="dot-revenue" cx="328" cy="82.2" r="4"><title>07-01 · Faturamento R$ 110,00</title></circle>
+      <circle class="dot-revenue" cx="424" cy="64.4" r="4"><title>07-02 · Faturamento R$ 130,00</title></circle>
+      <circle class="dot-revenue" cx="520" cy="39.6" r="4"><title>07-03 · Faturamento R$ 158,00</title></circle>
+      <text class="direct-label" x="530" y="42" fill="var(--text-2)">R$ 158</text>
+
+      <!-- Lucro -->
+      <path class="line-profit" d="M40,140 L136,153.3 L232,131.1 L328,164 L424,137.3 L520,125.8"/>
+      <circle class="dot-profit" cx="40" cy="140" r="4"><title>06-28 · Lucro R$ 45,00</title></circle>
+      <circle class="dot-profit" cx="136" cy="153.3" r="4"><title>06-29 · Lucro R$ 30,00</title></circle>
+      <circle class="dot-profit" cx="232" cy="131.1" r="4"><title>06-30 · Lucro R$ 55,00</title></circle>
+      <circle class="dot-profit" cx="328" cy="164" r="4"><title>07-01 · Lucro R$ 18,00 (pior dia)</title></circle>
+      <circle class="dot-profit" cx="424" cy="137.3" r="4"><title>07-02 · Lucro R$ 48,00</title></circle>
+      <circle class="dot-profit" cx="520" cy="125.8" r="4"><title>07-03 · Lucro R$ 61,00 (melhor dia)</title></circle>
+      <text class="direct-label" x="530" y="129" fill="var(--text-2)">R$ 61</text>
+    </svg>
+    <p style="font-size:var(--fs-small);color:var(--text-muted)">Passe o mouse sobre os pontos para o valor exato de cada dia.</p>
+  </section>
+
+  <!-- Tabela de fornadas -->
+  <section class="card">
+    <h2>Fornadas registradas</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th><th>Receita</th><th class="num">Prod.</th><th class="num">Vend.</th>
+          <th class="num">Lucro</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num" style="text-align:left">2026-07-03</td>
+          <td>Pão Rústico de Azeite</td>
+          <td class="num">24</td><td class="num">22</td>
+          <td class="num">R$ 61,00</td>
+          <td><span class="chip chip-ok">Margem 38,6%</span></td>
+          <td><button class="btn btn-secondary" style="font-size:var(--fs-small);padding:2px 8px">Editar</button></td>
+        </tr>
+        <tr>
+          <td class="num" style="text-align:left">2026-07-01</td>
+          <td>Pão de Centeio</td>
+          <td class="num">12</td><td class="num">7</td>
+          <td class="num loss">−R$ 4,10</td>
+          <td><span class="chip chip-crit">Prejuízo</span></td>
+          <td><button class="btn btn-secondary" style="font-size:var(--fs-small);padding:2px 8px">Editar</button></td>
+        </tr>
+        <tr class="planned">
+          <td class="num" style="text-align:left">2026-07-08</td>
+          <td>Pão Rústico de Azeite</td>
+          <td class="num">30</td><td class="num">—</td>
+          <td class="num">—</td>
+          <td><span class="badge-planned">◌ Planejada — fora dos totais</span></td>
+          <td><button class="btn btn-secondary" style="font-size:var(--fs-small);padding:2px 8px">Editar</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+</body>
+</html>

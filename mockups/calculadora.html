@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora — Pão Rústico de Azeite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  .page { max-width: 1080px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
+  .row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--sp-5); }
+  body:not(.mode-alt) .banner-mode-alt { display: none; }
+</style>
+</head>
+<body>
+
+<nav class="app-nav">
+  <a href="calculadora.html" class="active">Calculadora</a>
+  <a href="receitas.html">Receitas</a>
+  <a href="historico.html">Histórico</a>
+</nav>
+
+<div class="banner-mode-alt">
+  ⚠ Modo alternativo ativo (peso → %) — a convenção de porcentagem de padeiro está suspensa.
+  <button class="btn btn-secondary" style="margin-left:auto" onclick="document.body.classList.remove('mode-alt')">Voltar ao modo padrão</button>
+</div>
+
+<header class="page-header">
+  <div class="inner">
+    <h1>🍞 Pão Rústico de Azeite</h1>
+    <p class="subtitle">Editado 2026-07-03 · Modo: % → peso</p>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="document.body.classList.add('mode-alt')">Alternar p/ peso → %</button>
+      <button class="btn btn-secondary">Duplicar</button>
+      <button class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Módulo Ancoragem -->
+  <section class="card">
+    <h2>Ancoragem e Planejamento da Fornada</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field">
+        <label>Modo de planejamento</label>
+        <div class="period-toggle">
+          <button class="active">Fornada inteira</button>
+          <button>Por unidade</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Peso de Farinha Total (F total)</label>
+        <input class="input num" value="1.000,0 g" style="width:140px">
+      </div>
+      <div class="field">
+        <label>Quantidade de Produtos</label>
+        <input class="input num" value="2" style="width:90px">
+      </div>
+      <div class="field">
+        <label>Escalonar para peso alvo</label>
+        <div class="row" style="gap:4px">
+          <input class="input num" placeholder="ex: 2000" style="width:100px">
+          <button class="btn btn-secondary" style="font-size:var(--fs-small)">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabela de Insumos -->
+  <section class="card">
+    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+      <h2 style="margin:0;border:none;padding:0">Ingredientes</h2>
+      <label style="margin-left:auto;display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-small);font-weight:600;color:var(--text-2);cursor:pointer">
+        <input type="checkbox" onchange="document.getElementById('tbl-insumos').classList.toggle('show-costs', this.checked)">
+        Exibir custos
+      </label>
+    </div>
+    <table class="table" id="tbl-insumos">
+      <thead>
+        <tr>
+          <th>Ingrediente</th>
+          <th>Unidade</th>
+          <th class="num">%</th>
+          <th class="num">Peso (g)</th>
+          <th class="num cost-col">Preço pago</th>
+          <th class="num cost-col">Peso do produto</th>
+          <th class="num cost-col">Custo/g</th>
+          <th class="num cost-col">Custo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input class="cell-input" value="Farinha Branca"></td>
+          <td>g</td>
+          <td class="num"><input class="cell-input num" value="100,00"></td>
+          <td class="num readonly"><input class="cell-input num" value="1.000,0" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 8,00"></td>
+          <td class="num cost-col"><input class="cell-input num" value="1 kg"></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0080" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 8,00" readonly></td>
+        </tr>
+        <tr>
+          <td><input class="cell-input" value="Água"></td>
+          <td><span class="unit-toggle"><button class="active">g</button><button>mL</button></span></td>
+          <td class="num"><input class="cell-input num" value="70,00"></td>
+          <td class="num readonly"><input class="cell-input num" value="700,0" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,00"></td>
+          <td class="num cost-col"><input class="cell-input num" value="1 L"></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0000" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,00" readonly></td>
+        </tr>
+        <tr>
+          <td><input class="cell-input" value="Azeite"> <small style="color:var(--text-muted)">(gordura — fora da hidratação)</small></td>
+          <td><span class="unit-toggle"><button class="active">g</button><button>mL</button></span></td>
+          <td class="num"><input class="cell-input num" value="4,00"></td>
+          <td class="num readonly"><input class="cell-input num" value="40,0" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 80,00"></td>
+          <td class="num cost-col"><input class="cell-input num" value="1250 g"></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0640" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 2,56" readonly></td>
+        </tr>
+        <tr class="row-fermento">
+          <td>Fermento <button class="expand-link" onclick="document.getElementById('sub-fermento').scrollIntoView({behavior:'smooth'})">▸ ver composição</button></td>
+          <td>g</td>
+          <td class="num"><input class="cell-input num" value="20,00"></td>
+          <td class="num readonly"><input class="cell-input num" value="200,0" readonly></td>
+          <td class="num cost-col readonly">—</td>
+          <td class="num cost-col readonly">—</td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0040" readonly title="Derivado da sub-receita"></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,80" readonly></td>
+        </tr>
+        <tr>
+          <td><input class="cell-input" value="Sal"></td>
+          <td>g</td>
+          <td class="num"><input class="cell-input num" value="2,00"></td>
+          <td class="num readonly"><input class="cell-input num" value="20,0" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 3,00"></td>
+          <td class="num cost-col"><input class="cell-input num" value="1 kg"></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0030" readonly></td>
+          <td class="num cost-col"><input class="cell-input num" value="R$ 0,06" readonly></td>
+        </tr>
+        <tr>
+          <td colspan="8" style="padding:var(--sp-2) var(--sp-3)">
+            <button class="btn btn-secondary" style="font-size:var(--fs-small);padding:4px 10px">+ ingrediente</button>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total da massa</td>
+          <td class="num">196,00</td>
+          <td class="num">1.960,0</td>
+          <td class="cost-col" colspan="3"></td>
+          <td class="num cost-col">R$ 11,42</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <!-- Sub-receita do Fermento -->
+  <section class="card" id="sub-fermento">
+    <h2>Sub-receita: composição do Fermento</h2>
+    <p class="sub-recipe-note">↳ Consumida pela linha <strong>Fermento</strong> da tabela acima — receita dentro da receita.</p>
+
+    <div class="field" style="margin-bottom:var(--sp-3)">
+      <label>Peso total do fermento (vem da % acima)</label>
+      <input class="input num" value="200,0 g" readonly style="width:140px">
+    </div>
+
+    <table class="table show-costs" style="margin-bottom:var(--sp-3)">
+      <thead>
+        <tr>
+          <th>Componente</th>
+          <th class="num">Proporção</th>
+          <th class="num">Peso (g)</th>
+          <th class="num">Preço pago</th>
+          <th class="num">Peso do produto</th>
+          <th class="num">Custo/g</th>
+          <th class="num">Custo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Isca <small style="color:var(--text-muted)">(sobra do fermento anterior)</small></td>
+          <td class="num"><input class="cell-input num" value="0"></td>
+          <td class="num readonly"><input class="cell-input num" value="0,0" readonly></td>
+          <td class="num readonly">—</td>
+          <td class="num readonly">—</td>
+          <td class="num readonly">—</td>
+          <td class="num readonly">R$ 0,00</td>
+        </tr>
+        <tr>
+          <td>Farinha <small style="color:var(--text-muted)">(Farinha Branca)</small></td>
+          <td class="num"><input class="cell-input num" value="1"></td>
+          <td class="num readonly"><input class="cell-input num" value="100,0" readonly></td>
+          <td class="num"><input class="cell-input num" value="R$ 8,00"></td>
+          <td class="num"><input class="cell-input num" value="1 kg"></td>
+          <td class="num readonly"><input class="cell-input num" value="R$ 0,0080" readonly></td>
+          <td class="num readonly"><input class="cell-input num" value="R$ 0,80" readonly></td>
+        </tr>
+        <tr>
+          <td>Água</td>
+          <td class="num"><input class="cell-input num" value="1"></td>
+          <td class="num readonly"><input class="cell-input num" value="100,0" readonly></td>
+          <td class="num"><input class="cell-input num" value="R$ 0,00"></td>
+          <td class="num"><input class="cell-input num" value="1 L"></td>
+          <td class="num readonly"><input class="cell-input num" value="R$ 0,0000" readonly></td>
+          <td class="num readonly"><input class="cell-input num" value="R$ 0,00" readonly></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td class="num">2</td>
+          <td class="num">200,0</td>
+          <td colspan="3"></td>
+          <td class="num">R$ 0,80</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="metric-pair">
+      <div class="metric"><div class="label">Hidratação resultante (Água ÷ Farinha)</div><div class="value">100,00%</div></div>
+    </div>
+  </section>
+
+  <div class="grid-2">
+    <!-- Painel de Hidratação -->
+    <section class="card">
+      <h2>Hidratação</h2>
+      <div class="metric-pair">
+        <div class="metric"><div class="label">Nominal</div><div class="value">70,00%</div></div>
+        <div class="metric"><div class="label">Real</div><div class="value">72,73%</div></div>
+        <div class="metric"><div class="label">Farinha Real Consumida</div><div class="value">1.100,0 g</div></div>
+      </div>
+    </section>
+
+    <!-- Módulo Negócios -->
+    <section class="card">
+      <h2>Precificação</h2>
+      <div class="row" style="margin-bottom:var(--sp-3)">
+        <span class="chip chip-ok">Margem 40,0%</span>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field"><label>Preço de venda</label><input class="input num" value="9,52" style="width:90px"></div>
+        <div class="field"><label>Margem %</label><input class="input num" value="40,00" style="width:90px"></div>
+        <div class="field"><label>Lucro unitário</label><input class="input num" value="3,81" style="width:90px"></div>
+      </div>
+      <table class="table" style="margin-top:var(--sp-3)">
+        <tbody>
+          <tr><td>Custo unitário</td><td class="num readonly">R$ 5,71</td></tr>
+          <tr><td>Receita total (2 un.)</td><td class="num readonly">R$ 19,04</td></tr>
+          <tr><td>Lucro total</td><td class="num readonly">R$ 7,62</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+</div>
+
+</body>
+</html>
