@@ -41,6 +41,9 @@ import { recipeSumPercent } from '../core/scaling'; // reuso (regra de ouro 2): 
 import type { Ingredient, PackageCost } from '../core/types';
 import { h, clear, on } from './dom';
 import type { AppStateStore } from './state';
+// Extraídos para cellHelpers.ts (issue 015, regra de ouro 2) — reusados também
+// por sourdoughTable.ts. Comportamento idêntico ao anterior, só de local.
+import { UNIT_OPTIONS, moneyPlain, applyValidation } from './cellHelpers';
 
 /** Referências às células derivadas de uma linha — únicas repintadas via `subscribe`. */
 interface RowRefs {
@@ -52,49 +55,6 @@ interface FootRefs {
   pctCell: HTMLElement;
   weightCell: HTMLElement;
   costCell: HTMLElement;
-}
-
-/**
- * Opções de unidade da coluna "Peso do produto" por categoria (§2.A.1/§7):
- * sólidos em massa (kg/g); líquidos em volume (L/mL); gorduras podem ser
- * compradas por massa OU volume (g/kg/mL/L, como o Azeite do mockup).
- */
-const UNIT_OPTIONS: Record<Ingredient['category'], PackageCost['packageUnit'][]> = {
-  flour: ['kg', 'g'],
-  salt: ['kg', 'g'],
-  extra: ['kg', 'g'],
-  liquid: ['L', 'mL'],
-  fat: ['g', 'kg', 'mL', 'L'],
-};
-
-/** Formata moeda (format.ts, dono único) e remove o prefixo "R$" — campo
- *  editável de Preço Pago mostra só o número (mockups/calculadora.html),
- *  sem reimplementar arredondamento/vírgula. */
-function moneyPlain(n: number): string {
-  return formatCurrency(n).replace('R$', '').trim();
-}
-
-/**
- * Aplica o resultado de uma validação (010) a um input: bloqueio reverte
- * (callback do chamador) e sinaliza erro nativo; aviso não reverte, só
- * anota a mensagem. `null` limpa qualquer sinalização anterior.
- */
-function applyValidation(el: HTMLInputElement, issue: ValidationResult, revert: () => void): void {
-  if (issue && issue.level === 'block') {
-    revert();
-    el.setCustomValidity(issue.message);
-    el.reportValidity();
-    el.setAttribute('aria-invalid', 'true');
-  } else {
-    el.setCustomValidity('');
-    el.removeAttribute('aria-invalid');
-    if (issue) {
-      // aviso (§5.C): permite o valor, só sinaliza (ex.: proporção do fermento 0%).
-      el.title = issue.message;
-    } else {
-      el.title = '';
-    }
-  }
 }
 
 export function renderIngredientsTable(root: HTMLElement, store: AppStateStore): void {
