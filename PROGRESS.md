@@ -4,6 +4,18 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 011 — storage receitas)**
+
+1. **Interface StorageLike própria + stub em memória em vez de happy-dom/jsdom**: Vitest roda em `node` (default), zero dependência nova. createMemoryStorage() cobre testes sem jsdom (regra de ouro 1/2/4: deps consolidadas + reuso + zero deps extras). localStorage acessado uma única vez (local.ts); recipes.ts/prefs.ts recebem StorageLike injetado.
+
+2. **Storage NÃO limpa nem recalcula derivados no save/load — persiste tal-qual**: recipes.ts serializa estado COMPLETO (ingredientes, sourdough, modos, pricing) via JSON nativo (Date→ISO via toJSON); reviver dirigido SÓ reativa createdAt/updatedAt (nunca coage strings arbitrárias a Date). Recalc é do core recalculate (§1.6). Conseq: uma receita carregada é entregue "cru"; UI ou core (issue 016/020) decide se valida/recalcula. Revisor humano: conferir se é aceitável persistir estado sem derivados.
+
+3. **crypto.randomUUID exige secure context — OK localhost/HTTPS, quebra em file:// (newId injetável permite fallback)**: newId() é função injetada em createRecipeStore (interface RecipeStoreOptions), padrão usa crypto.randomUUID (§10 offline, no browser). Fallback simples em testes: `() => 'uuid-' + Math.random()` (não criptograficamente seguro, mas determinístico). Issue 016 (UI) decide se instancia newId padrão ou custom para ambiente especial (ex.: file:// debug).
+
+4. **priceInputMode round-trips dentro de Recipe.pricing, não é pref global**: Pricing.priceInputMode (novo em issue 008) persiste junto com cada receita. Não é toggle global como showCosts (prefs.ts). UI 016 deve restaurar modo ao carregar a receita (recipes.get(id) devolve completo).
+
+---
+
 **2026-07-05 (issue 010 — validações §5)**
 
 1. **Contrato ValidationResult = ValidationIssue|null (null=OK)**: bloqueio (reverte/impede UI) ⇒ valid:false, level:'block'; aviso (permite valor, sinaliza) ⇒ valid:true, level:'warn'. null significa "tudo OK, nada a reportar" — alinhado ao core (issue 005/006 retornam `number|null` para ÷0 defensivo; aqui null ≠ 0 ≠ erro, é "sem mensagem"). UI 014/016/018 deve tratar null como estado válido silencioso e checar `if (issue) { ... }` antes de exibir.
@@ -13,6 +25,20 @@
 3. **Validação sobre valor CRUS, nunca sobre arredondado de exibição**: validatePercentageSum recebe `percentages: number[]` (pesos reais em precisão total, nunca formatCurrency/formatPercent de §9), compara com SUM_EPSILON 1e-9 (dono em bakers.percentagesSumTo100). Motivo: divergência de epsilon — se UI arredondar para 2 casas (60,00+40,00=100,00 exato) mas core calcular 60,0001+39,9999=100,0000, validação cai diferente. Bloqueio: validar ANTES de arredondar; exibição de % nunca sinaliza se soma válida ou não (é contrato da entrada).
 
 4. **Partes 0:0:1 passa validateSourdoughParts mas warn em validateSourdoughFlourPart**: `isValidSourdoughParts({isca:0, flour:0, water:1})` retorna true (SomaPartes=1>0, todas≥0 § §5.B literal). Mas `validateSourdoughFlourPart(0, 'fermento')` retorna warn (mínimo 1 farinha recomendado §5.B, literal "pelo menos 1 farinha em cada grupo"). UI chama AS DUAS — primeira passa guarda, segunda avisa sobre composição sem farinha (edge case defensivo: fermento só com água é inviável biologicamente, mas não bloqueado por §5.C; issue 011 em histórico pode avisar ao gravar "fornada com fermento 0% farinha").
+
+---
+
+## Iteração 011 — 2026-07-05 ~03:35 (storage receitas)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 011-storage-recipes |
+| **Timestamp** | 2026-07-05 03:35 |
+| **O que foi feito** | src/storage/local.ts: interface StorageLike (subconjunto Web Storage API: getItem/setItem/removeItem); createMemoryStorage (Map, testes sem jsdom); defaultStorage (acessor único ao localStorage real, só aqui). src/storage/recipes.ts: createRecipeStore (CRUD list/get/create/update/rename/duplicate/remove) persistindo Recipe[] sob chave mp.recipes.v1 (versionada). Serializa JSON nativo (Date→ISO toJSON); reviver dirigido SÓ createdAt/updatedAt, nunca coage strings usuário a Date. Recipe carregada é "crua" — derivados (hidratação, custos, preço) não recalculados na carga (§1.6); UI issue 016 ou smoke issue 020 decidem validação/recalc. I/O tempo injetados (clock, newId): createRecipeStore recebe RecipeStoreOptions = {storage?, now?, newId?} para determinismo teste. newId padrão = crypto.randomUUID (secure context localhost/HTTPS, quebra file://; fallback injetável). src/storage/prefs.ts: createPrefsStore persistindo toggle showCosts (pref global única §2.A.2, não per-receita) sob chave mp.prefs.v1. Default false (custos ocultos), JSON corrompido/ausente → default sem crash, sem eval. Zero rede, zero secret (§10, §11.1, regra de ouro 3). src/storage/*.test.ts: 13 testes TDD (recipes 10 casos: list/get/create/update/rename/duplicate/remove/round-trip reviver/pureza/newId; prefs 3 casos: default/set/persist). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: recipes.test.ts (10) + prefs.test.ts (3) + toda suíte core (validation 15 + recalc 8 + scaling 11 + pricing 18 + costs 13 + hydration 14 + sourdough 12 + bakers 22 + format 23 + golden 5) = **154 total**. **Pass: 154. Fail: 0.** 🟢 Build Vite: verde. Gates: testes 154/154 ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado. **ACHADO DIFERIDO PARA REVISOR HUMANO** (registrado em "Decisões da noite" acima): (a) critério "zero rede" não tem teste dedicado — estruturalmente verificado (storage recebe StorageLike injetável, nenhuma fetch/XHR em código, sem observable side-effects). Cobertura automatizada fica no smoke da issue 020 (validar que app roda offline). (b) crypto.randomUUID fallback; (c) storage persiste estado cru sem derivados. Sem demais achados. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em todos os 5 arquivos novos (local.ts §10, recipes.ts §2.F/§6/§10, prefs.ts §2.A.2/§10, recipes.test.ts, prefs.test.ts). Reuso total: StorageLike é predicate minimalista (3 métodos); recipes.ts/prefs.ts reusam StorageLike/defaultStorage sem duplicar acesso ao browser; both recebem injeção de clock/newId. Não recalcula derivados (§1.6 responsabilidade core). Mapa de módulos será atualizado agora. |
 
 ---
 
