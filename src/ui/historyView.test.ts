@@ -162,9 +162,10 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
       unitSalePrice: 10,
     });
     render(m);
-    // sem fornada no período anterior → "—"
+    // sem fornada no período anterior → "—" (espaço à frente — não cola no
+    // valor, mesmo padrão do ramo ↑/↓, bug relatado 2026-07-06)
     const revenueDeltaEmpty = kpiValue(m.root, 'Faturamento').querySelector('.delta')!;
-    expect(revenueDeltaEmpty.textContent).toBe('—');
+    expect(revenueDeltaEmpty.textContent).toBe(' —');
 
     // adiciona fornada na janela anterior EXATA (mesma largura de 7 dias,
     // imediatamente antes de "De" 2026-06-29 → janela 2026-06-22–2026-06-28)

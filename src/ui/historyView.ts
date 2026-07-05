@@ -304,7 +304,7 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
     valueEl.textContent = text;
     const span = h('span', { className: 'delta' });
     if (delta === null) {
-      span.textContent = '—';
+      span.textContent = ' —'; // espaço à frente — mesmo padrão do ramo ↑/↓ abaixo, sem colar no valor
     } else {
       const dir = delta >= 0 ? 'up' : 'down';
       span.classList.add(dir);

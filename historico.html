@@ -4,6 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Histórico de Fornadas</title>
+  <style>
+    /* Escopo só desta página (mesmo padrão de mockups/historico.html): a
+       decisão de `.page` sem max-width (design-system.css, issue 014) é para
+       telas com tabela larga (Calculadora/Receitas) — aqui o gráfico SVG
+       (viewBox 600×220, trendChart.ts) escala fonte/traço pela largura do
+       container (`.chart-svg` não tem width/height no CSS compartilhado —
+       só existia no <style> local do mockup, nunca replicado aqui), então um
+       container sem limite estica o texto do eixo/rótulos a tamanhos
+       absurdos. Restaura o limite do canônico (2026-07-06, bug relatado).
+       `padding`/`display`/`gap` continuam vindo do `.page` compartilhado —
+       só o que falta é adicionado aqui, sem duplicar. */
+    .page { max-width: 1080px; margin: 0 auto; }
+    .chart-svg { width: 100%; height: auto; overflow: visible; }
+  </style>
 </head>
 <body>
   <!-- Navegação global (espelha mockups/*.html) — Histórico é a página ativa. -->
