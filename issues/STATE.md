@@ -30,7 +30,7 @@
 | 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | done | 62b3826 |
 | 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | done | f567a9c |
 | 028 | Refactor — estilo dos PDFs (visual tipo tela) + split Receita/Custos | export | 019, 027 | done | 708372c |
-| 029 | Fix — achados da revisão da issue 028 (refactor PDF) | fix | 028 | todo | — |
+| 029 | Fix — achados da revisão da issue 028 (refactor PDF) | fix | 028 | done | 69ee142 |
 | 030 | Eliminar unidades de volume (mL/L) — todo ingrediente em peso (g/kg) | mista | 002, 006, 010, 011, 014, 015 | done | 979d639 |
 | 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | todo | — |
 | 032 | Rota inicial do site deve ser receitas.html | ui | 017 | done | 8c67f6c |
@@ -38,3 +38,4 @@
 | 034 | Refactor impressão Receita/Custos v2 — cards, fermento, coluna custo | export | 019, 028, 030 | done | 6486296 |
 | 035 | "+ Nova receita" abre modal de nome antes de criar; seed sem Azeite | ui | 017 | todo | — |
 | 036 | Calculadora exibe e permite editar o nome da receita carregada | ui | 014, 033 | todo | — |
+| 037 | Fix — achado da revisão da issue 029 (nota de reatividade do PDF Financeiro) | fix | 029 | todo | — |
