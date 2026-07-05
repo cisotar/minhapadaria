@@ -1,11 +1,13 @@
-# Spec: Refactor Rota Inicial + Edição Inline de Nome de Receita
+# Spec: Refactor Fluxo "Nova Receita" (nome via modal + nome editável na Calculadora + seed sem Azeite)
 
 ## Visão Geral
-Dois refactors pontuais na Calculadora de Pão (app MPA já existente, spec v5):
-1. Trocar a página inicial do site de `index.html` (Calculadora) para `receitas.html` (Minhas Receitas).
-2. Substituir o fluxo de renomear receita (hoje `window.prompt` via botão "Renomear") por edição inline do nome, direto no card — sem abrir diálogo/modal.
+Três ajustes pontuais no fluxo de criação de receita da Calculadora de Pão (app MPA já existente, spec v5), pedidos pelo cliente:
 
-Não é uma nova feature de produto: é ajuste de navegação e UX sobre telas já implementadas (`receitas.html`, `src/ui/recipesList.ts`).
+1. Hoje, clicar em "+ Nova receita" (`recipesList.ts`) cria a receita direto com nome genérico da golden seed ("Pão Rústico de Azeite") e já direciona para a Calculadora. Passa a: clique abre um modal pedindo o nome da receita → cliente digita e confirma → receita é criada JÁ com esse nome → só então direciona para a Calculadora (`receitas.html?recipe=<id>`).
+2. Hoje a tela Calculadora não exibe o nome da receita em lugar nenhum (só o `<h1>` estático "🍞 Calculadora de Pão com Fermento Natural"). Passa a exibir o nome da receita carregada (no lugar do `<h1>` estático, só quando há `?recipe=<id>` válido) — editável inline, no mesmo padrão sem `window.prompt`/modal já usado no card de `recipesList.ts` (issue 033).
+3. A golden seed usada no fluxo de criação deixa de incluir o ingrediente "Azeite" — hoje toda receita nova nasce com Azeite 40g/4% pré-preenchido; não deve mais vir sugerido por padrão.
+
+Não é uma nova feature de produto: é ajuste de UX sobre telas já implementadas (`index.html`/`recipesList.ts`, `receitas.html`/`calculadora.ts`, `src/ui/seed.ts`).
 
 ## Stack Tecnológica
 (inalterada — ver `references/architecture.md`)
@@ -15,50 +17,59 @@ Não é uma nova feature de produto: é ajuste de navegação e UX sobre telas j
 
 ## Páginas e Rotas
 
-### Rota inicial — `/` (GitHub Pages: `https://cisotar.github.io/minhapadaria/`)
-**Descrição:** Ao acessar a raiz do site publicado, o usuário deve cair em "Minhas Receitas" (`receitas.html`), não mais na Calculadora (`index.html`).
+### Minhas Receitas — `/index.html`
+**Descrição:** Grid de cards de receita (`.recipe-card`) + toolbar de ações (busca, nova receita, backup). O botão "+ Nova receita" (`recipesList.ts:130-134`) hoje chama `createRecipe()` (`:196-201`), que cria direto via `recipeStore.create(goldenSeed())` e navega.
 
-**Behaviors:**
-- [ ] Acessar `https://cisotar.github.io/minhapadaria/` (sem sufixo) exibe a tela "Minhas Receitas".
-- [ ] Nav global (`.app-nav`, presente nas 3 páginas) marca "Receitas" como item ativo quando na rota raiz.
-- [ ] `index.html` (Calculadora) continua acessível a partir do card/receita aberta (`index.html?recipe=<id>`) e pelo link "Calculadora" no nav — não é removida, só deixa de ser a home.
+**Componentes:**
+- `recipesList.ts` (`renderRecipesList`): toolbar, subtítulo, grid de cards, estado vazio.
+- **Novo:** modal "Nome da nova receita" — primeiro componente de modal do design system (hoje não existe nenhum, decisão registrada em `architecture.md` linha 191 era "sem modal"; este pedido do cliente é uma exceção explícita, escopo restrito a este fluxo).
 
-**Nota de implementação (para a fase de plano, não decidir aqui):** GitHub Pages serve `index.html` como documento padrão da raiz; avaliar troca de conteúdo entre os arquivos `index.html`/`receitas.html` (mantendo cada `<script type="module">` apontando pro TS certo) vs. redirect. Decisão de arquitetura fica para `/plan`.
+**Behaviors (o que o usuário pode fazer):**
+- [ ] Clicar em "+ Nova receita" NÃO cria a receita imediatamente — abre um modal com um campo de texto "Nome da receita" vazio, foco automático.
+- [ ] Confirmar o modal (botão "Criar" e/ou Enter no campo) com nome preenchido: cria a receita via `recipeStore.create({ ...goldenSeed(), name: <nome digitado> })`, fecha o modal e navega para `receitas.html?recipe=<id>` (mesmo destino atual).
+- [ ] Confirmar o modal com nome vazio (ou só espaços): NÃO cria a receita — modal permanece aberto, mensagem de erro exibida (reusar padrão `.form-status--error` já existente), foco volta ao campo.
+- [ ] Cancelar o modal (botão "Cancelar", tecla Esc, ou clique fora/no backdrop): fecha o modal sem criar nenhuma receita, sem navegar.
+- [ ] Nome digitado nunca passa por `innerHTML` (regra de ouro 3, spec v5 §11.1) — renderização/leitura via `value`/`textContent`.
+- [ ] "Nova receita em branco" (`newBlankBtn`, `:138-142`) e as demais ações do card (abrir/duplicar/renomear inline/excluir) continuam com o comportamento atual, inalteradas — o modal é exclusivo do botão "+ Nova receita".
 
 ---
 
-### Minhas Receitas — `/receitas.html`
-**Descrição:** Grid de cards de receita (`.recipe-card`), cada um com nome, métricas (custo unit./margem) e ações (abrir/renomear/duplicar/excluir).
+### Calculadora — `/receitas.html`
+**Descrição:** Composição de cards (Ancoragem/Planejamento, Ingredientes, Fermento, Hidratação, Precificação) via `calculadora.ts`. Hoje o cabeçalho é 100% estático (`<h1>🍞 Calculadora de Pão com Fermento Natural</h1>`, `receitas.html:25`), sem qualquer referência ao nome da receita carregada.
 
 **Componentes:**
-- `recipesList.ts` (`renderRecipesList`): monta toolbar (busca, nova receita, backup), subtítulo, grid de cards e estado vazio.
-- Card de receita (`.recipe-card`): título `<h3>` do nome + ações.
+- `calculadora.ts` (`initCalculadora`): já resolve `?recipe=<id>` (`:88-100`) e liga autosave quando a receita existe.
+- **Novo:** nome da receita editável inline, substituindo o `<h1>` estático quando há receita carregada.
 
 **Behaviors (o que o usuário pode fazer):**
-- [ ] Clicar em "Renomear" no card NÃO abre `window.prompt` nem qualquer modal/diálogo.
-- [ ] Clicar em "Renomear" transforma o `<h3>` do nome em um campo de edição inline (input de texto), com foco automático e texto selecionado.
-- [ ] Confirmar a edição inline (Enter ou blur/perda de foco) salva o novo nome via `recipeStore.rename(id, novoNome)` e volta o `<h3>` ao modo texto.
-- [ ] Cancelar a edição inline (Esc) descarta a alteração e restaura o nome original, sem chamar `rename`.
-- [ ] Nome vazio ao confirmar: mesma regra atual (cancelado/vazio/sem mudança → não chama `rename`, ver `recipesList.ts:218-223`).
-- [ ] Nome do usuário renderizado sempre via `textContent`/atributo de `value`, nunca `innerHTML` (regra de ouro de segurança, spec v5 §11.1).
-- [ ] Demais ações do card (abrir, duplicar, excluir) continuam com o comportamento atual, inalteradas.
+- [ ] Ao abrir a Calculadora com `?recipe=<id>` válido, o nome da receita aparece no lugar do `<h1>` estático "🍞 Calculadora de Pão com Fermento Natural".
+- [ ] Sem `?recipe=<id>` (acesso direto a `receitas.html`, golden seed efêmera) ou com `id` inexistente (banner "Receita não encontrada"), o `<h1>` estático permanece — comportamento atual inalterado.
+- [ ] O nome exibido é editável inline (mesmo padrão de `startInlineEdit` do card — sem `window.prompt`/modal, Enter ou blur confirmam, Esc cancela).
+- [ ] Confirmar com nome vazio ou igual ao atual: não grava, nome exibido volta ao original (mesma tríplice guarda de `recipesList.ts`/issue 033).
+- [ ] Confirmar com nome novo válido: atualiza o nome no estado da receita (`store`) e segue o mesmo pipeline de autosave já existente (debounce ~400ms, flush em `visibilitychange`/`beforeunload`) — sem chamada direta a `recipeStore.rename` fora desse pipeline, para não duplicar caminho de escrita.
+- [ ] Nome sempre renderizado via `textContent`/`value` (nunca `innerHTML`, regra de ouro 3).
 
 ---
 
 ## Componentes Compartilhados
-- `recipeStore.rename(id, name)` (`src/storage/recipes.ts:37`) — já existe, reusado sem alteração de contrato.
-- Nav global (`.app-nav`, replicado em `index.html`/`receitas.html`/`historico.html`).
+- `recipeStore.create(recipe)` / `.rename(id, name)` (`src/storage/recipes.ts`) — reusados sem alteração de contrato.
+- `goldenSeed()` (`src/ui/seed.ts`) — deixa de incluir o ingrediente "Azeite"; nome padrão da seed (`'Pão Rústico de Azeite'`, `seed.ts:36`) é atualizado para não referenciar mais Azeite (evita inconsistência quando a seed é usada sem passar por um nome customizado — ex.: acesso direto a `receitas.html` sem `?recipe`).
+- Modal "Nome da nova receita" — novo componente compartilhável (estrutura genérica o bastante para reuso futuro, mas esta issue só cobre o fluxo de criação).
+- `startInlineEdit`-like: mecanismo de edição inline de nome já existe em `recipesList.ts` (issue 033); a Calculadora reusa o mesmo padrão (Enter/blur/Esc), não uma implementação nova do zero.
 
 ## Modelos de Dados
-Inalterados — `Recipe` (`src/storage/recipes.ts`), sem novos campos.
+Inalterados — `Recipe` (`src/storage/recipes.ts`), sem novos campos. `goldenSeed()` (`src/ui/seed.ts`) perde a linha do ingrediente "Azeite" da lista semente.
 
 ## Regras de Negócio
-- Edição inline de nome segue as mesmas regras de validação hoje aplicadas no fluxo `window.prompt` (nome vazio ou igual ao atual não persiste, `updatedAt` só muda se `rename` for efetivamente chamado — `recipes.ts:225`).
+- Nome da receita nunca pode ficar vazio ao ser CRIADA (diferente da edição, onde vazio só cancela a edição sem apagar o nome existente) — o modal bloqueia a confirmação até haver um nome não-vazio.
+- Nomes duplicados continuam permitidos (nenhuma regra de unicidade existia antes; não é introduzida agora).
+- Remover Azeite da golden seed é só a lista padrão de ingredientes sugerida — o usuário pode adicionar Azeite manualmente na tabela de ingredientes a qualquer momento (funcionalidade de adicionar ingrediente já existe, inalterada).
 - Nenhuma chamada de rede, nenhum dado sai do localStorage (regra de ouro 3, inalterada).
-- Rota inicial é só um ajuste de qual página é servida na raiz — não altera dados nem storage.
+- Modal é um padrão novo neste projeto (decisão anterior evitava modal, `architecture.md`:191) — escopo desta exceção é estritamente o fluxo "+ Nova receita"; o fluxo de renomear (card e Calculadora) continua sem modal, edição inline (issue 033).
 
 ## Fora do Escopo (v1 deste refactor)
-- Criar diálogo/modal customizado no design system (explicitamente descartado pelo pedido).
-- Editar outros campos inline além do nome (ingredientes, fermento etc. continuam nas telas existentes).
-- Mudar a URL de `index.html?recipe=<id>` ou o fluxo de abrir receita.
-- Migração de histórico (`historico.html`) — fora do escopo desta issue.
+- Modal genérico reutilizável para outros fluxos (excluir, restaurar backup etc.) — só o de "Nova receita" é criado agora.
+- "Nova receita em branco" ganhar o mesmo modal de nome — continua criando com nome padrão (`defaultRecipe()`, "Nova Receita"), sem alteração.
+- Regra de unicidade de nome de receita.
+- Editar outros campos inline na Calculadora além do nome (ingredientes, fermento etc. continuam nas telas/tabelas existentes).
+- Migração de receitas já existentes que tenham Azeite pré-preenchido — a mudança afeta só a seed usada em receitas NOVAS a partir desta issue.

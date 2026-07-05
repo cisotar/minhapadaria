@@ -36,3 +36,5 @@
 | 032 | Rota inicial do site deve ser receitas.html | ui | 017 | done | 8c67f6c |
 | 033 | Renomear receita vira edição inline (sem prompt/modal) | ui | 017 | done | 72e443a |
 | 034 | Refactor impressão Receita/Custos v2 — cards, fermento, coluna custo | export | 019, 028, 030 | done | 6486296 |
+| 035 | "+ Nova receita" abre modal de nome antes de criar; seed sem Azeite | ui | 017 | todo | — |
+| 036 | Calculadora exibe e permite editar o nome da receita carregada | ui | 014, 033 | todo | — |
