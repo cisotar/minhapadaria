@@ -24,7 +24,7 @@
 | 020 | Verificação final §12 + a11y + README | verify | 009, 010, 016–019, 021–027 | todo | |
 | 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | done | e0b2b41 |
 | 022 | Fix — achados da revisão da issue 014 (tabela) | fix | 014 | done | 66076d2 |
-| 023 | Fix — achados da revisão da issue 015 (fermento UI) | fix | 015 | doing | |
+| 023 | Fix — achados da revisão da issue 015 (fermento UI) | fix | 015 | done | 15dc19a |
 | 024 | Fix — achados da revisão da issue 016 (escala/preço UI) | fix | 016 | todo | |
 | 025 | Fix — achados da revisão da issue 017 (tela receitas) | fix | 017 | todo | |
 | 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | todo | |
