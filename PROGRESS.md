@@ -2,6 +2,25 @@
 
 > Log de iterações concluídas. Mantido pelo agente `escriba`. Topo da página: seção "Decisões da noite" acumulando toda interpretação de spec tomada de forma autônoma — é o que o humano revisa de manhã.
 
+## Refactor: Múltiplas Farinhas — Fases 1 e 2 Concluídas (2026-07-06 ~06:00)
+
+**Spec**: `spec/refactor-farinhas-multiplas.md` — proposta validada, implementação verde.
+
+**Status**: **COMPLETO** — Fases 1 (tabela Farinhas + contrato-espelho + soma soft) e 2 (fermento por proporção por linha) implementadas. **332/332 testes pass** (suíte v1 + novos casos de refactor). **tsc --noEmit limpo**. **build ok**.
+
+**Mudanças de design (desvios conscientes da spec v5)**:
+1. **Fase 1 (AC1–AC14)**: Farinhas principais — soma soft não-bloqueante (aviso chip `validateFlourPercentageSumSoft` em batchPanel.ts), **desvio da v5 §2.A/§5.A (trava-100% bloqueante)**. Motivo: com N farinhas partindo de 0%, bloquear cada blur com Σ≠100 era IMPOSSÍVEL chegar a 100% sem reverter intermediárias. Solução: nunca bloqueia, apenas avisa.
+2. **Fase 2 (AC15–AC23)**: Fermento — proporção por linha (Isca/Farinhas/Água, Σ denominador global), **desvio da v5 §2.B.2/§2.B.3 (Partes fixas `{isca, flour, water}` + % das farinhas)**. Novo modelo: `SourdoughParts {isca, water}`, `SourdoughFlour.proportion` (não `percentage`), peso_linha = W_ferm × proporção ÷ Σproporções. Sem "somar 100" fermento (proporções livres, AC23).
+
+**Implementação**:
+- **Core**: `sourdough.ts` — funções novas `sourdoughFlourProportionSum`, `sourdoughDenominator` (denominador global); `types.ts` — `SourdoughParts` sem `flour`, `SourdoughFlour.proportion`; `validation.ts` — `validateFlourPercentageSumSoft` (fase 1).
+- **UI**: `batchPanel.ts` — tabela "Farinhas" (edit nome/proporção/preço/peso-produto, + farinha, remover com mínimo 1, chip aviso soma soft); `ingredientsTable.ts` — linhas de farinha READ-ONLY com contrato-espelho (bloco contíguo topo, sincronizado nome/proporção/peso/custo); `sourdoughTable.ts` — reconstruída (Total/Isca/Farinhas/Água/Total em ordem, proporção editável, sem regra somar-100).
+- **Seeds**: `seed.ts` golden preservado `{isca:0, water:1} + proporção:1` = denom 2 = mesmos números §12.
+
+**AC Completados**: AC1–AC14 (fase 1 espelho + soma soft), AC15–AC23 (fase 2 proporção por linha fermento).
+
+---
+
 ## Resumo da noite (encerramento — 2026-07-05 ~09:10)
 
 **Status**: v1 COMPLETA — **27/27 issues done** (20 planejadas + 7 fixes de revisão).
@@ -34,6 +53,18 @@
 ---
 
 ## Decisões da noite
+
+**2026-07-06 (refactor-farinhas-multiplas — fases 1 e 2 completas)**
+
+1. **SOMA SOFT FARINHAS PRINCIPAIS (fase 1, desvio consciente §2.A/§5.A)**: `batchPanel.ts` tabela "Farinhas" nunca bloqueia proporção Σ≠100. Validator `validateFlourPercentageSumSoft` (aditivo) renderiza chip `.chip-warn` com mensagem "Faltam X%" ou "Excede X%". Bloqueio (trava-100%) ficou para o fermento (sourdoughTable.ts sempre `validateSourdoughParts` strict, pré-refactor). Motivo: UX incrementar várias farinhas de 0% → 100% com trava era IMPOSSÍVEL (cada blur intermediária revertia). Desvio aceitável por cliente (regra "soma soft" fase 1 §4).
+
+2. **PROPORÇÃO POR LINHA FERMENTO (fase 2, desvio §2.B.2/§2.B.3)**: Partes do fermento `SourdoughParts {isca, water}` (sem `flour`); cada farinha tem `proportion` própria. Denominador global = `sourdoughDenominator(parts, flours)` = isca + Σfarinhas + água. Peso_linha = W_ferm × proporção ÷ denom. Sem "somar 100" fermento (proporções livres, AC23). Hidratação = água_peso ÷ Σfarinha_peso (refactor §5.5, idem antes). Motivo: modelo anterior (Partes fixas + % das farinhas dividindo 100) era inflexível para múltiplos cenários; novo modelo proporcional é genérico. Golden §12 preservado: Isca 0 + Farinha proporção 1 + Água 1 → denom 2 → mesmos pesos/hidratação.
+
+3. **CONTRATO-ESPELHO FARINHAS (fase 1, §3)**: `batchPanel.ts` tabela "Farinhas" é FONTE DE VERDADE de `recipe.ingredients[category==='flour']`. `ingredientsTable.ts` renderiza essas linhas como READ-ONLY no topo do bloco (contíguas, em ordem). Sincronização (§3.4): mudança de nome, proporção, preço, peso-produto em `batchPanel` reflete em `ingredientsTable` no mesmo `subscribe` (via `patchAllDerived` + novo campo `nameCell` nas RowRefs). Add/remove em `batchPanel` dispara `fullRender()` em ambas (estrutural). Regra de ouro 2: sem duplicação de edição ou renderização — um tabelão fonte, outro consumidor.
+
+4. **VALIDAÇÃO SEM REDISTRIBUIÇÃO (refactor §4, alinhado v5 §5.A)**: Blur de proporção em `batchPanel` valida via `validateFlourPercentageSumSoft` (aditivo, nunca redistribui). Nunca normaliza automaticamente (ex: se usuário digita 3 farinhas 50% cada = 150%, código não ajusta para 33.33%). Aviso apenas; reverte-se só em bloqueio (aplicável apenas fermento). Pureza mantida: validação reporta sem mutar.
+
+---
 
 **2026-07-05 (issue 019 — export XLSX + impressão)**
 

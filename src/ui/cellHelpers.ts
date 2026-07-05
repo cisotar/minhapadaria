@@ -14,6 +14,12 @@
  * `CHIP_CLASS` em `pricingPanel.ts` (§4); agora único ponto, reusado também
  * por `recipesList.ts` (chip de margem do card de receita, §2.F).
  *
+ * Extensão (refactor de farinhas, 2026-07-05, regra de ouro 2): `setDerivedDisplay`
+ * — escreve texto formatado num alvo derivado (`<input readonly>` usa `.value`,
+ * célula plana usa `.textContent`, §1.3/§4); antes duplicado em
+ * `ingredientsTable.ts`, agora também reusado por `batchPanel.ts` (tabela de
+ * Farinhas, mesma sensibilidade a modo).
+ *
  * Seções implementadas: §2.A.1, §4, §5, §7, §9 (via format.ts).
  */
 import { formatCurrency } from '../core/format';
@@ -52,6 +58,17 @@ export function marginChipClass(status: MarginStatus): string {
  *  sem reimplementar arredondamento/vírgula. */
 export function moneyPlain(n: number): string {
   return formatCurrency(n).replace('R$', '').trim();
+}
+
+/**
+ * Escreve texto formatado num alvo derivado — `<input readonly>` usa `.value`,
+ * célula plana usa `.textContent` (§1.3/§4). Reuso entre `ingredientsTable.ts`
+ * e `batchPanel.ts` (tabela de Farinhas): os dois alternam entre input-readonly
+ * (destaque `.pct` do modo peso→%) e texto plano conforme a mesma regra.
+ */
+export function setDerivedDisplay(el: HTMLElement, text: string): void {
+  if (el instanceof HTMLInputElement) el.value = text;
+  else el.textContent = text;
 }
 
 /**

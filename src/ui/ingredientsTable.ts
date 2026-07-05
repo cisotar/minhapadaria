@@ -46,14 +46,45 @@
  * `.title-row`/`.toggle-label`/`.push-right`/`.btn-sm`/`.row.row--tight`/
  * `.table-add-cell` (design-system.css) substituem os 7 encontrados aqui.
  *
+ * Refactor de múltiplas farinhas (2026-07-05, aprovado — `mockups/
+ * calculadora-farinhas.html`): a edição de farinha (nome, %, peso, preço,
+ * peso do produto, remover) migrou para a tabela "Farinhas" do card Ancoragem
+ * (`batchPanel.ts`) — mesmo desenho de sub-receita já usado pelo Fermento
+ * (a linha "Fermento" abaixo consome `recipe.sourdough`, somente-leitura).
+ * Aqui, cada linha `category:'flour'` de `recipe.ingredients` vira uma linha
+ * CONSUMIDA (`buildFlourDisplayRow`): nome + `(vem da Ancoragem)`, %, peso,
+ * preço pago, peso do produto, custo/g e custo — todos texto plano
+ * somente-leitura, sem botão remover. `buildIngredientRow` só atende as
+ * demais categorias (liquid/fat/salt/extra) — sem farinha, então a trava
+ * de 100%/mínimo-1-farinha não se aplica mais aqui (migrou por completo).
+ *
+ * Contrato-espelho (2026-07-06, `spec/refactor-farinhas-multiplas.md` §3, fase
+ * 1) — 2 bugs corrigidos:
+ *  1. §3.2 (ordem/contiguidade): `fullRender()` agora faz DOIS passes sobre
+ *     `recipe.ingredients` — primeiro as farinhas (`buildFlourDisplayRow`),
+ *     formando um bloco CONTÍGUO NO TOPO, depois as demais categorias
+ *     (`buildIngredientRow`, preservando o índice real do array) — antes a
+ *     ordem seguia o array cru (`forEach` único), então farinhas adicionadas
+ *     via `+ farinha` (push no fim do array) apareciam DEPOIS de água/
+ *     azeite/sal em vez de formarem bloco com a 1ª farinha. Como
+ *     `batchPanel.ts` também filtra `category==='flour'` na ordem do array,
+ *     a ordem das duas tabelas bate automaticamente (mesmo array, mesmo
+ *     filtro) — não foi preciso trocar `push` por `splice`.
+ *  2. §3.4 (sincronização do nome): `patchAllDerived` repintava %/peso/preço/
+ *     custo da farinha mas não o nome — `buildFlourDisplayRow` não guardava
+ *     ref dele. Renomear na tabela Farinhas (sem mudar a lista de ids) não
+ *     dispara `fullRender()`, então o nome ficava "velho". Fix: `nameCell`
+ *     (novo campo opcional de `RowRefs`) aponta pro `<span>` do nome; `patchAllDerived`
+ *     repinta via `textContent` (regra de ouro 3 — nunca `innerHTML`) a cada
+ *     notificação do store, junto com os demais campos consumidos.
+ * Fase 2 (sub-receita do Fermento, spec §5) — FORA de escopo, não tocada.
+ *
  * Seções implementadas: §1.3, §2.A.2, §4, §5.A, §5.B, §5.C, §7.1, §9.
  */
 import { parseDecimal, formatPercent, formatWeight, formatCurrency, formatCostPerGram } from '../core/format';
 import {
-  validatePercentageSum,
-  validateFlourCount,
-  validatePackageSize,
   validateNonNegative,
+  validatePackageSize,
   validateSourdoughProportion,
   type ValidationResult,
 } from '../core/validation';
@@ -62,21 +93,28 @@ import type { Ingredient, PackageCost } from '../core/types';
 import { h, clear, on } from './dom';
 import type { AppStateStore } from './state';
 // Extraídos para cellHelpers.ts (issue 015, regra de ouro 2) — reusados também
-// por sourdoughTable.ts. Comportamento idêntico ao anterior, só de local.
-import { UNIT_OPTIONS, moneyPlain, applyValidation } from './cellHelpers';
+// por sourdoughTable.ts/batchPanel.ts. Comportamento idêntico ao anterior, só de local.
+import { UNIT_OPTIONS, moneyPlain, applyValidation, setDerivedDisplay } from './cellHelpers';
 
 /**
  * Referências às células derivadas de uma linha — únicas repintadas via
- * `subscribe`. Exatamente um de `derivedWeightTarget`/`derivedPctTarget` é
- * não-nulo por linha de ingrediente, conforme o modo vigente no momento do
- * `fullRender()` (§1.3/§4, ver cabeçalho do arquivo); a linha do Fermento
- * sempre usa `derivedWeightTarget` (peso sempre derivado, nos dois modos).
+ * `subscribe`. Para ingredientes não-farinha, exatamente um de
+ * `derivedWeightTarget`/`derivedPctTarget` é não-nulo, conforme o modo
+ * vigente no momento do `fullRender()` (§1.3/§4, ver cabeçalho do arquivo); a
+ * linha do Fermento sempre usa `derivedWeightTarget` (peso sempre derivado,
+ * nos dois modos). Para farinha (linha CONSUMIDA, somente-leitura — edição em
+ * `batchPanel.ts`), AMBOS `derivedWeightTarget`/`derivedPctTarget` são
+ * preenchidos (sempre texto plano) e `priceCell`/`pwCell` também são
+ * repintados, porque a edição acontece num módulo diferente.
  */
 interface RowRefs {
   derivedWeightTarget: HTMLElement | null;
   derivedPctTarget: HTMLElement | null;
   costGCell: HTMLElement;
   costCell: HTMLElement;
+  priceCell?: HTMLElement; // só farinha — preço pago também é consumido/repintado aqui
+  pwCell?: HTMLElement; // só farinha — peso do produto também é consumido/repintado aqui
+  nameCell?: HTMLElement; // só farinha — nome também é consumido/repintado aqui (spec §3.4, bug do nome)
 }
 interface FootRefs {
   pctCell: HTMLElement;
@@ -112,12 +150,6 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   let rowRefs = new Map<string, RowRefs>();
   let footRefs: FootRefs | null = null;
 
-  /** Escreve texto formatado num alvo derivado — `<input readonly>` usa `.value`, célula plana usa `.textContent` (§1.3/§4). */
-  function setDerivedDisplay(el: HTMLElement, text: string): void {
-    if (el instanceof HTMLInputElement) el.value = text;
-    else el.textContent = text;
-  }
-
   /** Repinta só as células derivadas + rodapé — nunca recria um input em foco. */
   function patchAllDerived(): void {
     const { recipe } = store.getState();
@@ -130,9 +162,25 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       } else {
         const ing = recipe.ingredients.find((i) => i.id === id);
         if (!ing) continue;
-        // §1.3: só um dos dois é derivado por vez, conforme o modo (ver fullRender).
-        if (refs.derivedWeightTarget) setDerivedDisplay(refs.derivedWeightTarget, formatWeight(ing.weight));
-        else if (refs.derivedPctTarget) setDerivedDisplay(refs.derivedPctTarget, formatPercent(ing.percentage));
+        if (ing.category === 'flour') {
+          // Linha CONSUMIDA (somente-leitura, edição em batchPanel.ts): nome/
+          // %/peso/preço/peso-do-produto podem mudar por uma edição em OUTRO
+          // módulo — sempre repintados aqui (nunca só um dos dois, ao
+          // contrário das demais categorias, ver header do arquivo). Nome via
+          // `textContent` (regra de ouro 3, nunca innerHTML) — spec
+          // §3.4/bug do nome (renomear na Ancoragem não refletia aqui).
+          if (refs.nameCell) refs.nameCell.textContent = ing.name;
+          if (refs.derivedWeightTarget) setDerivedDisplay(refs.derivedWeightTarget, formatWeight(ing.weight));
+          if (refs.derivedPctTarget) setDerivedDisplay(refs.derivedPctTarget, formatPercent(ing.percentage));
+          if (refs.priceCell) refs.priceCell.textContent = formatCurrency(ing.packageCost.pricePaid);
+          if (refs.pwCell) {
+            refs.pwCell.textContent = `${formatWeight(ing.packageCost.packageSize)} ${ing.packageCost.packageUnit}`;
+          }
+        } else {
+          // §1.3: só um dos dois é derivado por vez, conforme o modo (ver fullRender).
+          if (refs.derivedWeightTarget) setDerivedDisplay(refs.derivedWeightTarget, formatWeight(ing.weight));
+          else if (refs.derivedPctTarget) setDerivedDisplay(refs.derivedPctTarget, formatPercent(ing.percentage));
+        }
         refs.costGCell.textContent = ing.costPerGram !== undefined ? formatCostPerGram(ing.costPerGram) : '—';
         refs.costCell.textContent = ing.recipeCost !== undefined ? formatCurrency(ing.recipeCost) : '—';
       }
@@ -198,11 +246,13 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     return span;
   }
 
-  function buildIngredientRow(
-    ing: Ingredient,
-    index: number,
-    flourCount: number,
-  ): { tr: HTMLTableRowElement; refs: RowRefs } {
+  /**
+   * Linha editável de ingrediente NÃO-farinha (liquid/fat/salt/extra) — a
+   * farinha migrou por completo para `batchPanel.ts` (tabela "Farinhas"),
+   * então nem a trava de mínimo-1-farinha nem a trava de 100% da farinha
+   * única se aplicam mais aqui.
+   */
+  function buildIngredientRow(ing: Ingredient, index: number): { tr: HTMLTableRowElement; refs: RowRefs } {
     const tr = h('tr') as HTMLTableRowElement;
     tr.dataset.ingredientId = ing.id; // âncora estável para localizar a linha (repintura/testes)
     const label = ing.name || 'ingrediente';
@@ -219,27 +269,22 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       });
     });
 
-    const wouldBeFlourCount = flourCount - (ing.category === 'flour' ? 1 : 0);
-    const removeIssue = ing.category === 'flour' ? validateFlourCount(wouldBeFlourCount, 'principal') : null;
     const removeBtn = h(
       'button',
       {
         type: 'button',
         className: 'btn btn-secondary btn-sm', // `.btn-sm` (design-system.css, issue 022) — era style inline
-        title: removeIssue ? removeIssue.message : 'Remover ingrediente',
+        title: 'Remover ingrediente',
         'aria-label': `Remover ${label}`,
-        disabled: Boolean(removeIssue),
       },
       ['×'],
     ) as HTMLButtonElement;
-    if (!removeIssue) {
-      on(removeBtn, 'click', () => {
-        store.update((draft) => {
-          draft.ingredients = draft.ingredients.filter((i) => i.id !== ing.id);
-        });
-        fullRender(); // add/remove é mudança estrutural (§5.B)
+    on(removeBtn, 'click', () => {
+      store.update((draft) => {
+        draft.ingredients = draft.ingredients.filter((i) => i.id !== ing.id);
       });
-    }
+      fullRender(); // add/remove é mudança estrutural (§5.B)
+    });
     // Nome só com o input; o botão remover foi para a coluna de ações no fim da
     // linha (diretiva de layout do coordenador — última ação horizontal, §10).
     const nameCell = h('td', {}, [nameInput]);
@@ -257,14 +302,12 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     // dois campos (% ou Peso) é a fonte de verdade editável desta linha.
     const mode = store.getState().recipe.calculationMode;
     const isWeightToPct = mode === 'weight-to-percentage';
-    // Trava de farinha única (100%) só existe no modo padrão — em peso→% a %
-    // é sempre derivada, então a trava não se aplica (§1.3, "inclusive farinha e água").
-    const isLockedFlour = !isWeightToPct && ing.category === 'flour' && flourCount === 1;
-    const pctReadonly = isWeightToPct || isLockedFlour;
+    const pctReadonly = isWeightToPct;
 
     // % — classe `pct` sempre presente (marcador do destaque §1.3); em
     // peso→% é derivada (readonly, mas com o destaque, ver cabeçalho);
-    // no modo padrão trava 100% se única farinha; senão editável (§5.A).
+    // no modo padrão é sempre editável (§5.A — a única categoria com regra de
+    // soma-100%/trava é farinha, que migrou para batchPanel.ts).
     const pctInput = h('input', {
       className: 'cell-input num pct',
       value: formatPercent(ing.percentage),
@@ -286,30 +329,12 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
           pctInput.value = lastValidPct;
           return;
         }
-        // §5.A: só farinhas precisam somar 100% — outras categorias não têm essa regra.
-        const issue: ValidationResult =
-          ing.category === 'flour'
-            ? validatePercentageSum(
-                store
-                  .getState()
-                  .recipe.ingredients.filter((i) => i.category === 'flour')
-                  .map((i) => i.percentage),
-                'principal',
-              )
-            : null;
-        applyValidation(pctInput, issue, () => {
-          pctInput.value = lastValidPct;
-          const reverted = parseDecimal(lastValidPct);
-          if (reverted !== null) {
-            store.update((draft) => {
-              draft.ingredients[index].percentage = reverted;
-            });
-          }
-        });
-        if (!issue || issue.level !== 'block') {
-          lastValidPct = formatPercent(parsed); // §9: arredondamento só na exibição
-          pctInput.value = lastValidPct;
-        }
+        // §5.A: farinha (única categoria com regra de soma-100%) não passa
+        // mais por este builder — não há validação de blur para % de
+        // ingredientes comuns; só limpa qualquer sinalização anterior.
+        applyValidation(pctInput, null, () => {});
+        lastValidPct = formatPercent(parsed); // §9: arredondamento só na exibição
+        pctInput.value = lastValidPct;
       });
     }
     // Só marca a célula como `.readonly` quando a % é REALMENTE derivada
@@ -486,6 +511,72 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   }
 
   /**
+   * Linha de farinha CONSUMIDA (somente-leitura): a edição (nome, %, peso,
+   * preço pago, peso do produto, remover) vive na tabela "Farinhas" do card
+   * Ancoragem (`batchPanel.ts`) — mesmo desenho de sub-receita já usado pelo
+   * Fermento (`buildFermentoRow` abaixo consome `recipe.sourdough`). Todas as
+   * 7 células são texto plano (brandbook §4.1: valor derivado sem box); nunca
+   * um único remove-button (célula de ações vazia, §5.B — mínimo 1 farinha é
+   * garantido lá).
+   *
+   * `nameValue` (spec/refactor-farinhas-multiplas.md §3.4, bug do nome):
+   * guarda a referência do `<span>` do nome (mantendo o `<small
+   * class="note-muted">` ao lado) para `patchAllDerived` repintar via
+   * `textContent` a cada notificação do store — renomear na Ancoragem sem
+   * mudar a lista de ids não disparava `fullRender()`, então o nome ficava
+   * desatualizado sem esta ref.
+   */
+  function buildFlourDisplayRow(ing: Ingredient): { tr: HTMLTableRowElement; refs: RowRefs } {
+    const tr = h('tr') as HTMLTableRowElement;
+    tr.dataset.ingredientId = ing.id; // âncora estável (mesma convenção das demais linhas)
+
+    const nameValue = h('span', {}, [ing.name]);
+    const nameCell = h('td', {}, [nameValue, ' ', h('small', { className: 'note-muted' }, ['(↑ vem da Ancoragem)'])]);
+    const unitCell = h('td', {}, ['g']); // farinha é sempre g (§2.A.2)
+
+    const pctCell = h('td', { className: 'num readonly' });
+    pctCell.textContent = formatPercent(ing.percentage);
+
+    const weightCell = h('td', { className: 'num readonly' });
+    weightCell.textContent = formatWeight(ing.weight);
+
+    const priceCell = h('td', { className: 'num cost-col readonly' });
+    priceCell.textContent = formatCurrency(ing.packageCost.pricePaid);
+
+    const pwCell = h('td', { className: 'num cost-col readonly' });
+    pwCell.textContent = `${formatWeight(ing.packageCost.packageSize)} ${ing.packageCost.packageUnit}`;
+
+    const costGCell = h('td', { className: 'num cost-col readonly' });
+    costGCell.textContent = ing.costPerGram !== undefined ? formatCostPerGram(ing.costPerGram) : '—';
+    const costCell = h('td', { className: 'num cost-col readonly' });
+    costCell.textContent = ing.recipeCost !== undefined ? formatCurrency(ing.recipeCost) : '—';
+
+    // Mesma ordem das demais linhas; sem botão remover (célula de ações vazia).
+    tr.appendChild(nameCell);
+    tr.appendChild(pctCell);
+    tr.appendChild(weightCell);
+    tr.appendChild(priceCell);
+    tr.appendChild(pwCell);
+    tr.appendChild(costGCell);
+    tr.appendChild(costCell);
+    tr.appendChild(unitCell);
+    tr.appendChild(h('td', { className: 'col-actions' }));
+
+    return {
+      tr,
+      refs: {
+        derivedWeightTarget: weightCell,
+        derivedPctTarget: pctCell,
+        costGCell,
+        costCell,
+        priceCell,
+        pwCell,
+        nameCell: nameValue,
+      },
+    };
+  }
+
+  /**
    * Linha consolidada do Fermento (§2.A.2): peso/% seguem a mesma fórmula
    * genérica de linha, mas vêm de `recipe.sourdough` (sub-receita, §2.B) —
    * sem edição de peso; custos exibem o custo derivado do fermento.
@@ -618,9 +709,23 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const tbody = h('tbody');
     rowRefs = new Map();
     const { recipe } = store.getState();
-    const flourCount = recipe.ingredients.filter((i) => i.category === 'flour').length;
+    // Contrato-espelho (spec/refactor-farinhas-multiplas.md §3.2): bloco de
+    // farinhas CONTÍGUO NO TOPO, na MESMA ORDEM da tabela Farinhas
+    // (batchPanel.ts filtra `category==='flour'` na ordem do array — igual
+    // aqui, então a 1ª farinha do array é sempre a 1ª linha nas DUAS
+    // tabelas), antes dos demais ingredientes e da linha Fermento — nunca
+    // intercalado com água/gordura/sal. Dois passes sobre o MESMO array (não
+    // dois arrays filtrados novos) preservam o índice REAL de cada
+    // ingrediente para `buildIngredientRow` (usado nos `store.update`).
+    recipe.ingredients.forEach((ing) => {
+      if (ing.category !== 'flour') return;
+      const { tr, refs } = buildFlourDisplayRow(ing);
+      rowRefs.set(ing.id, refs);
+      tbody.appendChild(tr);
+    });
     recipe.ingredients.forEach((ing, index) => {
-      const { tr, refs } = buildIngredientRow(ing, index, flourCount);
+      if (ing.category === 'flour') return;
+      const { tr, refs } = buildIngredientRow(ing, index);
       rowRefs.set(ing.id, refs);
       tbody.appendChild(tr);
     });
@@ -637,15 +742,31 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     patchAllDerived(); // sincroniza valores exibidos com o estado atual
   }
 
+  /** Assinatura estável da lista de ingredientes (ids na ordem atual) — usada só
+   *  para detectar add/remove estrutural vindo de OUTRO módulo (ex.: tabela de
+   *  Farinhas em batchPanel.ts), já que o toggle g/mL e o "+ ingrediente"/remover
+   *  locais já chamam `fullRender()` diretamente. */
+  function ingredientIdsSignature(): string {
+    return store
+      .getState()
+      .recipe.ingredients.map((i) => i.id)
+      .join(',');
+  }
+
   fullRender();
   // §1.3/§4: alternar `calculationMode` é mudança ESTRUTURAL (editabilidade
   // de %/Peso se inverte) — exige `fullRender()`, não só `patchAllDerived()`.
+  // Add/remove de farinha feito em batchPanel.ts também é estrutural (linhas
+  // desta tabela aparecem/somem) — detectado via mudança na assinatura de ids.
   // Qualquer outra mutação segue só repintando as células derivadas (§1.6).
   let lastMode = store.getState().recipe.calculationMode;
+  let lastIds = ingredientIdsSignature();
   store.subscribe(() => {
     const mode = store.getState().recipe.calculationMode;
-    if (mode !== lastMode) {
+    const ids = ingredientIdsSignature();
+    if (mode !== lastMode || ids !== lastIds) {
       lastMode = mode;
+      lastIds = ids;
       fullRender();
     } else {
       patchAllDerived();

@@ -9,9 +9,10 @@
  * TDD: estes 15 casos são escritos ANTES da implementação (issue 010).
  */
 import { describe, it, expect } from 'vitest';
-import type { SourdoughParts } from './types';
+import type { SourdoughFlour, SourdoughParts } from './types';
 import {
   validatePercentageSum,
+  validateFlourPercentageSumSoft,
   validateFlourCount,
   validateProductQuantity,
   validateNonNegative,
@@ -44,6 +45,29 @@ describe('validation §5 — camada de mensagens sobre predicados puros', () => 
     expect(bad?.message).toBe('A soma das porcentagens das farinhas do fermento deve ser 100%.');
   });
 
+  // 1b. Farinhas principais, versão SOFT (decisão do cliente, 2026-07-05) —
+  // nunca bloqueia; usada só pela tabela "Farinhas" do batchPanel.ts.
+  it('soft: soma 100 é null (sem aviso); <100 avisa "faltam"; >100 avisa "excede" — nunca bloqueia', () => {
+    expect(validateFlourPercentageSumSoft([60, 40])).toBeNull();
+    expect(validateFlourPercentageSumSoft([100])).toBeNull();
+
+    const short = validateFlourPercentageSumSoft([60, 20]); // soma 80 — faltam 20
+    expect(short?.level).toBe('warn');
+    expect(short?.valid).toBe(true);
+    expect(short?.message).toBe('Faltam 20,00% para 100%.');
+
+    const over = validateFlourPercentageSumSoft([60, 40, 30]); // soma 130 — excede 30
+    expect(over?.level).toBe('warn');
+    expect(over?.valid).toBe(true);
+    expect(over?.message).toBe('Excede 100% em 30,00% — reduza.');
+  });
+
+  it('soft: tolerância anti-drift IEEE-754 (33,33+33,33+33,34) não avisa (mesmo epsilon de percentagesSumTo100)', () => {
+    expect(validateFlourPercentageSumSoft([33.33, 33.33, 33.34])).toBeNull();
+    // Drift minúsculo abaixo do epsilon (1e-9) — ainda soma 100 para fins de validação.
+    expect(validateFlourPercentageSumSoft([50 + 1e-10, 50])).toBeNull();
+  });
+
   // 3. §5.B mínimo 1 farinha por grupo
   it('§5.B: 0 farinhas bloqueia; 1 farinha é OK', () => {
     const bad = validateFlourCount(0, 'principal');
@@ -71,24 +95,36 @@ describe('validation §5 — camada de mensagens sobre predicados puros', () => 
     expect(validateNonNegative(0, 'Preço Pago')).toBeNull();
   });
 
-  // 6. §5.C partes do fermento (reusa isValidSourdoughParts)
-  it('§5.C: SomaPartes 0 bloqueia; golden 0:1:1 é OK', () => {
-    const zero: SourdoughParts = { isca: 0, flour: 0, water: 0 };
-    const bad = validateSourdoughParts(zero);
+  // 6. refactor §5.6 partes do fermento (reusa isValidSourdoughParts, denom global)
+  it('§5.6: denominador global 0 bloqueia; golden (isca0/água1 + farinha 1) é OK', () => {
+    const zero: SourdoughParts = { isca: 0, water: 0 };
+    const noFlours: SourdoughFlour[] = [];
+    const bad = validateSourdoughParts(zero, noFlours);
     expect(bad?.level).toBe('block');
     expect(bad?.message).toBe(
-      'As partes do fermento não podem ser negativas e a soma deve ser maior que zero.',
+      'As proporções do fermento não podem ser negativas e a soma de todas deve ser maior que zero.',
     );
-    expect(validateSourdoughParts({ isca: 0, flour: 1, water: 1 })).toBeNull();
+    const flours: SourdoughFlour[] = [
+      { flourId: 'sf1', name: 'Farinha', proportion: 1, weight: 0, packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'g' } },
+    ];
+    expect(validateSourdoughParts({ isca: 0, water: 1 }, flours)).toBeNull();
   });
 
-  // 7. §5.C parte de farinha = 0 → aviso (hidratação "—")
-  it('§5.C: parte de farinha 0 avisa (hidratação indefinida); >0 é OK', () => {
-    const warn = validateSourdoughFlourPart(0);
+  // 7. refactor §5.5/§5.6: Σ proporções das farinhas do fermento = 0 → aviso (hidratação "—")
+  it('§5.5: Σ proporções das farinhas do fermento 0 avisa (hidratação indefinida); >0 é OK', () => {
+    const zeroFlours: SourdoughFlour[] = [
+      { flourId: 'sf1', name: 'F', proportion: 0, weight: 0, packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'g' } },
+    ];
+    const warn = validateSourdoughFlourPart(zeroFlours);
     expect(warn?.level).toBe('warn');
     expect(warn?.valid).toBe(true);
-    expect(warn?.message).toBe('Parte de farinha do fermento é 0: a hidratação fica indefinida (—).');
-    expect(validateSourdoughFlourPart(7)).toBeNull();
+    expect(warn?.message).toBe(
+      'A soma das proporções das farinhas do fermento é 0: a hidratação fica indefinida (—).',
+    );
+    const someFlours: SourdoughFlour[] = [
+      { flourId: 'sf1', name: 'F', proportion: 7, weight: 0, packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'g' } },
+    ];
+    expect(validateSourdoughFlourPart(someFlours)).toBeNull();
   });
 
   // 8. §5.C proporção do fermento: <0 block, =0 warn, >0 ok
@@ -166,8 +202,10 @@ describe('validation §5 — camada de mensagens sobre predicados puros', () => 
     validatePercentageSum(percentages, 'principal');
     expect(percentages).toEqual([60, 50]);
 
-    const parts: SourdoughParts = { isca: 0, flour: 0, water: 0 };
-    validateSourdoughParts(parts);
-    expect(parts).toEqual({ isca: 0, flour: 0, water: 0 });
+    const parts: SourdoughParts = { isca: 0, water: 0 };
+    const flours: SourdoughFlour[] = [];
+    validateSourdoughParts(parts, flours);
+    expect(parts).toEqual({ isca: 0, water: 0 });
+    expect(flours).toEqual([]);
   });
 });

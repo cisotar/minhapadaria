@@ -4,10 +4,15 @@
  * §3.E/§4).
  *
  * Casos 7–9 do Plano Técnico da issue 016, com o fixture exato da §12 SEM
- * Azeite (o golden da spec — Custo Total R$8,86, 2 un. — não inclui a
- * categoria `fat` que o `goldenSeed()` de 014 acrescentou para exercitar
- * g/mL; removê-la aqui reproduz os números literais da §12: Custo unitário
- * R$4,43, margem 40% → Preço R$7,38, Lucro R$2,95).
+ * Azeite (não inclui a categoria `fat` que o `goldenSeed()` de 014 acrescentou
+ * para exercitar g/mL).
+ *
+ * Ajuste do cliente (§5.1, 2026-07-06): o seed passou a usar Isca=1 (era 0) —
+ * denom global do fermento 1+1+1=3 — então os números não são mais os
+ * literais da §12 (que usava Isca 0): Custo unitário agora R$4,30 (era 4,43),
+ * margem 40% → Preço R$7,16 (era 7,38), Lucro R$2,86 (era 2,95). Valores
+ * RECALCULADOS pelo engine para o seed atual (`golden-example.test.ts` mantém
+ * fixture próprio com Isca 0 para validar as fórmulas da §12 à parte — AC25).
  */
 import { describe, it, expect } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
@@ -34,7 +39,7 @@ function mount(mutate?: (r: ReturnType<typeof goldenSeedNoFat>) => void) {
 }
 
 describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
-  it('7. editar Margem 40 → Preço 7,38 e Lucro 2,95 (golden §12); campo em foco não é sobrescrito', () => {
+  it('7. editar Margem 40 → Preço 7,16 e Lucro 2,86 (seed com Isca=1, 2026-07-06); campo em foco não é sobrescrito', () => {
     const { root } = mount();
     const marginInput = root.querySelector('input[aria-label="Margem %"]') as HTMLInputElement;
     const priceInput = root.querySelector('input[aria-label="Preço de venda"]') as HTMLInputElement;
@@ -43,8 +48,8 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
     marginInput.value = '40';
     marginInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-    expect(priceInput.value).toBe('7,38');
-    expect(profitInput.value).toBe('2,95');
+    expect(priceInput.value).toBe('7,16');
+    expect(profitInput.value).toBe('2,86');
     expect(marginInput.value).toBe('40'); // campo em edição não é reformatado/sobrescrito
   });
 
@@ -56,7 +61,7 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
 
     store.update((draft) => {
       draft.pricing.priceInputMode = 'sale-price';
-      draft.pricing.salePrice = 1; // < custo unitário 4,43 → prejuízo
+      draft.pricing.salePrice = 1; // < custo unitário 4,30 → prejuízo
     });
 
     expect(chip.classList.contains('chip-crit')).toBe(true);

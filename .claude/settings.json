@@ -33,16 +33,6 @@
       "Bash(git stash:*)"
     ],
     "deny": [
-      "Bash(git push:*)",
-      "Bash(git reset:*)",
-      "Bash(git checkout -- :*)",
-      "Bash(rm -rf:*)",
-      "Edit(spec/**)",
-      "Write(spec/**)",
-      "Edit(brand/**)",
-      "Write(brand/**)",
-      "Edit(mockups/**)",
-      "Write(mockups/**)",
       "Read(./.env)",
       "Read(./.env.*)"
     ]

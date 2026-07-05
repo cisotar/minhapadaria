@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refactor — Farinhas na Ancoragem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  .page { max-width: 1200px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
+  .unit-suffix { color: var(--text-muted); font-size: var(--fs-small); margin-left: 4px; }
+  .pw-combo .cell-input { width: 64px; }
+  .pw-combo select.cell-input { width: 52px; text-align: left; }
+  /* nota de contexto entre subtítulo e tabela — só ilustrativa do mockup */
+  .mock-note { color: var(--text-muted); font-size: var(--fs-small); margin: var(--sp-2) 0 var(--sp-4); }
+</style>
+</head>
+<body class="show-costs">
+
+<nav class="app-nav">
+  <a href="calculadora.html">Calculadora</a>
+  <a href="calculadora-farinhas.html" class="active">Refactor Farinhas</a>
+</nav>
+
+<header class="page-header">
+  <div class="inner">
+    <h1>🍞 Refactor — Múltiplas farinhas na Ancoragem</h1>
+    <p class="subtitle">Card Ancoragem ganha tabela de farinhas (colunas análogas a Ingredientes). F total = Σ pesos das farinhas. As linhas de farinha são consumidas (read-only) pela tabela Ingredientes.</p>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- ============ CARD ANCORAGEM REFATORADO ============ -->
+  <section class="card">
+    <h2>Ancoragem e Planejamento da Fornada</h2>
+
+    <!-- Linha de campos-âncora (inalterada vs. código atual per-unit) -->
+    <div class="row row--end row--mb">
+      <div class="field">
+        <label>Quantidade de Produtos</label>
+        <input class="input num" value="2" aria-label="Quantidade de Produtos">
+      </div>
+      <div class="field">
+        <label>Farinha por Unidade (F unit)</label>
+        <div class="row">
+          <input class="input num" value="500,0" aria-label="Farinha por Unidade">
+          <span class="unit-suffix">g</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Modo de cálculo</label>
+        <div class="period-toggle">
+          <button class="active">% → peso</button>
+          <button>peso → %</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Escalonar para peso alvo</label>
+        <div class="row row--tight">
+          <input class="input num" placeholder="ex: 2000" aria-label="Peso alvo">
+          <button class="btn btn-secondary btn-sm">Aplicar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ NOVO: TABELA DE FARINHAS ============ -->
+    <h2>Farinhas</h2>
+    <p class="sub-recipe-note">↳ Consumidas pelas linhas de <strong>farinha</strong> da tabela Ingredientes abaixo — a % é relativa ao total de farinha e deve somar 100%.</p>
+
+    <table class="table show-costs">
+      <thead>
+        <tr>
+          <th>Farinha</th>
+          <th class="num">%</th>
+          <th class="num">Peso (g)</th>
+          <th class="num cost-col">Preço pago</th>
+          <th class="num cost-col">Peso do produto</th>
+          <th class="num cost-col">Custo/g</th>
+          <th class="num cost-col">Custo</th>
+          <th class="col-actions" aria-label="Ações"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Farinha A -->
+        <tr>
+          <td><input class="cell-input" value="Farinha Branca" aria-label="Nome da farinha"></td>
+          <td class="num"><input class="cell-input num" value="60,00" aria-label="Porcentagem"></td>
+          <td class="num readonly">600,0</td>
+          <td class="num cost-col"><input class="cell-input num" value="8,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input class="cell-input num" value="1" size="6">
+              <select class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num cost-col readonly">R$ 0,0080</td>
+          <td class="num cost-col readonly">R$ 4,80</td>
+          <td class="col-actions"><button class="btn btn-secondary btn-sm" aria-label="Remover Farinha Branca">×</button></td>
+        </tr>
+        <!-- Farinha B -->
+        <tr>
+          <td><input class="cell-input" value="Farinha Integral" aria-label="Nome da farinha"></td>
+          <td class="num"><input class="cell-input num" value="40,00" aria-label="Porcentagem"></td>
+          <td class="num readonly">400,0</td>
+          <td class="num cost-col"><input class="cell-input num" value="12,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input class="cell-input num" value="1" size="6">
+              <select class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num cost-col readonly">R$ 0,0120</td>
+          <td class="num cost-col readonly">R$ 4,80</td>
+          <td class="col-actions"><button class="btn btn-secondary btn-sm" aria-label="Remover Farinha Integral">×</button></td>
+        </tr>
+        <!-- Adicionar -->
+        <tr>
+          <td colspan="8" class="table-add-cell">
+            <button class="btn btn-secondary btn-sm">+ farinha</button>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total de farinha</td>
+          <td class="num">100,00</td>
+          <td class="num">1.000,0</td>
+          <td class="cost-col" colspan="3"></td>
+          <td class="num cost-col">R$ 9,60</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Fechamento: F total derivado, em destaque (última linha do card) -->
+    <div class="metric-pair mt-3">
+      <div class="metric">
+        <div class="label">Peso Total de Farinha (F total = Σ farinhas = F unit × N)</div>
+        <div class="value">1.000,0 g</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TABELA INGREDIENTES (linhas de farinha consumidas) ============ -->
+  <section class="card">
+    <div class="title-row">
+      <h2>Ingredientes</h2>
+      <label class="toggle-label push-right">
+        <input type="checkbox" checked> Exibir custos
+      </label>
+    </div>
+    <table class="table show-costs">
+      <thead>
+        <tr>
+          <th>Ingrediente</th>
+          <th class="num">%</th>
+          <th class="num">Peso (g)</th>
+          <th class="num cost-col">Preço pago</th>
+          <th class="num cost-col">Peso do produto</th>
+          <th class="num cost-col">Custo/g</th>
+          <th class="num cost-col">Custo</th>
+          <th>Unidade</th>
+          <th class="col-actions" aria-label="Ações"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Farinhas CONSUMIDAS: read-only, definidas no card Ancoragem -->
+        <tr class="row-fermento">
+          <td>Farinha Branca <small class="note-muted">(↑ vem da Ancoragem)</small></td>
+          <td class="num readonly">60,00</td>
+          <td class="num readonly">600,0</td>
+          <td class="num cost-col readonly">R$ 8,00</td>
+          <td class="num cost-col readonly">1 kg</td>
+          <td class="num cost-col readonly">R$ 0,0080</td>
+          <td class="num cost-col readonly">R$ 4,80</td>
+          <td>g</td>
+          <td class="col-actions"></td>
+        </tr>
+        <tr class="row-fermento">
+          <td>Farinha Integral <small class="note-muted">(↑ vem da Ancoragem)</small></td>
+          <td class="num readonly">40,00</td>
+          <td class="num readonly">400,0</td>
+          <td class="num cost-col readonly">R$ 12,00</td>
+          <td class="num cost-col readonly">1 kg</td>
+          <td class="num cost-col readonly">R$ 0,0120</td>
+          <td class="num cost-col readonly">R$ 4,80</td>
+          <td>g</td>
+          <td class="col-actions"></td>
+        </tr>
+        <!-- Demais ingredientes: editáveis como hoje -->
+        <tr>
+          <td><input class="cell-input" value="Água" aria-label="Nome"></td>
+          <td class="num"><input class="cell-input num" value="70,00"></td>
+          <td class="num readonly">700,0</td>
+          <td class="num cost-col"><input class="cell-input num" value="0,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input class="cell-input num" value="1" size="6">
+              <select class="cell-input"><option value="L" selected>L</option><option value="mL">mL</option></select>
+            </div>
+          </td>
+          <td class="num cost-col readonly">R$ 0,0000</td>
+          <td class="num cost-col readonly">R$ 0,00</td>
+          <td><span class="unit-toggle"><button class="active">g</button><button>mL</button></span></td>
+          <td class="col-actions"><button class="btn btn-secondary btn-sm">×</button></td>
+        </tr>
+        <tr class="row-fermento">
+          <td>Fermento</td>
+          <td class="num"><input class="cell-input num" value="20,00"></td>
+          <td class="num readonly">200,0</td>
+          <td class="num cost-col readonly">—</td>
+          <td class="num cost-col readonly">—</td>
+          <td class="num cost-col readonly">R$ 0,0040</td>
+          <td class="num cost-col readonly">R$ 0,80</td>
+          <td>g</td>
+          <td class="col-actions"></td>
+        </tr>
+        <tr>
+          <td><input class="cell-input" value="Sal" aria-label="Nome"></td>
+          <td class="num"><input class="cell-input num" value="2,00"></td>
+          <td class="num readonly">20,0</td>
+          <td class="num cost-col"><input class="cell-input num" value="3,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input class="cell-input num" value="1" size="6">
+              <select class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num cost-col readonly">R$ 0,0030</td>
+          <td class="num cost-col readonly">R$ 0,06</td>
+          <td>g</td>
+          <td class="col-actions"><button class="btn btn-secondary btn-sm">×</button></td>
+        </tr>
+        <tr>
+          <td colspan="9" class="table-add-cell">
+            <button class="btn btn-secondary btn-sm">+ ingrediente</button>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total da massa</td>
+          <td class="num">192,00</td>
+          <td class="num">1.920,0</td>
+          <td class="cost-col" colspan="3"></td>
+          <td class="num cost-col">R$ 10,46</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <p class="mock-note">As duas primeiras linhas (farinhas) são somente-leitura aqui: nome, %, preço e peso-de-produto se editam no card <strong>Ancoragem</strong>. Peso e custo são derivados. Botão remover fica só na Ancoragem.</p>
+  </section>
+
+</div>
+
+</body>
+</html>

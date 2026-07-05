@@ -31,7 +31,7 @@ function seed(): Partial<Recipe> {
     ],
     sourdough: {
       percentageOfTotalFlour: 20,
-      parts: { isca: 1, flour: 7, water: 7 },
+      parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
       waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
     },
@@ -180,5 +180,69 @@ describe('recipes store', () => {
     expect(got.name).toBe('Pão Rústico');
     expect(got.ingredients[0].weight).toBe(1000);
     expect(store.duplicate('inexistente')).toBeUndefined();
+  });
+
+  // Migração do modelo antigo do fermento (refactor farinhas fase 2): receitas
+  // salvas antes do refactor têm `parts {isca,flour,water}` + `flours[].percentage`
+  // e carregam sem `proportion` → NaN no denominador global → edição travada e
+  // peso/custo "n/a". `migrateSourdough` (readAll) converte preservando os pesos.
+  function oldModelRecipe(): unknown {
+    return {
+      id: 'old-1',
+      name: 'Antiga',
+      calculationMode: 'percentage-to-weight',
+      batchPlanningMode: 'per-unit',
+      flourTotalWeight: 1000,
+      ingredients: [],
+      pricing: { quantity: 1, salePrice: 0, profitMargin: 40, profitPerUnit: 0, priceInputMode: 'margin' },
+      sourdough: {
+        percentageOfTotalFlour: 20,
+        parts: { isca: 1, flour: 2, water: 2 }, // modelo ANTIGO (tem `flour`)
+        flours: [
+          { flourId: 'f1', name: 'Branca', percentage: 60, packageCost: { pricePaid: 8, packageSize: 1, packageUnit: 'kg' }, weight: 0 },
+          { flourId: 'f2', name: 'Integral', percentage: 40, packageCost: { pricePaid: 12, packageSize: 1, packageUnit: 'kg' }, weight: 0 },
+        ],
+        waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
+      },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+  }
+
+  it('11. migração: modelo antigo (parts.flour + percentage) → proporção por linha, preservando pesos', () => {
+    const backend = createMemoryStorage();
+    backend.setItem('mp.recipes.v1', JSON.stringify([oldModelRecipe()]));
+    const got = makeStore(backend).get('old-1')!;
+    // `parts` perde `flour`, vira {isca, water}
+    expect(got.sourdough.parts).toEqual({ isca: 1, water: 2 });
+    expect(got.sourdough.parts).not.toHaveProperty('flour');
+    // proporção = (%/100) × parte-farinha-antiga(2): 60%→1,2; 40%→0,8 (Σ=2=parte antiga)
+    expect(got.sourdough.flours[0].proportion).toBeCloseTo(1.2);
+    expect(got.sourdough.flours[1].proportion).toBeCloseTo(0.8);
+    // `percentage` removido; nenhuma proporção undefined/NaN
+    expect(got.sourdough.flours[0]).not.toHaveProperty('percentage');
+    expect(Number.isFinite(got.sourdough.flours[0].proportion)).toBe(true);
+    // denominador global finito e > 0 (isca1 + 1,2 + 0,8 + água2 = 5) — sem NaN
+    const denom =
+      got.sourdough.parts.isca + got.sourdough.flours.reduce((s, f) => s + f.proportion, 0) + got.sourdough.parts.water;
+    expect(denom).toBeCloseTo(5);
+  });
+
+  it('12. migração é defensiva/idempotente: proporção ausente → 0; modelo novo passa intacto', () => {
+    const backend = createMemoryStorage();
+    // (a) proporção ausente e sem percentage → 0 (robustez); (b) modelo novo intacto
+    const missingProp = { ...(oldModelRecipe() as Record<string, unknown>), id: 'm' } as any;
+    delete missingProp.sourdough.parts.flour; // sem parte-farinha antiga
+    missingProp.sourdough.parts.isca = 1;
+    missingProp.sourdough.parts.water = 1;
+    missingProp.sourdough.flours = [{ flourId: 'z', name: '', packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' }, weight: 0 }]; // sem proportion nem percentage
+    const already = { ...(oldModelRecipe() as Record<string, unknown>), id: 'n' } as any;
+    already.sourdough.parts = { isca: 1, water: 1 };
+    already.sourdough.flours = [{ flourId: 'a', name: 'Nova', proportion: 3, packageCost: { pricePaid: 5, packageSize: 1, packageUnit: 'kg' }, weight: 0 }];
+    backend.setItem('mp.recipes.v1', JSON.stringify([missingProp, already]));
+    const store = makeStore(backend);
+    expect(store.get('m')!.sourdough.flours[0].proportion).toBe(0); // ausente → 0
+    expect(store.get('n')!.sourdough.flours[0].proportion).toBe(3); // novo intacto
+    expect(store.get('n')!.sourdough.parts).toEqual({ isca: 1, water: 1 });
   });
 });

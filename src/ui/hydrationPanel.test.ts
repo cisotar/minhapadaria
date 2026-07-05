@@ -8,7 +8,14 @@
  *
  * Nota de formatação: "Farinha Real Consumida" usa `formatWeight` (dono único,
  * format.ts), que agrupa milhar com ponto e decimal com vírgula (§9;
- * format.test.ts caso 16). Golden §12 (1100g) exibe `1.100,0 g`.
+ * format.test.ts caso 16).
+ *
+ * Ajuste do cliente (§5.1, 2026-07-06): o seed passou a usar Isca=1 (era 0)
+ * — denom global do fermento 1+1+1=3 (era 0+1+1=2) — então deixou de
+ * reproduzir os números literais da §12 (que tinha Isca 0, Farinha Real
+ * Consumida 1100g). Os valores abaixo são os RECALCULADOS pelo engine para
+ * o seed atual (`golden-example.test.ts` mantém um fixture próprio com Isca 0
+ * para validar as fórmulas da §12 à parte — AC25).
  */
 import { describe, it, expect } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
@@ -26,15 +33,15 @@ function mount() {
 }
 
 describe('hydrationPanel (jsdom)', () => {
-  it('10. golden §12 — Nominal 70,00% · Real 72,73% · Farinha Real Consumida 1100,0 g', () => {
+  it('10. seed atual (Isca=1) — Nominal 70,00% · Real 71,87% · Farinha Real Consumida 1.066,7 g', () => {
     const { root } = mount();
     const nominal = root.querySelector('.metric:nth-child(1) .value') as HTMLElement;
     const real = root.querySelector('.metric:nth-child(2) .value') as HTMLElement;
     const flour = root.querySelector('.metric:nth-child(3) .value') as HTMLElement;
 
-    expect(nominal.textContent).toBe('70,00%');
-    expect(real.textContent).toBe('72,73%');
-    expect(flour.textContent).toBe('1.100,0 g');
+    expect(nominal.textContent).toBe('70,00%'); // nominal independe do fermento — inalterado
+    expect(real.textContent).toBe('71,87%');
+    expect(flour.textContent).toBe('1.066,7 g');
   });
 
   it('11. F_total=0 (sem farinhas) → Nominal "—", Real ainda numérico, sem crash', () => {

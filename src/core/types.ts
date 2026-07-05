@@ -34,17 +34,18 @@ export interface Ingredient {
 export interface SourdoughFlour {
   flourId: string;
   name: string;
-  percentage: number;
+  proportion: number;          // refactor-farinhas-multiplas §5.3: proporção livre ≥0 (era `percentage`)
   packageCost: PackageCost;
   costPerGram?: number;        // derivado
   weight: number;
 }
 
-// Partes de construção do fermento (Seção 2.B.2): Isca:Farinha:Água, ex 1:7:7.
-// Substituem a antiga entrada de Hidratação — hydration agora é derivada.
+// Partes de construção do fermento (refactor-farinhas-multiplas §5.3): cada
+// linha tem proporção própria; o denominador é GLOBAL = Isca + Σ(proporções das
+// farinhas) + Água. A parte fixa "flour" foi removida (as farinhas passam a ter
+// proporção própria em SourdoughFlour). Hidratação continua derivada (§5.5).
 export interface SourdoughParts {
   isca: number;
-  flour: number;
   water: number;
 }
 

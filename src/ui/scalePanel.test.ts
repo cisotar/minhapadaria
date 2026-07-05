@@ -45,8 +45,11 @@ describe('scalePanel (jsdom, fixture §12 sem Azeite)', () => {
     targetInput.dispatchEvent(new Event('input', { bubbles: true }));
     applyBtn.click();
 
+    // Farinha é linha CONSUMIDA (somente-leitura) na tabela Ingredientes desde o
+    // refactor de múltiplas farinhas (2026-07-05) — % (1ª célula readonly) e
+    // Peso (2ª) são ambos texto plano aqui; a edição migrou para batchPanel.ts.
     const row = tableRoot.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
-    const weightCell = row.querySelector('td.readonly') as HTMLElement;
+    const weightCell = row.querySelectorAll('td.readonly')[1] as HTMLElement;
     expect(weightCell.textContent).toBe('1.041,7');
   });
 

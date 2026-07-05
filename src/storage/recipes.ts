@@ -52,7 +52,7 @@ function defaultRecipe(): Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> {
     ingredients: [],
     sourdough: {
       percentageOfTotalFlour: 0,
-      parts: { isca: 1, flour: 7, water: 7 },
+      parts: { isca: 1, water: 7 }, // refactor §5.3: proporção por linha (farinhas em flours[])
       flours: [],
       waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
     },
@@ -79,7 +79,42 @@ function reviveDates(raw: unknown): Recipe | null {
   const r = raw as Record<string, unknown>;
   if (typeof r.createdAt === 'string') r.createdAt = new Date(r.createdAt);
   if (typeof r.updatedAt === 'string') r.updatedAt = new Date(r.updatedAt);
+  migrateSourdough(r);
   return r as unknown as Recipe;
+}
+
+/**
+ * Migração de modelo (refactor farinhas fase 2): receitas salvas no modelo
+ * ANTIGO do fermento — `parts {isca, flour, water}` + `flours[].percentage` —
+ * carregam sem `proportion`, produzindo NaN no denominador global (isca + Σprop
+ * + água) e travando a edição de qualquer proporção ("não podem ser negativas"),
+ * além de peso/custo "n/a". Converte para o modelo de proporção por linha
+ * PRESERVANDO os pesos: `proporção_i = (percentage_i/100) × parts.flour`;
+ * `parts` vira `{isca, water}`. Também coage qualquer `proportion` não-finito a 0
+ * (robustez contra JSON corrompido). Idempotente: receitas já no modelo novo
+ * passam intactas.
+ */
+function migrateSourdough(r: Record<string, unknown>): void {
+  const sd = r.sourdough as Record<string, unknown> | undefined;
+  if (!sd || typeof sd !== 'object') return;
+  const parts = sd.parts as Record<string, unknown> | undefined;
+  const flours = Array.isArray(sd.flours) ? (sd.flours as Record<string, unknown>[]) : [];
+  const hadOldFlourPart = !!parts && typeof parts === 'object' && 'flour' in parts;
+  const oldFlourPart = hadOldFlourPart ? Number(parts!.flour) || 0 : 0;
+
+  for (const f of flours) {
+    if (!f || typeof f !== 'object') continue;
+    if (typeof f.proportion !== 'number' || !Number.isFinite(f.proportion)) {
+      const pct = typeof f.percentage === 'number' ? f.percentage : 0;
+      // Preserva o peso do modelo antigo: prop = (%/100) × parte-farinha.
+      f.proportion = hadOldFlourPart ? (pct / 100) * oldFlourPart : 0;
+    }
+    if ('percentage' in f) delete f.percentage;
+  }
+
+  if (parts && typeof parts === 'object') {
+    sd.parts = { isca: Number(parts.isca) || 0, water: Number(parts.water) || 0 };
+  }
 }
 
 export function createRecipeStore(opts: RecipeStoreOptions = {}): RecipeStore {

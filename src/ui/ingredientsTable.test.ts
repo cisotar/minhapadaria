@@ -109,42 +109,45 @@ describe('ingredientsTable (jsdom)', () => {
     expect(mlBtnAfter.classList.contains('active')).toBe(true); // rótulo trocou
   });
 
-  it('7. blur do Peso do Produto = 0 reverte (§5.C, impede ÷0 no Custo/g)', () => {
+  it('7. farinha (linha consumida): Peso do Produto e Preço Pago são texto plano, sem <input> (edição migrou para a Ancoragem)', () => {
     const { root } = mount();
     const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
-    const pwInput = row.querySelector('input[aria-label="Peso do produto de Farinha Branca"]') as HTMLInputElement;
-    expect(pwInput.value).toBe('1,0'); // packageSize=1 (na unidade "kg" do seletor, sem milhar por ser <1000)
 
-    pwInput.value = '0';
-    pwInput.dispatchEvent(new Event('input', { bubbles: true }));
-    pwInput.dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(row.querySelector('input[aria-label="Peso do produto de Farinha Branca"]')).toBeNull();
+    expect(row.querySelector('input[aria-label="Preço pago de Farinha Branca"]')).toBeNull();
+    expect(row.querySelector('input[aria-label="Nome da farinha"]')).toBeNull();
+    expect(row.querySelector('input[aria-label="Porcentagem de Farinha Branca"]')).toBeNull();
 
-    expect(pwInput.value).toBe('1,0'); // reverte ao último valor válido
-    expect(pwInput.getAttribute('aria-invalid')).toBe('true');
+    const cells = Array.from(row.querySelectorAll('td'));
+    expect(cells[0].textContent).toContain('Farinha Branca');
+    expect(cells[0].querySelector('small.note-muted')).not.toBeNull(); // "(↑ vem da Ancoragem)"
+    expect(cells[3].textContent).toBe('R$ 8,00'); // Preço pago (packageCost.pricePaid da golden seed)
+    expect(cells[4].textContent).toBe('1,0 kg'); // Peso do produto (packageSize + unidade)
   });
 
-  it('8. blur do Preço Pago = −1 reverte (§5.C, não-negativo)', () => {
-    const { root } = mount();
-    const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
-    const priceInput = row.querySelector('input[aria-label="Preço pago de Farinha Branca"]') as HTMLInputElement;
-    expect(priceInput.value).toBe('8,00');
+  it('8. farinha (linha consumida): editar `packageCost`/`percentage` no store (ex.: via Ancoragem) repinta % / peso / preço / peso-do-produto aqui', () => {
+    const { root, store } = mount();
+    const row = () => root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    const cells = () => Array.from(row().querySelectorAll('td'));
 
-    priceInput.value = '-1';
-    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
-    priceInput.dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(cells()[1].textContent).toBe('100,00'); // única farinha — 100% (golden seed)
 
-    expect(priceInput.value).toBe('8,00'); // reverte ao último valor válido
-    expect(priceInput.getAttribute('aria-invalid')).toBe('true');
+    store.update((draft) => {
+      draft.ingredients[0].packageCost.pricePaid = 12;
+      draft.ingredients[0].packageCost.packageSize = 2;
+    });
+
+    expect(cells()[3].textContent).toBe('R$ 12,00');
+    expect(cells()[4].textContent).toBe('2,0 kg');
   });
 
-  it('9. mínimo 1 farinha: botão remover desabilitado na última farinha (§5.B)', () => {
+  it('9. farinha (linha consumida): sem botão remover — a trava de mínimo 1 farinha (§5.B) vive na Ancoragem (batchPanel.ts)', () => {
     const { root } = mount(); // golden seed tem uma única farinha (Farinha Branca)
     const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
-    const removeBtn = row.querySelector('button[aria-label="Remover Farinha Branca"]') as HTMLButtonElement;
-    expect(removeBtn.disabled).toBe(true);
-    expect(removeBtn.title).toMatch(/farinha/i);
+    const actionsCell = row.querySelector('td.col-actions') as HTMLElement;
+    expect(actionsCell.querySelector('button')).toBeNull(); // sem remover aqui — só na Ancoragem
 
-    // Outra categoria (não-farinha) permanece removível normalmente.
+    // Outra categoria (não-farinha) permanece removível normalmente, sem trava.
     const saltRow = root.querySelector('tr[data-ingredient-id="salt-1"]') as HTMLTableRowElement;
     const saltRemoveBtn = saltRow.querySelector('button[aria-label="Remover Sal"]') as HTMLButtonElement;
     expect(saltRemoveBtn.disabled).toBe(false);
@@ -170,8 +173,10 @@ describe('ingredientsTable (jsdom)', () => {
     expect(pctInput.readOnly).toBe(true);
   });
 
-  it('4. blur com soma de farinhas ≠ 100% reverte o campo (§5.A)', () => {
-    // Cenário com 2 farinhas (60/40) para exercitar a soma — golden seed tem 1 só.
+  it('4. múltiplas farinhas (2): as duas aparecem como linhas consumidas, somente-leitura, na ordem do array (§5.A vive na Ancoragem)', () => {
+    // Cenário com 2 farinhas (60/40) — golden seed tem 1 só. A soma-100% (§5.A)
+    // é validada na tabela "Farinhas" do card Ancoragem (batchPanel.ts); aqui
+    // a tabela Ingredientes só exibe o que já veio calculado.
     const prefs = createPrefsStore({ storage: createMemoryStorage() });
     const recipe = goldenSeed();
     recipe.ingredients[0].percentage = 60;
@@ -188,13 +193,68 @@ describe('ingredientsTable (jsdom)', () => {
     const root = document.createElement('div');
     renderIngredientsTable(root, store);
 
-    const pctInput = root.querySelector('input[aria-label="Porcentagem de Farinha Branca"]') as HTMLInputElement;
-    expect(pctInput.value).toBe('60,00');
+    expect(root.querySelector('input[aria-label="Porcentagem de Farinha Branca"]')).toBeNull();
+    expect(root.querySelector('input[aria-label="Porcentagem de Farinha Integral"]')).toBeNull();
 
-    pctInput.value = '90,00'; // 90 + 40 = 130% — rompe 100%
-    pctInput.dispatchEvent(new Event('input', { bubbles: true }));
-    pctInput.dispatchEvent(new Event('blur', { bubbles: true }));
+    const row1 = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    const row2 = root.querySelector('tr[data-ingredient-id="flour-2"]') as HTMLTableRowElement;
+    expect((row1.querySelectorAll('td')[1] as HTMLElement).textContent).toBe('60,00');
+    expect((row2.querySelectorAll('td')[1] as HTMLElement).textContent).toBe('40,00');
+  });
 
-    expect(pctInput.value).toBe('60,00'); // reverte ao último valor válido, sem redistribuir
+  it('11. contrato-espelho §3.2 (spec/refactor-farinhas-multiplas.md, AC6): farinhas formam bloco CONTÍGUO no topo mesmo com array NÃO-contíguo (ex.: farinha adicionada no fim, como o botão "+ farinha" faz)', () => {
+    const prefs = createPrefsStore({ storage: createMemoryStorage() });
+    const recipe = goldenSeed(); // [flour-1, water-1, oil-1, salt-1]
+    recipe.ingredients.push({
+      id: 'flour-2',
+      name: 'Farinha Integral',
+      category: 'flour',
+      weight: 0,
+      percentage: 0,
+      packageCost: { pricePaid: 6, packageSize: 1, packageUnit: 'kg' },
+    }); // array cru: [flour-1, water-1, oil-1, salt-1, flour-2] — farinhas NÃO adjacentes no array
+    const store = createAppState(recipe, prefs);
+    const root = document.createElement('div');
+    renderIngredientsTable(root, store);
+
+    const rows = Array.from(root.querySelectorAll('tbody tr')).filter((tr) => !tr.querySelector('.table-add-cell'));
+    // AC6: as 2 primeiras linhas são as farinhas, na ordem do array, antes de água/azeite/sal/Fermento.
+    expect(rows.map((tr) => tr.getAttribute('data-ingredient-id'))).toEqual([
+      'flour-1',
+      'flour-2',
+      'water-1',
+      'oil-1',
+      'salt-1',
+      'fermento',
+    ]);
+  });
+
+  it('12. contrato-espelho §3.4 (spec/refactor-farinhas-multiplas.md, AC2, bug do nome): renomear a farinha no store repinta o NOME aqui, sem fullRender (mesma lista de ids)', () => {
+    const { root, store } = mount();
+    const row = () => root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    expect(row().querySelector('td')?.textContent).toContain('Farinha Branca');
+
+    store.update((draft) => {
+      draft.ingredients[0].name = 'Venturelli';
+    });
+
+    expect(row().querySelector('td')?.textContent).toContain('Venturelli');
+    expect(row().querySelector('td')?.textContent).toContain('vem da Ancoragem'); // nota preservada
+    expect(row().querySelector('script')).toBeNull();
+  });
+
+  it('13. escape XSS no nome da farinha (regra de ouro 3): nunca via innerHTML, mesmo repintado pelo patch do nome', () => {
+    const prefs = createPrefsStore({ storage: createMemoryStorage() });
+    const store = createAppState(goldenSeed(), prefs);
+    const root = document.createElement('div');
+    renderIngredientsTable(root, store);
+
+    store.update((draft) => {
+      draft.ingredients[0].name = '<script>x</script>';
+    });
+
+    expect(root.querySelector('script')).toBeNull();
+    const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    expect(row.querySelector('td')?.textContent).toContain('<script>x</script>'); // literal, nunca executado
   });
 });

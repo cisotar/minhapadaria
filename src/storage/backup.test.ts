@@ -42,7 +42,7 @@ function recipeA(): Recipe {
     ],
     sourdough: {
       percentageOfTotalFlour: 20,
-      parts: { isca: 1, flour: 7, water: 7 },
+      parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
       waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
     },
@@ -69,7 +69,7 @@ function recipeB(): Recipe {
     ingredients: [],
     sourdough: {
       percentageOfTotalFlour: 15,
-      parts: { isca: 1, flour: 7, water: 7 },
+      parts: { isca: 1, water: 7 }, // refactor §5.3
       flours: [],
       waterPackageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'L' },
     },

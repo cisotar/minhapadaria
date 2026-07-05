@@ -86,6 +86,7 @@ export function recalculate(recipe: Recipe): RecalcResult {
     fTotal,
     state.sourdough.percentageOfTotalFlour,
     state.sourdough.parts,
+    state.sourdough.flours, // refactor §5.3: denominador global inclui as proporções das farinhas
   );
   const flourFermWeight = sd?.flourWeight ?? 0;
   const wFerm = sd?.totalWeight ?? 0;

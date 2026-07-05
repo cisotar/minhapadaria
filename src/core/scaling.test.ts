@@ -42,9 +42,9 @@ function goldenRecipe(): Recipe {
     ],
     sourdough: {
       percentageOfTotalFlour: 20,
-      parts: { isca: 0, flour: 1, water: 1 },
+      parts: { isca: 0, water: 1 }, // refactor §5.3: proporção por linha
       flours: [
-        { flourId: 'sf1', name: 'Farinha Branca', percentage: 100, weight: 0, packageCost: pkg(8, 1, 'kg') },
+        { flourId: 'sf1', name: 'Farinha Branca', proportion: 1, weight: 0, packageCost: pkg(8, 1, 'kg') },
       ],
       waterPackageCost: FREE_WATER,
     },

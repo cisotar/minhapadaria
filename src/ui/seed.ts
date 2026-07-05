@@ -9,7 +9,23 @@
  * Só dados — zero lógica, zero fórmula. Serve de estado inicial até existir o
  * fluxo "abrir receita" (telas de Receitas, issue 017/`src/storage/recipes.ts`).
  *
- * Seções implementadas: §12 (exemplo validado), §6 (estrutura de dados).
+ * Refactor-farinhas-multiplas §5.7 (2026-07-06, fase 2 — proporção por linha
+ * no fermento): `sourdough.parts` não tem mais `flour` (fica `{isca, water}`);
+ * a farinha do fermento usa `proportion` (era `percentage`).
+ *
+ * Ajuste do cliente (§5.1, nota "seed/golden §12", 2026-07-06): a Isca padrão
+ * passa a ser **1** (era 0) — `parts {isca:1, water:1}` + farinha do fermento
+ * `proportion:1` → denominador global = 1+1+1 = 3 (não mais 2). O seed
+ * DEIXA DE reproduzir os números do exemplo §12 (que usava Isca 0): agora
+ * FarinhaFerm = ÁguaFerm = W_ferm(200)/3 ≈ 66,67g (era 100g), Farinha Real
+ * Consumida = 1000 + 66,67 ≈ 1066,67g (era 1100g) — a hidratação do FERMENTO
+ * continua 100% (água=farinha em qualquer denom), mas a hidratação REAL da
+ * receita e os custos mudam (recalculados pelo engine, não à mão aqui). A
+ * validação das FÓRMULAS da §12 (Isca 0) permanece garantida à parte, em
+ * `golden-example.test.ts` (fixture próprio) — o §12 é referência de fórmula,
+ * não mais o estado inicial deste seed.
+ *
+ * Seções implementadas: §12 (exemplo de fórmula, fixture próprio), §6 (estrutura de dados).
  */
 import type { Recipe } from '../core/types';
 
@@ -60,12 +76,12 @@ export function goldenSeed(): Recipe {
     ],
     sourdough: {
       percentageOfTotalFlour: 20, // §12: proporção do fermento
-      parts: { isca: 0, flour: 1, water: 1 }, // §12: Partes 0:1:1
+      parts: { isca: 1, water: 1 }, // ajuste do cliente §5.1: Isca padrão 1 (era 0) — sem `flour` (refactor §5.7)
       flours: [
         {
           flourId: 'flour-1',
           name: 'Farinha Branca',
-          percentage: 100,
+          proportion: 1, // refactor §5.7 (era percentage:100) — denom global agora 1+1+1=3 (Isca 1, ajuste do cliente)
           packageCost: { pricePaid: 8, packageSize: 1, packageUnit: 'kg' },
           weight: 0,
         },

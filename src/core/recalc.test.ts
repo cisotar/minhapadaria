@@ -43,10 +43,11 @@ function goldenRecipe(): Recipe {
       { id: 's1', name: 'Sal', category: 'salt', weight: 0, percentage: 2, packageCost: pkg(3, 1, 'kg') },
     ],
     sourdough: {
+      // refactor §5.3: proporção por linha (denom global isca + Σfarinhas + água).
       percentageOfTotalFlour: 20,
-      parts: { isca: 0, flour: 1, water: 1 },
+      parts: { isca: 0, water: 1 },
       flours: [
-        { flourId: 'sf1', name: 'Farinha Branca', percentage: 100, weight: 0, packageCost: pkg(8, 1, 'kg') },
+        { flourId: 'sf1', name: 'Farinha Branca', proportion: 1, weight: 0, packageCost: pkg(8, 1, 'kg') },
       ],
       waterPackageCost: FREE_WATER,
     },

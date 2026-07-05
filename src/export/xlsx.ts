@@ -141,7 +141,7 @@ export function buildRecipeWorkbook(
   for (const f of sd.flours) {
     const row = ws.addRow([`  ${f.name}`]);
     setNum(row.getCell(2), f.weight, 1, FMT_WEIGHT);
-    setNum(row.getCell(3), f.percentage, 2, FMT_PERCENT);
+    setNum(row.getCell(3), f.proportion, 2, FMT_PERCENT); // refactor §5.3: proporção por linha (era %)
     if (includeCosts) setNum(row.getCell(6), f.costPerGram ?? null, 4, FMT_COST_PER_GRAM);
   }
   ws.addRow([]);

@@ -47,7 +47,7 @@ function setAndBlur(input: HTMLInputElement, value: string): void {
 }
 
 describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
-  it('1. select de receitas populado; escolher pré-preenche Custo/Preço unitário (golden §12: 4,43/7,38)', () => {
+  it('1. select de receitas populado; escolher pré-preenche Custo/Preço unitário (seed com Isca=1, 2026-07-06: 4,30/7,16)', () => {
     const { root, recipe } = mount();
     const select = root.querySelector('select[aria-label="Receita"]') as HTMLSelectElement;
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
@@ -57,8 +57,12 @@ describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
 
     const costInput = root.querySelector('input[aria-label="Custo Unitário"]') as HTMLInputElement;
     const priceInput = root.querySelector('input[aria-label="Preço de Venda Unitário"]') as HTMLInputElement;
-    expect(costInput.value).toBe('4,43');
-    expect(priceInput.value).toBe('7,38');
+    // Ajuste do cliente (§5.1, 2026-07-06): seed usa Isca=1 (era 0) — denom
+    // global 1+1+1=3 muda o custo do fermento e, por consequência, o custo/
+    // preço unitário da receita (golden-example.test.ts mantém isca 0 e os
+    // números originais da §12 à parte, fixture próprio).
+    expect(costInput.value).toBe('4,30');
+    expect(priceInput.value).toBe('7,16');
   });
 
   it('2. data default = formatDate(now()) com now injetado fixo 2026-07-05', () => {

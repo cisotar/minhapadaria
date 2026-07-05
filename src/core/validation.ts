@@ -19,12 +19,12 @@
  *
  * Seções implementadas: §5.A, §5.B, §5.C, §5.D, §14.6, §7.1.
  */
-import type { SourdoughParts } from './types';
+import type { SourdoughFlour, SourdoughParts } from './types';
 // Reuso (regras de ouro #1/#2): donos únicos da aritmética/predicados.
 import { percentagesSumTo100 } from './bakers';
-import { isValidSourdoughParts } from './sourdough';
+import { isValidSourdoughParts, sourdoughFlourProportionSum } from './sourdough';
 import { MARGIN_MIN, MARGIN_MAX, isLoss } from './pricing';
-import { formatDate } from './format';
+import { formatDate, formatPercent } from './format';
 
 export type ValidationLevel = 'block' | 'warn';
 export interface ValidationIssue {
@@ -62,6 +62,28 @@ export function validatePercentageSum(
   return block(`A soma das porcentagens das farinhas ${label} deve ser 100%.`);
 }
 
+// ── Farinhas principais, versão SOFT (decisão do cliente, 2026-07-05) ──
+/**
+ * Soma das % das farinhas principais — variante NÃO-bloqueante, usada só pela
+ * tabela "Farinhas" do card Ancoragem (`batchPanel.ts`). Desvio CONSCIENTE da
+ * spec §2.A/§5.A (trava-100%/bloqueio de soma): com N farinhas partindo de 0,
+ * bloquear cada blur com Σ≠100 tornava IMPOSSÍVEL o usuário chegar a 100%
+ * (cada tentativa intermediária era revertida). Aqui NUNCA bloqueia — só
+ * avisa (permite o valor); reusa `percentagesSumTo100` (bakers.ts, dono único
+ * do epsilon anti-drift IEEE-754) para a comparação com tolerância. O
+ * fermento e as farinhas do fermento (sourdoughTable.ts) NÃO usam esta
+ * variante — continuam com `validatePercentageSum` (bloqueio, §5.A).
+ */
+export function validateFlourPercentageSumSoft(percentages: readonly number[]): ValidationResult {
+  if (percentagesSumTo100(percentages)) return null; // soma 100 — sem aviso
+  const sum = percentages.reduce((acc, p) => acc + p, 0);
+  const diff = 100 - sum;
+  if (diff > 0) {
+    return warn(`Faltam ${formatPercent(diff)}% para 100%.`);
+  }
+  return warn(`Excede 100% em ${formatPercent(-diff)}% — reduza.`);
+}
+
 // ── §5.B — mínimo 1 farinha por grupo ──
 export function validateFlourCount(count: number, group: FlourGroup): ValidationResult {
   if (count >= 1) return null; // §5.B
@@ -86,16 +108,32 @@ export function validateNonNegative(value: number, fieldLabel: string): Validati
   return block(`${fieldLabel} não pode ser negativo.`);
 }
 
-/** Partes do fermento: ≥ 0 e SomaPartes > 0 (§5.C) — reusa isValidSourdoughParts. */
-export function validateSourdoughParts(parts: SourdoughParts): ValidationResult {
-  if (isValidSourdoughParts(parts)) return null; // §5.C
-  return block('As partes do fermento não podem ser negativas e a soma deve ser maior que zero.');
+/**
+ * Proporções do fermento (refactor §5.6): Isca/Água ≥ 0, cada proporção de
+ * farinha ≥ 0 E denominador global (Isca + Σfarinhas + Água) > 0 — reusa
+ * isValidSourdoughParts. Sem regra "somar 100" (proporções livres, AC23).
+ */
+export function validateSourdoughParts(
+  parts: SourdoughParts,
+  flours: readonly SourdoughFlour[],
+): ValidationResult {
+  if (isValidSourdoughParts(parts, flours)) return null; // refactor §5.6
+  return block(
+    'As proporções do fermento não podem ser negativas e a soma de todas deve ser maior que zero.',
+  );
 }
 
-/** Parte de farinha do fermento = 0 → aviso: hidratação indefinida ("—") (§5.C). */
-export function validateSourdoughFlourPart(flourPart: number): ValidationResult {
-  if (flourPart !== 0) return null; // §5.C: >0 (ou <0) não é este aviso
-  return warn('Parte de farinha do fermento é 0: a hidratação fica indefinida (—).');
+/**
+ * Σ das proporções das farinhas do fermento = 0 → aviso: hidratação indefinida
+ * ("—") (refactor §5.5). Reusa sourdoughFlourProportionSum (dono único).
+ */
+export function validateSourdoughFlourPart(
+  flours: readonly SourdoughFlour[],
+): ValidationResult {
+  if (sourdoughFlourProportionSum(flours) !== 0) return null; // refactor §5.5: >0 não é este aviso
+  return warn(
+    'A soma das proporções das farinhas do fermento é 0: a hidratação fica indefinida (—).',
+  );
 }
 
 /** Proporção do fermento: <0 bloqueia; =0 avisa (sem fermento); >0 OK (§5.C). */

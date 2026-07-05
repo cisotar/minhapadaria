@@ -27,11 +27,11 @@ function pkg(pricePaid: number, packageSize: number, packageUnit: PackageCost['p
 }
 
 // Fábrica mínima de SourdoughFlour (só os campos usados pelo core de custo).
-function sflour(percentage: number, cost: PackageCost): SourdoughFlour {
+function sflour(proportion: number, cost: PackageCost): SourdoughFlour {
   return {
-    flourId: `f-${percentage}`,
-    name: `farinha ${percentage}`,
-    percentage,
+    flourId: `f-${proportion}`,
+    name: `farinha ${proportion}`,
+    proportion, // refactor §5.3 (era `percentage`)
     packageCost: cost,
     weight: 0,
   };

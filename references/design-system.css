@@ -248,11 +248,15 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .table th {
   font-size: var(--fs-small); font-weight: 700; color: var(--chocolate);
   text-transform: uppercase; letter-spacing: .04em;
-  text-align: left; padding: var(--sp-2) var(--sp-3);
+  text-align: left; padding: var(--sp-2) var(--sp-4);
   border-bottom: 2px solid var(--border-strong);
 }
 .table th.num { text-align: right; }
-.table td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
+/* Padding horizontal ampliado de --sp-3 para --sp-4 (ajuste pós-teste do
+   cliente, 2026-07-05): respiro insuficiente entre colunas nas tabelas
+   Farinhas/Ingredientes (idênticas, mesma folha). Aplica a TODAS as tabelas
+   `.table` — consistência, sem CSS específico de uma só. */
+.table td { padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--border); }
 /* Sem zebra — tabelas minimalistas (brandbook §4.1) */
 .table tfoot td { font-weight: 700; border-top: 2px solid var(--border-strong); border-bottom: none; }
 
@@ -268,6 +272,18 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   border-color: transparent; background: transparent;
   color: var(--text-2); cursor: default; box-shadow: none;
 }
+
+/* Cap de largura dos campos numéricos inline (ajuste pós-teste do cliente,
+   2026-07-05): `.cell-input { width:100% }` inflava a coluna inteira até a
+   largura do <td> — % e Preço pago ficavam larguíssimos e Peso/Custo
+   espremidos. `max-width` (não `width` fixo) deixa a coluna encolher ao
+   conteúdo (cabe "100,00"/"19,90" com folga) sem quebrar o preenchimento
+   flexível de telas menores; `td.num`/`.num` já alinham a valor à direita.
+   NÃO se aplica ao input de NOME (`.cell-input` sem `.num`), que segue
+   flexível/largo. `.pw-combo .cell-input` (abaixo) já sobrescreve com
+   `width:auto` + `flex:0 1 auto` para o par valor+unidade — sem conflito,
+   o cap só arredonda o teto superior daquele campo também. */
+.table .cell-input.num { max-width: 6.5rem; }
 
 /* Linha consolidada do fermento (sub-receita à parte) — sem cor de fundo,
    distinção só pelo link de composição */

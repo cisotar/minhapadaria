@@ -106,14 +106,18 @@ describe('recipesList (jsdom)', () => {
     expect(root.textContent).toContain('2 receitas cadastradas');
   });
 
-  it('3. card stats: fixture §12 sem Azeite → Custo unit. R$ 4,43 e chip 40,00% classe chip-ok', () => {
+  it('3. card stats: fixture sem Azeite (seed com Isca=1, 2026-07-06) → Custo unit. R$ 4,30 e chip 40,00% classe chip-ok', () => {
     const storage = createMemoryStorage();
     const recipeStore = makeStore(storage);
     recipeStore.create(goldenSeedNoFat());
     const { root } = mount({ storage, recipeStore });
 
     const card = root.querySelector('.recipe-card')!;
-    expect(card.querySelector('.stat-value')!.textContent).toBe('R$ 4,43');
+    // Ajuste do cliente (§5.1, 2026-07-06): seed usa Isca=1 (era 0) — muda o
+    // custo do fermento e, por consequência, o custo unitário da receita
+    // (era R$4,43 com Isca 0; golden-example.test.ts mantém o fixture §12
+    // original à parte, AC25).
+    expect(card.querySelector('.stat-value')!.textContent).toBe('R$ 4,30');
     const chip = card.querySelector('.chip') as HTMLElement;
     expect(chip.textContent).toBe('40,00%');
     expect(chip.classList.contains('chip-ok')).toBe(true);
