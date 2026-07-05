@@ -64,8 +64,11 @@ export interface Sourdough {
 }
 
 export interface HydrationSummary {
-  nominal: number;
-  real: number;
+  // §5.C: F_total=0 (ou denominador 0) torna a hidratação impossível → null
+  // (nunca 0/NaN). Alargado de number para number|null pela issue 008 (engine
+  // ininterrompível, §1.6). Entradas válidas (golden §12) saem number concreto.
+  nominal: number | null;
+  real: number | null;
 }
 
 export interface Pricing {
@@ -73,6 +76,9 @@ export interface Pricing {
   salePrice: number;
   profitMargin: number;
   profitPerUnit: number;
+  // §3.E: qual dos três pontos de entrada sincronizados dirige o cálculo do
+  // engine (estado persistido do usuário; UI 016 o define). Adicionado pela 008.
+  priceInputMode: 'sale-price' | 'margin' | 'profit';
   totalCost?: number;
   totalRevenue?: number;
   totalProfit?: number;
@@ -96,15 +102,19 @@ export interface Recipe {
 
 export interface RecipeSummary {
   hydration: HydrationSummary;
+  // §2.D: Farinha Real Consumida = F_total + FarinhaFerm; nunca impossível → number.
   realFlourConsumed: number;
-  totalCost: number;
-  costPerUnit: number;
-  totalProductionCost: number;
-  salePrice: number;
-  totalRevenue: number;
-  profitPerUnit: number;
-  totalProfit: number;
-  profitMargin: number;
+  // §5.C + contrato null-vs-0: campos dependentes de custo/preço impossível
+  // (Peso do Produto ≤ 0) são number|null (null = cálculo impossível, jamais 0).
+  // Alargados de number pela issue 008. Golden §12 (entradas válidas) → number.
+  totalCost: number | null;
+  costPerUnit: number | null;
+  totalProductionCost: number | null;
+  salePrice: number | null;
+  totalRevenue: number | null;
+  profitPerUnit: number | null;
+  totalProfit: number | null;
+  profitMargin: number | null;
 }
 
 // --- Histórico de Fornadas ---

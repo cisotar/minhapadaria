@@ -4,6 +4,32 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 008 — recalc engine)**
+
+1. **types.ts diverge da spec §6 — DESTAQUE PARA REVISOR HUMANO**: campos derivados HydrationSummary/RecipeSummary alargados para `number | null` (contrato PROGRESS-005/006 decide null ≠ 0 ≠ erro). Exemplo: `realHydration?: number | null` (nil se ÷0 defensivo), `realFlourConsumed: number` (sempre). Sem mapeamento auto de undefined→0 no engine. Motivo: preservar contrato null-vs-0; consumidores (UI issue 016) decidem exibição.
+
+2. **Pricing.priceInputMode é campo novo de modelo**: nova chave `'sale-price' | 'margin' | 'profit'` em Pricing.ts §6 extensão. Engine recalc respeitou 3 modos isolados (recalculate não força modo); storage 011/012 e UI 016 devem persistir/definir este campo. Motivo: contrato de issue 007 (precificação 3-modos) requer persistência; tipos refletem realidade.
+
+3. **Denominador do modo peso→% INCLUI W_ferm (fermento)**: spec §1.3 ("total geral da massa") + §3.D nota ("o peso do fermento conta como parte do peso final da massa"). Fórmula: `% = peso / (Σ pesos ingredientes + W_ferm) × 100`. Fixture do teste: farinhas 800+200 + água 700 + sal 20 + W_ferm 200 = **1920**. O exemplo trabalhado do plano usava 1720 (lapso: omitia W_ferm da própria fórmula); revisor-spec confirmou 1920 como correto — só com W_ferm no denominador as proporções somam exatamente 100%.
+
+4. **recalc assume batchPlanningMode 'total' permanentemente**: issue 008 implementou engine para modo 'total' (toda fornada). Per-unit é extensão blocada na issue 009 (calculadora multi-unidade). Motivo: spec §1.2 assume total; mudanças de modo requerem bloquear entrada diferente, issue 009 decide. Engine puro respeitou premissa (recalculate valida batchPlanningMode='total' ou null-safe-returns).
+
+---
+
+## Iteração 008 — 2026-07-05 ~02:55 (recalc engine)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 008-recalc |
+| **Timestamp** | 2026-07-05 02:55 |
+| **O que foi feito** | src/core/recalc.ts: 1 função central `recalculate` orquestrando recálculo em lote de Recipe a partir do estado puro (§1.2/§1.6). Funções puras: (a) modo %→peso — derivar pesos de %; (b) modo peso→% — exibir % como peso/total geral da massa (INCLUI W_ferm denominador correto §1.3); (c) transitionToPercentageMode (§1.5) — converter explicitamente peso→% calculando F_total dos pesos atuais, reusando bakers.weightFromPercentage em marcha-ré; (d) orquestra camadas bakers (§3.A)·sourdough (§3.B)·hydration (§2.C/§2.D)·costs (§3.E)·pricing (§3.E) sem duplicar fórmula; (e) sem DOM, sem arredondamento (§9), sem localStorage, sem rede, pureza total. types.ts: HydrationSummary/RecipeSummary ampliados para `number | null` conforme contrato null-vs-0 (issue 005/006); Pricing.priceInputMode novo (`'sale-price'|'margin'|'profit'`). src/core/recalc.test.ts: 7 casos TDD (modo %→peso, modo peso→%, transição peso→%, idempotência ambos modos, pureza, null defensivo). src/core/golden-example.test.ts substituído por teste real ponta a ponta via `recalculate`: gabarito §12 fixado como contrato permanente (5 asserts: unitCost, salePrice, profitMargin, realHydration, farinha real consumida; antes era placeholder que falhava). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: recalc.test.ts (7) + golden-example.test.ts (5 asserts em 1 suite) + pricing.test.ts (18) + costs.test.ts (13) + hydration.test.ts (14) + sourdough.test.ts (12) + bakers.test.ts (22) + format.test.ts (23) = 114 total. **Pass: 114. Fail: 0.** 🟢 Primeira vez 100% verde da suíte (antes golden-example era 1 fail intencional). Build Vite: verde. Gates: testes 114 pass ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados estruturais. Denominador 1920 validado contra §1.3/§3.D (Σ ingredientes + W_ferm; fixture 800+200+700+20+200). types.ts alargamento null aprovado conforme contrato issues 005/006. **ACHADOS DIFERIDOS PARA REVISOR HUMANO** (registrados em "Decisões da noite" acima): (a) types.ts diverge literalmente de spec §6 (campos derivados + null); (b) Pricing.priceInputMode campo novo tipo — storage/UI devem persist; (c) modo peso→% denominador inclui W_ferm (fixture 1920); (d) batchPlanningMode 'total' bloqueado, per-unit issue 009. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em recalc.ts (§1.2/§1.3/§1.5/§1.6/§3.A/§3.B/§3.E/§2.C/§2.D/§9), recalc.test.ts, golden-example.test.ts. Reuso total: recalculate orquestra sem duplicar — bakers.weightFromPercentage/percentageFromWeight, sourdough.computeSourdoughWeights/distributeSourdoughFlourWeights, hydration.*, costs.*, pricing.priceFromMargin/priceFromSalePrice/pricingTotals em 1 função. Idempotência matemática validada (recalc de recalc ≡ recalc). golden §12 agora real: executa receita dourada e valida exatamente valores esperados. Mapa de módulos será atualizado agora. |
+
+---
+
 **2026-07-05 (issue 007 — precificação)**
 
 1. **Inconsistência na spec §3.E linha 232 — DESTAQUE PARA REVISOR HUMANO**: redação diz "CustoTotalProdução = CustoTotalReceita × Qtd", que quebraria o golden §12 (daria 8,86 × 2 = 17,72, e lucro total −2,95 em vez de 5,90). Resolvido conforme golden §12 fonte da verdade: totalProductionCost = unitCost × quantity = 4,43 × 2 = 8,86 (coerente com §14.3 BakeEntry.totalCost, custo por unidade vezes quantidade produzida). Motivo: golden §12 é contrato permanente da suíte; a fórmula literal de §3.E parece confundir CustoTotalProdução com CustoTotalReceita. Sugerir ao cliente: revisar redação de §3.E ou clarificar que totalProductionCost ≠ totalRecipeCost × Qtd.
