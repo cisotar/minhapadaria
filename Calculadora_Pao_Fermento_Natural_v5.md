@@ -54,13 +54,18 @@ Qualquer alteração de estado dispara **uma única função central de recálcu
 - **Farinhas** (compõem 100% entre si): nome, peso, porcentagem sobre $F_{total}$, custo por kg.
   - Uma única farinha: trava em 100%. Múltiplas: soma deve ser exatamente 100% (bloqueio no blur, Seção 5).
 - **Líquidos**: água, leite, cerveja etc. — peso, porcentagem, custo por litro.
-  - **Simplificação declarada**: assume-se densidade 1 (1g = 1mL) para todos os líquidos, inclusive leite e cerveja. O custo por litro é aplicado sobre o peso em gramas ÷ 1000.
+  - **Padrão de entrada: peso (gramas)**, seguindo a convenção de padeiro (baker's percentage é sempre em peso). Volume não é o padrão.
+  - **Entrada opcional em volume**: por líquido, o usuário pode alternar o campo para informar em mL/L em vez de gramas, caso prefira (ex: uma receita de referência que lista "300 mL de água"). O valor é convertido internamente para gramas usando a densidade (Seção 2.A.1) e o peso em gramas permanece o valor canônico armazenado.
+  - **Simplificação declarada**: assume-se densidade 1 (1g = 1mL) para todos os líquidos, inclusive leite e cerveja, tanto na conversão peso↔volume quanto no custo por litro (aplicado sobre o peso em gramas ÷ 1000).
+- **Gorduras** (azeite, óleo, manteiga, banha etc.): nome, peso, porcentagem sobre $F_{total}$, custo por kg (ou por litro, com mesma densidade 1:1 se em volume — Seção 2.A.1).
+  - **Categoria separada de Líquidos**: gordura **não entra no cálculo de Hidratação** (Seção 2.C), pois não hidrata a massa como água. Entra normalmente no peso total, custo e na Farinha Real Consumida via escalonamento.
+- **Ingredientes livres**: qualquer ingrediente (farinha, líquido, gordura, sal, extra) pode ser adicionado ou removido pelo usuário livremente para montar a receita — nem toda receita usa gordura, por exemplo. Regra de "sempre ao menos 1" (Seção 5.B) aplica-se apenas ao grupo de farinhas.
 - **Sal e Extras**: peso, porcentagem, custo por kg.
 
 ### B. Bloco do Fermento Natural (Sourdough / Levain)
 
 #### B.1. Configuração Geral
-- **Proporção do Fermento (%)**: sobre $F_{total}$. Incremento de 0.5%.
+- **Proporção do Fermento (%)**: sobre $F_{total}$. Incremento de 1% (fermento natural).
 - **Hidratação do Fermento (%)**: padrão 100%. Incremento de 5%.
 - O fermento é definido por proporção/hidratação **em ambos os modos de cálculo** (Seção 1.3).
 
@@ -80,6 +85,7 @@ Qualquer alteração de estado dispara **uma única função central de recálcu
 
 - **Hidratação Nominal**: $\dfrac{\sum \text{Líquidos Declarados}}{F_{total}} \times 100$
 - **Hidratação Real**: $\dfrac{\sum \text{Líquidos Declarados} + \text{Água do Fermento}}{F_{total} + \text{Farinha do Fermento}} \times 100$
+- **"Líquidos Declarados" inclui apenas a categoria `liquid`** (água, leite, cerveja etc.). Ingredientes da categoria `fat` (gorduras/óleos, ex: azeite) **não entram nessa soma**.
 
 Exibidas lado a lado (ex: "Nominal: 70% · Real: 72.7%").
 
@@ -92,6 +98,17 @@ Campo somente-leitura, sempre visível quando há fermento configurado.
 ### E. Painel de Controle de Escala e Produção
 
 - Peso da Farinha Total, Quantidade de Produtos, Painel de Precificação (3 modos sincronizados), Sistema de Unidades (Seção 7).
+
+#### E.1. Modo de Planejamento da Fornada
+
+Toggle com duas formas de definir o tamanho da fornada:
+
+- **Fornada inteira** (`total`): o usuário informa o **peso total de farinha** ($F_{total}$) de uma vez, para a fornada completa. Comportamento original da spec. A Quantidade de Produtos serve apenas para dividir custos e precificar (Seção 3.E).
+- **Por unidade** (`per-unit`): o usuário informa a **farinha-âncora de 1 unidade** ($F_{unit}$ — de um pão, bolo, ou o que estiver produzindo) e a **Quantidade de Produtos** ($N$). A farinha total é derivada e somente-leitura:
+$$F_{total} = F_{unit} \times N$$
+  - Alterar $F_{unit}$ ou $N$ recalcula $F_{total}$ e, em cascata, toda a receita (mesmo algoritmo do modo "% → peso", Seção 1.6).
+  - Disponível apenas no modo de cálculo "% → peso"; no modo "peso → %", o planejamento é sempre por fornada inteira.
+  - O escalonamento por peso alvo (Seção 3.D) segue disponível nos dois modos de planejamento; no modo por unidade, o resultado ajusta $F_{unit}$ mantendo $N$.
 
 ### F. Tela de Gerenciamento de Receitas
 
@@ -181,10 +198,11 @@ type CalculationMode = 'percentage-to-weight' | 'weight-to-percentage';
 interface Ingredient {
   id: string;
   name: string;
-  category: 'flour' | 'liquid' | 'salt' | 'extra';
-  weight: number;
+  category: 'flour' | 'liquid' | 'fat' | 'salt' | 'extra';
+  weight: number;              // valor canônico, sempre em gramas
   percentage: number;
   costPerUnit: number;
+  inputUnit?: 'weight' | 'volume'; // apenas para category 'liquid' ou 'fat'; padrão 'weight'
 }
 
 interface SourdoughFlour {
@@ -222,11 +240,15 @@ interface Pricing {
   totalProfit?: number;
 }
 
+type BatchPlanningMode = 'total' | 'per-unit';
+
 interface Recipe {
   id: string;
   name: string;
   calculationMode: CalculationMode;
-  flourTotalWeight: number;
+  batchPlanningMode: BatchPlanningMode; // Seção 2.E.1; padrão 'total'
+  flourTotalWeight: number;    // em 'per-unit', derivado: flourPerUnit * pricing.quantity
+  flourPerUnit?: number;       // farinha-âncora de 1 unidade; usado apenas em 'per-unit'
   ingredients: Ingredient[];
   sourdough: Sourdough;
   pricing: Pricing;
@@ -470,3 +492,7 @@ Lacunas identificadas na revisão da v4 e decisões que as fecharam:
 | 10 | Unidades imperiais | Removidas da v1; movidas para Futuras (Seções 7, 11) |
 | 11 | Risco de perda de dados no localStorage | Backup/restauração em arquivo JSON obrigatório na v1 (Seção 10) |
 | 12 | Integração com Google Docs do cliente | Débito registrado para o futuro, com restrições de segurança inegociáveis (Seção 11.1) |
+| 13 | Líquidos: entrada padrão peso ou volume? | Padrão é peso (convenção de padeiro); volume (mL/L) opcional por líquido, convertido via densidade 1:1 (Seção 2.A) |
+| 14 | Incremento de 0,5% na Proporção do Fermento era irreal para padaria | Corrigido para 1% (fermento natural). Fermento químico ficaria com 0,5%, mas está fora do escopo desta spec (Seção 2.B.1) |
+| 15 | Spec suporta ingredientes que nem toda receita usa (ex: azeite)? | Sim — ingredientes são livres para adicionar/remover (Seção 2.A). Azeite/gorduras viram categoria própria `fat`, separada de `liquid`, e **não contam na Hidratação** (Seções 2.A, 2.C, 6) |
+| 16 | Planejar fornada inteira vs. por unidade | Toggle: fornada inteira (informa $F_{total}$ direto) ou por unidade (informa farinha-âncora de 1 produto × quantidade; $F_{total}$ derivado). Por unidade só no modo "% → peso" (Seção 2.E.1) |
