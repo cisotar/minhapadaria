@@ -13,7 +13,7 @@
 | 009 | Escalonamento por alvo + fornada por unidade | core | 008 | done | 931f5ed |
 | 010 | Validações §5 consolidadas | core | 008 | done | 7e1fcfd |
 | 011 | Storage receitas CRUD + toggle custos | storage | 002 | done | b2fbaf4 |
-| 012 | Backup/restauração JSON | storage | 011 | todo | |
+| 012 | Backup/restauração JSON | storage | 011 | done | f0f9bba |
 | 013 | Fornadas — cálculos, agregações, persistência | core | 002, 011 | todo | |
 | 014 | UI calculadora — tabela de insumos | ui | 008, 010, 011 | todo | |
 | 015 | UI calculadora — fermento + hidratação | ui | 014 | todo | |
