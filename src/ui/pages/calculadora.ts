@@ -1,5 +1,5 @@
 /**
- * calculadora.ts — Composition root da página Calculadora (index.html), issues 014/015/016/017/028.
+ * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028.
  *
  * O que faz: instancia `createPrefsStore` (011), o estado inicial via
  * `goldenSeed` (§12) + `createAppState` (§1.6) — com o `normalize` opcional
@@ -11,7 +11,7 @@
  * 014), a sub-receita do Fermento (`renderSourdoughTable`, §2.B, 015) e, lado
  * a lado (`.grid-2`), a Hidratação (`renderHydrationPanel`, §2.C/§2.D, 015) e
  * a Precificação (`renderPricingPanel`, §3.E/§4, 016) — no `<div id="app">`
- * do shell estático de `index.html` (nav/header já são HTML puro). Zero
+ * do shell estático de `receitas.html` (nav/header já são HTML puro). Zero
  * fórmula aqui: só composição/wiring (regra de ouro 2).
  *
  * Integração `?recipe=<id>` (issue 017, §2.F): `new
@@ -20,7 +20,7 @@
  * semente inicial (no lugar de `goldenSeed()`) e liga o auto-save; se o id
  * não existir, cai em `goldenSeed()` + chip de aviso discreto ("Receita não
  * encontrada; abrindo modelo padrão."). Sem `?recipe` (acesso direto a
- * `index.html`) o comportamento é o de sempre: golden seed efêmero, SEM
+ * `receitas.html`) o comportamento é o de sempre: golden seed efêmero, SEM
  * auto-save (preserva o comportamento anterior às issues 014–016).
  *
  * Auto-save (decisão registrada, §10 "debounce em inputs" + §1.6 "sem
@@ -74,7 +74,7 @@ export interface InitCalculadoraDeps {
 /**
  * Composition root da Calculadora (§2.F): monta o estado inicial (golden seed
  * ou receita salva via `?recipe=<id>`), o auto-save e todos os cards da tela
- * dentro de `#app` (shell estático de `index.html`). Chamada sem argumentos
+ * dentro de `#app` (shell estático de `receitas.html`). Chamada sem argumentos
  * pelo rodapé deste módulo — o comportamento de produção não muda com a
  * extração (regra de ouro 2/arquitetura: zero lógica nova, só testabilidade).
  */
@@ -237,6 +237,6 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
   }
 }
 
-// Composition root real (script da página, `index.html`): sem argumentos —
+// Composition root real (script da página, `receitas.html`): sem argumentos —
 // mesmas instâncias/URL de produção de sempre (comportamento inalterado).
 initCalculadora();

@@ -1,10 +1,10 @@
 /**
- * receitas.ts — Composition root da página Minhas Receitas (receitas.html),
+ * receitas.ts — Composition root da página Minhas Receitas (index.html após issue 032),
  * issue 017 (spec §2.F).
  *
  * O que faz: instancia `createRecipeStore()` (localStorage real, 011) +
  * `defaultStorage()` (mesmo backend, 010), preenche o `<h1>` estático do
- * cabeçalho (`#rc-header`, shell de `receitas.html`) e chama
+ * cabeçalho (`#rc-header`, shell de `index.html`) e chama
  * `renderRecipesList(app, {recipeStore, storage, headerRoot: header})` — que
  * monta a barra de ações (busca/criar/backup) dentro de `#app` e o subtítulo
  * dinâmico dentro de `#rc-header` (issue 025 item 3, ao lado do `<h1>`, igual

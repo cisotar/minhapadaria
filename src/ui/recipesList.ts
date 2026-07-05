@@ -46,8 +46,9 @@
  *  3. Margem do card usa `formatPercent` (2 casas, §9) — "40,00%" — em vez
  *     do "40,0%" (1 casa) do HTML estático do mockup; `format.ts` é a fonte
  *     única de formatação (regra de ouro 2), não a demo estática.
- *  4. "Abrir" aponta para `index.html` (arquivo real da Calculadora), não
- *     `calculadora.html` (nome usado só no mockup).
+ *  4. "Abrir" aponta para `receitas.html` (arquivo real da Calculadora após a
+ *     inversão nome↔conteúdo, issue 032), não `calculadora.html` (nome usado
+ *     só no mockup).
  *
  * "Criar em branco" (§2.F, issue 025 item 5): a spec pede as duas formas —
  * "em branco ou a partir de valores padrão". "+ Nova receita" (padrão)
@@ -198,7 +199,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     // Semente de valores padrão (§2.F, caminho 1 de 2: "a partir de valores
     // padrão") — mesmo gabarito usado na Calculadora quando não há `?recipe`.
     const created = recipeStore.create(goldenSeed());
-    navigateFn(`index.html?recipe=${encodeURIComponent(created.id)}`);
+    navigateFn(`receitas.html?recipe=${encodeURIComponent(created.id)}`);
   }
 
   function createBlankRecipe(): void {
@@ -207,7 +208,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     // próprio store (zero ingredientes/fermento), reuso total (regra de
     // ouro 1) — nenhuma fórmula/estrutura nova aqui.
     const created = recipeStore.create();
-    navigateFn(`index.html?recipe=${encodeURIComponent(created.id)}`);
+    navigateFn(`receitas.html?recipe=${encodeURIComponent(created.id)}`);
   }
 
   function duplicateRecipe(id: string): void {
@@ -320,7 +321,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     const actions = h('div', { className: 'actions' });
     const openLink = h('a', {
       className: 'btn btn-primary',
-      href: `index.html?recipe=${encodeURIComponent(recipe.id)}`,
+      href: `receitas.html?recipe=${encodeURIComponent(recipe.id)}`,
     }, ['Abrir']);
     const dupBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Duplicar']) as HTMLButtonElement;
     const renameBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Renomear']) as HTMLButtonElement;

@@ -135,7 +135,7 @@ describe('recipesList (jsdom)', () => {
     expect(h3.textContent).toBe(evil);
   });
 
-  it('5. criar: clique "+ Nova receita" → list().length +1; navigate chamado com index.html?recipe=<id>', () => {
+  it('5. criar: clique "+ Nova receita" → list().length +1; navigate chamado com receitas.html?recipe=<id>', () => {
     const storage = createMemoryStorage();
     const recipeStore = makeStore(storage);
     const navigate = vi.fn();
@@ -148,7 +148,7 @@ describe('recipesList (jsdom)', () => {
     const after = recipeStore.list();
     expect(after).toHaveLength(before.length + 1);
     const created = after.find((r) => !before.includes(r.id))!;
-    expect(navigate).toHaveBeenCalledWith(`index.html?recipe=${created.id}`);
+    expect(navigate).toHaveBeenCalledWith(`receitas.html?recipe=${created.id}`);
   });
 
   it('6. duplicar independente: +1 na lista, nome "Cópia de X"; mutar cópia não afeta original', () => {
@@ -318,7 +318,7 @@ describe('recipesList (jsdom)', () => {
     expect(cards[0].querySelector('h3')!.textContent).toBe('Baguete Tradicional');
   });
 
-  it('14. "Abrir" (issue 025): href do card === index.html?recipe=<encodeURIComponent(id)>', () => {
+  it('14. "Abrir" (issue 025): href do card === receitas.html?recipe=<encodeURIComponent(id)>', () => {
     const storage = createMemoryStorage();
     const recipeStore = makeStore(storage);
     const created = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão & Cia' }); // "&" força encode
@@ -326,7 +326,7 @@ describe('recipesList (jsdom)', () => {
 
     const openLink = root.querySelector('.recipe-card a.btn-primary') as HTMLAnchorElement;
     expect(openLink.textContent).toBe('Abrir');
-    expect(openLink.getAttribute('href')).toBe(`index.html?recipe=${encodeURIComponent(created.id)}`);
+    expect(openLink.getAttribute('href')).toBe(`receitas.html?recipe=${encodeURIComponent(created.id)}`);
   });
 
   it('15. "Nova receita em branco" (issue 025, §2.F): recipeStore.create() SEM seed + navigate', () => {
@@ -347,7 +347,7 @@ describe('recipesList (jsdom)', () => {
     // Sem seed: cai no `defaultRecipe()` mínimo do próprio store (recipes.ts) — zero ingredientes/fermento.
     expect(created.ingredients).toHaveLength(0);
     expect(created.sourdough.flours).toHaveLength(0);
-    expect(navigate).toHaveBeenCalledWith(`index.html?recipe=${created.id}`);
+    expect(navigate).toHaveBeenCalledWith(`receitas.html?recipe=${created.id}`);
   });
 
   it('16. subtítulo dinâmico (issue 025 item 3): montado em headerRoot com classe .subtitle', () => {

@@ -33,3 +33,5 @@
 | 029 | Fix — achados da revisão da issue 028 (refactor PDF) | fix | 028 | todo | — |
 | 030 | Eliminar unidades de volume (mL/L) — todo ingrediente em peso (g/kg) | mista | 002, 006, 010, 011, 014, 015 | done | 979d639 |
 | 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | todo | — |
+| 032 | Rota inicial do site deve ser receitas.html | ui | 017 | done | f1c4756 |
+| 033 | Renomear receita vira edição inline (sem prompt/modal) | ui | 017 | todo | — |

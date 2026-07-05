@@ -3,27 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora — Pão com Fermento Natural</title>
+  <title>Minhas Receitas</title>
 </head>
 <body>
-  <!-- Navegação global (espelha mockups/*.html) — Calculadora é a página ativa. -->
+  <!-- Inversão nome↔conteúdo (issue 032, spec.md refactor I): GitHub Pages
+       serve `index.html` como documento default da raiz — para a raiz exibir
+       "Minhas Receitas" sem trocar a URL publicada, este arquivo (nome
+       `index.html`) passou a hospedar o shell de Receitas; o shell da
+       Calculadora foi movido para `receitas.html` (ver comentário espelhado
+       lá). Nenhuma lógica de `receitas.ts` mudou — só o roteamento/shell. -->
+
+  <!-- Navegação global (espelha mockups/*.html) — Receitas é a página ativa. -->
   <nav class="app-nav">
-    <a href="index.html" class="active">Calculadora</a>
-    <a href="receitas.html">Receitas</a>
+    <a href="receitas.html">Calculadora</a>
+    <a href="index.html" class="active">Receitas</a>
     <a href="historico.html">Histórico</a>
   </nav>
 
-  <!-- Cabeçalho de página padrão (design-system.css .page-header, spec §2.A). -->
+  <!-- Cabeçalho de página padrão (design-system.css .page-header, spec §2.F).
+       O <h1> estático é preenchido por receitas.ts; a barra de ações
+       (busca/criar/backup) e o subtítulo dinâmico são responsabilidade de
+       `renderRecipesList` (issue 017), montados dentro de #app. -->
   <header class="page-header">
-    <div class="inner">
-      <h1>🍞 Calculadora de Pão com Fermento Natural</h1>
-      <p class="subtitle">Os ingredientes recalculam automaticamente a cada edição — sem enviar formulário (§1.6)</p>
-    </div>
+    <div class="inner" id="rc-header"></div>
   </header>
 
-  <!-- Ponto de montagem da UI (issue 014): card Ingredientes via ingredientsTable.ts. -->
+  <!-- Ponto de montagem da UI (issue 017): grid de receitas via recipesList.ts. -->
   <div id="app" class="page"></div>
 
-  <script type="module" src="/src/ui/pages/calculadora.ts"></script>
+  <script type="module" src="/src/ui/pages/receitas.ts"></script>
 </body>
 </html>
