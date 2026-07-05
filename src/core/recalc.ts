@@ -38,6 +38,7 @@ import {
   priceFromSalePrice,
   priceFromProfit,
   pricingTotals,
+  effectiveQuantity,
   type PricingBreakdown,
   type PricingTotals,
 } from './pricing';
@@ -60,9 +61,24 @@ export function recalculate(recipe: Recipe): RecalcResult {
   const mode = state.calculationMode;
 
   // 1. F_total (âncora). §1.2 usa flourTotalWeight declarado; §1.3 deriva da
-  //    soma dos pesos das farinhas editadas (§3.A). (Fornada per-unit é a 009.)
-  const fTotal =
-    mode === 'percentage-to-weight' ? state.flourTotalWeight : flourTotal(state.ingredients);
+  //    soma dos pesos das farinhas editadas (§3.A).
+  //    Fornada por unidade (§2.E.1, issue 009): SÓ em %→peso a âncora pode vir
+  //    de flourPerUnit × N — F_total passa a derivado somente-leitura. Em peso→%
+  //    o planejamento é sempre 'total' (§2.E.1): normalizamos e ignoramos
+  //    flourPerUnit, derivando F_total das farinhas editadas.
+  let fTotal: number;
+  if (mode === 'percentage-to-weight') {
+    if (state.batchPlanningMode === 'per-unit') {
+      // §2.E.1: F_total = F_unit × N (N ≥ 1 via effectiveQuantity, guarda ÷0 reusada).
+      fTotal = (state.flourPerUnit ?? 0) * effectiveQuantity(state.pricing.quantity); // §2.E.1
+    } else {
+      fTotal = state.flourTotalWeight;
+    }
+  } else {
+    // §2.E.1: per-unit indisponível em peso→% → força 'total'.
+    state.batchPlanningMode = 'total';
+    fTotal = flourTotal(state.ingredients); // §1.3/§3.A
+  }
 
   // 2. Fermento — SEMPRE por proporção + Partes nos dois modos (§1.3/§3.B).
   //    Peso do fermento nunca é editado. Partes inválidas → null (§5.C), sem throw.
@@ -81,6 +97,9 @@ export function recalculate(recipe: Recipe): RecalcResult {
     for (const ing of state.ingredients) {
       ing.weight = weightFromPercentage(fTotal, ing.percentage); // §3.A
     }
+    // §2.E.1: em per-unit F_total é derivado (F_unit × N); em total já é a
+    //         fonte de verdade — escrever fTotal é idempotente nos dois casos.
+    state.flourTotalWeight = fTotal;
   } else {
     // §1.3: o peso é verdade; a baker's percentage é suspensa e a % passa a
     // refletir a proporção de cada linha sobre o TOTAL GERAL DA MASSA. O peso do

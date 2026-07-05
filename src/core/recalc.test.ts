@@ -177,6 +177,30 @@ describe('pureza / sem cache intermediário (§1.6)', () => {
   });
 });
 
+describe('fornada per-unit ignorada em peso→% (§2.E.1, força total)', () => {
+  it('11. em peso→%, F_total vem das farinhas; flourPerUnit não influi e o modo é normalizado a total', () => {
+    // Recipe peso→% com per-unit espúrio: o engine deve ignorar flourPerUnit
+    // (planejamento é sempre 'total' neste modo, §2.E.1) e derivar F_total das
+    // farinhas editadas (§1.3/§3.A), exatamente como no caso 'total'.
+    const perUnit = weightModeRecipe();
+    perUnit.batchPlanningMode = 'per-unit';
+    perUnit.flourPerUnit = 99999; // valor absurdo: não pode influenciar peso→%
+    const asTotal = weightModeRecipe(); // idêntico, mas em 'total'
+    const viaPerUnit = recalculate(perUnit);
+    const viaTotal = recalculate(asTotal);
+    // Planejamento normalizado a 'total' (§2.E.1: per-unit indisponível em peso→%).
+    expect(viaPerUnit.state.batchPlanningMode).toBe('total');
+    // F_total derivado das farinhas (800+200), não de flourPerUnit.
+    expect(viaPerUnit.state.flourTotalWeight).toBeCloseTo(1000, 9);
+    // Resultado idêntico ao caso 'total' (flourPerUnit ignorado por completo).
+    expect(viaPerUnit.summary).toEqual(viaTotal.summary);
+    const f1p = viaPerUnit.state.ingredients.find((i) => i.id === 'f1')!;
+    const f1t = viaTotal.state.ingredients.find((i) => i.id === 'f1')!;
+    expect(f1p.percentage).toBeCloseTo(f1t.percentage, 9);
+    expect(f1p.weight).toBe(f1t.weight);
+  });
+});
+
 describe('null não colapsa (§5.C + contrato null-vs-0)', () => {
   it('6. Peso do Produto ≤ 0 → custo/preço null; hidratação/pesos numéricos', () => {
     const r = goldenRecipe();

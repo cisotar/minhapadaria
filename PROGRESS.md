@@ -4,6 +4,18 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 009 — escalonamento + per-unit)**
+
+1. **peso→% NORMALIZA batchPlanningMode para 'total'**: quando recalculate detecta modo 'weight-to-percentage' em state.batchPlanningMode='per-unit', força a 'total' (linha 78 recalc.ts). Alternativa seria ignorar silenciosamente e derivar F_total das farinhas de qualquer forma. Motivo: §2.E.1 diz "planejamento por unidade só em %→peso"; peso→% é implicitamente planejamento em lote inteiro. Decisão: reescrever o campo e deixar claro que modo é 'total' — evita UI inconsistente (campo exibindo 'per-unit' quando F_total vem de Σ pesos, §3.A). Revisor humano: conferir se esta normalização silenciosa é aceitável ou deve-se avisar/bloquear.
+
+2. **applyTargetScaling retorna Recipe|null (não muta, não throws)**: escalonamento por alvo é ação explícita (§1.6) que pode falhar (alvo ≤ 0, soma ≤ 0 → divisão impossível). Retorna null em caso de guarda falhar (contrato null≠0, issues 004–008); o caller deve checar antes de re-alimentar recalculate. Sem throw. Motivo: contrato defensivo alinhado a toda a suite (§5.C). UI 016 deve tratar null (ex.: desabilitar botão ou mostrar alerta).
+
+3. **Em per-unit, N = pricing.quantity e divide o mesmo N**: applyTargetScaling(per-unit) recalcula fluorPerUnit = F_nova / N onde N vem de effectiveQuantity(state.pricing.quantity) — linha 73 scaling.ts. effectiveQuantity já guarda N ≥ 1 (evita ÷0). Precificação (issue 007) também usa o mesmo N via unitCost. Motivo: sincronização — uma única âncora N para escalonamento e preço. Quando N muda (UI 016), tanto F_unit quanto unitCost refazem via recalculate.
+
+4. **recipeSumPercent INCLUI fermento (decisão 3 antiga, reconfirmada)**: a proporção do fermento entra na soma (§3.D passo 1). Golden §12: 100+70+2+20 = 192 (não 172). O fermento é parte da receita, não uma sub-célula isolada. Reuso: recipeSumPercent centraliza esta regra; scaledFlourTotal (passo 2) reusa sem duplicar.
+
+---
+
 **2026-07-05 (issue 008 — recalc engine)**
 
 1. **types.ts diverge da spec §6 — DESTAQUE PARA REVISOR HUMANO**: campos derivados HydrationSummary/RecipeSummary alargados para `number | null` (contrato PROGRESS-005/006 decide null ≠ 0 ≠ erro). Exemplo: `realHydration?: number | null` (nil se ÷0 defensivo), `realFlourConsumed: number` (sempre). Sem mapeamento auto de undefined→0 no engine. Motivo: preservar contrato null-vs-0; consumidores (UI issue 016) decidem exibição.
@@ -13,6 +25,20 @@
 3. **Denominador do modo peso→% INCLUI W_ferm (fermento)**: spec §1.3 ("total geral da massa") + §3.D nota ("o peso do fermento conta como parte do peso final da massa"). Fórmula: `% = peso / (Σ pesos ingredientes + W_ferm) × 100`. Fixture do teste: farinhas 800+200 + água 700 + sal 20 + W_ferm 200 = **1920**. O exemplo trabalhado do plano usava 1720 (lapso: omitia W_ferm da própria fórmula); revisor-spec confirmou 1920 como correto — só com W_ferm no denominador as proporções somam exatamente 100%.
 
 4. **recalc assume batchPlanningMode 'total' permanentemente**: issue 008 implementou engine para modo 'total' (toda fornada). Per-unit é extensão blocada na issue 009 (calculadora multi-unidade). Motivo: spec §1.2 assume total; mudanças de modo requerem bloquear entrada diferente, issue 009 decide. Engine puro respeitou premissa (recalculate valida batchPlanningMode='total' ou null-safe-returns).
+
+---
+
+## Iteração 009 — 2026-07-05 ~03:10 (escalonamento + per-unit)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 009-scaling-per-unit |
+| **Timestamp** | 2026-07-05 03:10 |
+| **O que foi feito** | src/core/scaling.ts: 3 funções puras (recipeSumPercent — Σ %ingredientes + %fermento, fermento ENTRA soma decisão 3; scaledFlourTotal — F_nova = W_alvo/(SomaReceita%/100) §3.D passo 2, guardas null; applyTargetScaling — ação explícita §1.6 retorna Recipe clonada ou null, suporta âncoras 'total' (reescreve flourTotalWeight) e 'per-unit' §2.E.1 (reescreve flourPerUnit = F_nova/N, N intacto)). scaling.test.ts: 11 its TDD cobrindo golden, fermento 0, validação alvo/soma, escalonamento pesos/per-unit, guards null, pureza. src/core/recalc.ts estendido: detecção per-unit em %→peso (F_total = flourPerUnit × N via effectiveQuantity §2.E.1), peso→% força 'total' e normaliza batchPlanningMode (linha 78–79). src/core/recalc.test.ts: +1 it caso 11 (per-unit sem escalonamento — F_total derivado, pesos ≡ golden, hidratação real/nominal bate §2.E.1). Sem DOM, sem localStorage, precisão total (§1.6/§2.E.1/§3.D/§12). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: scaling.test.ts (11) + recalc.test.ts (8, +1) + pricing.test.ts (18) + costs.test.ts (13) + hydration.test.ts (14) + sourdough.test.ts (12) + bakers.test.ts (22) + format.test.ts (23) + golden-example.test.ts (5 asserts) = 126 total. **Pass: 126. Fail: 0.** 🟢 Build Vite: verde. Gates: testes 126 pass ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados estruturais no código da issue 009 (scaling.ts/recalc.ts). ACHADOS REPORTADOS (3 total, 2 médios, 1 baixo): 2 edições em spec/ (pré-existentes, git status desde início da sessão, nunca staged pelo loop); 1 em mockups/calculadora.html (pré-existente id.). Achados não atribuíveis ao loop (presentes antes de issue 009 começar, confirmados por revisores 002–008, não revertidos por regra "nunca deletar trabalho"). ZERO falhas no core scaling/recalc. |
+| **Observações** | Decisões de spec registradas em "Decisões da noite" acima. Cabeçalhos de spec presentes em scaling.ts (§1.6/§2.E.1/§3.D/§12, decisões 3, 16) e scaling.test.ts; recalc.ts anotado sobre extensão per-unit (§2.E.1); recalc.test.ts novo caso comentado. Reuso total: recipeSumPercent simples predicate; scaledFlourTotal usa recipeSumPercent; applyTargetScaling reusa effectiveQuantity (pricing.ts) para N ≥ 1; recalculate orquestra sem duplicar passo 3 (bakers.weightFromPercentage); transitionToPercentageMode inalterado. Mapa de módulos será atualizado agora. |
 
 ---
 
