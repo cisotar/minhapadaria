@@ -6,7 +6,24 @@
   <title>Histórico de Fornadas</title>
 </head>
 <body>
-  <!-- Espelha mockups/historico.html — UI implementada na issue 018. -->
+  <!-- Navegação global (espelha mockups/*.html) — Histórico é a página ativa. -->
+  <nav class="app-nav">
+    <a href="/index.html">Calculadora</a>
+    <a href="/receitas.html">Receitas</a>
+    <a href="/historico.html" class="active">Histórico</a>
+  </nav>
+
+  <!-- Cabeçalho de página padrão (design-system.css .page-header, spec §14).
+       O <h1> estático é preenchido por historico.ts; filtros/KPIs/gráfico/
+       tabela (issue 018) são responsabilidade de `renderHistoryView`,
+       montados dentro de #app. -->
+  <header class="page-header">
+    <div class="inner" id="hist-header"></div>
+  </header>
+
+  <!-- Ponto de montagem da UI (issue 018): dashboard via historyView.ts. -->
+  <div id="app" class="page"></div>
+
   <script type="module" src="/src/ui/pages/historico.ts"></script>
 </body>
 </html>

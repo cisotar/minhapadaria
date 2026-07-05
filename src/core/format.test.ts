@@ -15,6 +15,7 @@ import {
   formatCurrency,
   formatCostPerGram,
   formatDate,
+  parseLocalDate,
 } from './format';
 
 describe('parseDecimal (spec §7.1 — aceita vírgula ou ponto)', () => {
@@ -101,5 +102,24 @@ describe('formatDate (spec §7.1 — aaaa-mm-dd, getters locais)', () => {
   });
   it('23. new Date(2026, 0, 1) → "2026-01-01" (padStart mês/dia)', () => {
     expect(formatDate(new Date(2026, 0, 1))).toBe('2026-01-01');
+  });
+});
+
+describe('parseLocalDate (spec §7.1 — meia-noite LOCAL, nunca UTC)', () => {
+  it('24. "2026-07-08" → dia local 8 (new Date(2026,6,8)), não 7 (UTC não desloca)', () => {
+    const d = parseLocalDate('2026-07-08');
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(6);
+    expect(d.getDate()).toBe(8);
+  });
+  it('25. round-trip: formatDate(parseLocalDate(s)) === s', () => {
+    expect(formatDate(parseLocalDate('2026-02-28'))).toBe('2026-02-28');
+    expect(formatDate(parseLocalDate('2026-07-08'))).toBe('2026-07-08');
+  });
+  it('26. "2026-01-01" → getFullYear 2026, getMonth 0, getDate 1', () => {
+    const d = parseLocalDate('2026-01-01');
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(0);
+    expect(d.getDate()).toBe(1);
   });
 });

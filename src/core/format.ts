@@ -136,3 +136,19 @@ export function formatDate(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * parseLocalDate — parseia `'aaaa-mm-dd'` (valor de `<input type="date">`) para
+ * meia-noite LOCAL (§7.1, dono único, simétrico a `formatDate`). NUNCA
+ * `new Date('aaaa-mm-dd')`: o construtor de string trata esse formato como
+ * UTC meia-noite (ISO 8601 date-only), o que em fusos negativos (ex.: Brasil,
+ * UTC−3) desloca o dia ao ler com getters locais (getDate() devolveria o dia
+ * anterior). Construindo por componentes (y, m-1, d) o resultado é meia-noite
+ * local, garantindo round-trip com `formatDate`.
+ * Docs: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date
+ *       https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse
+ */
+export function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}

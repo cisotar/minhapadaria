@@ -13,11 +13,22 @@
  * digitado pelo usuário passa por este módulo antes de virar nó DOM, sempre
  * via API segura (regra de ouro 3).
  *
+ * `svg` (issue 018, §14.5) estende o mesmo contrato seguro para o namespace
+ * SVG (gráfico de tendência): elementos SVG exigem `document.createElementNS`
+ * (não `createElement`) — sem isso o nó nasce como `HTMLUnknownElement` e não
+ * renderiza. Atributos via `setAttribute` (idêntico a `h`); texto de filho via
+ * `createTextNode` (mesma blindagem XSS, regra de ouro 3).
+ *
  * Docs oficiais consultadas (regra de ouro 4):
  * - https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement
  * - https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent
  * - https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute
+ * - https://developer.mozilla.org/en-US/docs/Web/API/Document/createElementNS
+ * - https://developer.mozilla.org/en-US/docs/Web/SVG/Namespace
  */
+
+/** Namespace XML do SVG (constante da spec SVG, não um token de design). */
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export type Attrs = Record<string, string | number | boolean | undefined | null> & {
   className?: string;
@@ -55,6 +66,31 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   }
   if (checked !== undefined) {
     (el as unknown as { checked?: boolean }).checked = Boolean(checked);
+  }
+  return el;
+}
+
+/**
+ * Cria um elemento SVG tipado (namespace SVG, `createElementNS` — regra de
+ * ouro 4/MDN) com o mesmo contrato seguro de `h`: atributos via `setAttribute`,
+ * filhos (nós ou strings) sempre via `createTextNode`. Usado só pelo gerador
+ * do gráfico de tendência (`trendChart.ts`, §14.5) — zero `innerHTML`.
+ */
+export function svg<K extends keyof SVGElementTagNameMap>(
+  tag: K,
+  attrs: Attrs = {},
+  children: Array<Node | string> = [],
+): SVGElementTagNameMap[K] {
+  const el = document.createElementNS(SVG_NS, tag) as SVGElementTagNameMap[K];
+  const { className, ...rest } = attrs;
+  if (className) el.setAttribute('class', String(className));
+  for (const [key, v] of Object.entries(rest)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (v === true) el.setAttribute(key, '');
+    else el.setAttribute(key, String(v));
+  }
+  for (const child of children) {
+    el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
   }
   return el;
 }
