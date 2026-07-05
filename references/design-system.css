@@ -154,6 +154,16 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   border-bottom: 2px solid var(--border);
 }
 
+/* Card dimensionado pelo CONTEÚDO em vez de esticar à largura da página
+   (Calculadora, spec §10 desktop-first): o card de Ingredientes cresce/encolhe
+   conforme as colunas visíveis (toggle "Exibir custos") — sem esticar 3 colunas
+   à força quando os custos estão ocultos. `fit-content` é palavra-chave de
+   layout (não um token de cor/fonte/espaçamento); `max-width:100%` evita
+   estouro horizontal quando a tabela é mais larga que a viewport. Os demais
+   cards da tela (Ancoragem, Sub-receita, painéis) recebem a MESMA largura
+   recalculada por JS (calculadora.ts), para uma interface simétrica. */
+.card--fit { width: fit-content; max-width: 100%; margin-inline: auto; }
+
 /* ============ Botões ============ */
 .btn {
   display: inline-flex; align-items: center; gap: var(--sp-2);
@@ -273,6 +283,12 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 /* Colunas de custo: ocultas por padrão, toggle "Exibir custos" as revela */
 .table .cost-col { display: none; }
 .table.show-costs .cost-col { display: table-cell; }
+
+/* Coluna de ações da linha (botão remover) — sempre visível, à direita de
+   todas as colunas de dados/custo (última ação horizontal da linha). Largura
+   mínima pelo conteúdo (`width:1%` é o padrão de "coluna que encolhe" em
+   tabela; não é token visual), botão centralizado, sem quebra de linha. */
+.col-actions { width: 1%; white-space: nowrap; text-align: center; }
 
 /* Toggle g/mL compacto por linha (líquidos) */
 .unit-toggle {

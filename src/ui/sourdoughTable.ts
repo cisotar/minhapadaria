@@ -231,6 +231,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(h('td', { className: 'col-actions' })); // Isca não remove — célula de ações vazia
     return { tr, refs: { weightCell, costGCell, costCell } };
   }
 
@@ -258,6 +259,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(h('td', { className: 'col-actions' })); // linha-cabeçalho Farinha não remove — ações vazias
     return { tr, refs: { weightCell, costGCell, costCell } };
   }
 
@@ -307,9 +309,10 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
       });
     }
     // Indentação (`.subrow-indent`, issue 022) sinaliza visualmente que é sub-linha de "Farinha" (§2.B.3).
-    const nameCell = h('td', { className: 'subrow-indent' }, [
-      h('div', { className: 'row row--tight' }, [nameInput, removeBtn]),
-    ]);
+    // O botão remover foi para a coluna de ações no fim da linha (diretiva de
+    // layout do coordenador — última ação horizontal, §10).
+    const nameCell = h('td', { className: 'subrow-indent' }, [nameInput]);
+    const actionsCell = h('td', { className: 'col-actions' }, [removeBtn]);
 
     // % trava em 100 se única farinha do fermento (mesmo padrão da tabela principal, §2.A).
     const isLocked = flourCount === 1;
@@ -463,6 +466,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(actionsCell);
 
     return { tr, refs: { weightCell, costGCell, costCell } };
   }
@@ -574,6 +578,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(h('td', { className: 'col-actions' })); // Água não remove — célula de ações vazia
 
     return { tr, refs: { weightCell, costGCell, costCell } };
   }
@@ -597,7 +602,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
       });
       fullRenderTable(); // add/remove é mudança estrutural (§5.B)
     });
-    tr.appendChild(h('td', { colspan: 7, className: 'table-add-cell' }, [addBtn])); // issue 022 — era style inline
+    tr.appendChild(h('td', { colspan: 8, className: 'table-add-cell' }, [addBtn])); // colspan = nº de colunas (com Ações)
     return tr;
   }
 
@@ -612,6 +617,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
         h('th', { className: 'num cost-col' }, ['Peso do produto']),
         h('th', { className: 'num cost-col' }, ['Custo/g']),
         h('th', { className: 'num cost-col' }, ['Custo']),
+        h('th', { className: 'col-actions', 'aria-label': 'Ações' }), // botão remover (extrema direita, §10)
       ]),
     );
     return thead;
@@ -629,6 +635,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
         weightCell,
         h('td', { className: 'cost-col', colspan: 3 }),
         costCell,
+        h('td'), // coluna de ações — sem total
       ]),
     );
     return { tfoot, refs: { partsCell, weightCell, costCell } };

@@ -36,20 +36,22 @@ type NumberFormatOptionsWithRounding = Intl.NumberFormatOptions & {
   roundingMode?: 'halfExpand';
 };
 
-// Percentuais: 2 casas, sem separador de milhar (§9). Ex: 192 -> "192,00".
+// Percentuais: 2 casas, com separador de milhar pt-BR (ponto). Ex: 1920 -> "1.920,00".
 const percentOptions: NumberFormatOptionsWithRounding = {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-  useGrouping: false,
+  useGrouping: true,
   roundingMode: 'halfExpand',
 };
 const percentFormatter = new Intl.NumberFormat('pt-BR', percentOptions);
 
-// Pesos: 1 casa, sem milhar — obrigatório para o gabarito §12 (1041,7, não 1.041,7).
+// Pesos: 1 casa, com separador de milhar pt-BR (decisão revisada — gabarito
+// §12 da spec e testes atualizados para "1.041,7", ponto de milhar / vírgula
+// decimal em todo o app).
 const weightOptions: NumberFormatOptionsWithRounding = {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
-  useGrouping: false,
+  useGrouping: true,
   roundingMode: 'halfExpand',
 };
 const weightFormatter = new Intl.NumberFormat('pt-BR', weightOptions);
@@ -71,7 +73,7 @@ const costPerGramOptions: NumberFormatOptionsWithRounding = {
   currency: 'BRL',
   minimumFractionDigits: 4,
   maximumFractionDigits: 4,
-  useGrouping: false,
+  useGrouping: true,
   roundingMode: 'halfExpand',
 };
 const costPerGramFormatter = new Intl.NumberFormat('pt-BR', costPerGramOptions);
@@ -110,7 +112,7 @@ export function formatPercent(n: number): string {
   return percentFormatter.format(n);
 }
 
-/** formatWeight — peso com 1 casa e vírgula, sem milhar (§9). Ex: 1041.6666 -> "1041,7". */
+/** formatWeight — peso com 1 casa, vírgula decimal e ponto de milhar (§9). Ex: 1041.6666 -> "1.041,7". */
 export function formatWeight(n: number): string {
   return weightFormatter.format(n);
 }

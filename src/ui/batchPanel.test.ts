@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe('batchPanel (jsdom)', () => {
-  it('4. per-unit: F_unit 250 × N 4 → F_total 1000,0 somente-leitura (§2.E.1)', () => {
+  it('4. per-unit: F_unit 250 × N 4 → F_total 1.000,0 somente-leitura (§2.E.1)', () => {
     const { root } = mount((r) => {
       r.batchPlanningMode = 'per-unit';
       r.flourPerUnit = 250;
@@ -39,7 +39,7 @@ describe('batchPanel (jsdom)', () => {
     const ftotalInput = root.querySelector(
       'input[aria-label="Peso de Farinha Total"]',
     ) as HTMLInputElement;
-    expect(ftotalInput.value).toBe('1000,0');
+    expect(ftotalInput.value).toBe('1.000,0');
     expect(ftotalInput.readOnly).toBe(true);
   });
 
@@ -49,7 +49,7 @@ describe('batchPanel (jsdom)', () => {
     const ftotalInput = root.querySelector(
       'input[aria-label="Peso de Farinha Total"]',
     ) as HTMLInputElement;
-    expect(ftotalInput.value).toBe('1000,0');
+    expect(ftotalInput.value).toBe('1.000,0');
 
     const qtyInput = root.querySelector(
       'input[aria-label="Quantidade de Produtos"]',
@@ -58,7 +58,7 @@ describe('batchPanel (jsdom)', () => {
     qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
 
     expect(store.getState().summary.costPerUnit).not.toBe(before);
-    expect(ftotalInput.value).toBe('1000,0'); // F_total é a âncora em 'total' — não muda com N
+    expect(ftotalInput.value).toBe('1.000,0'); // F_total é a âncora em 'total' — não muda com N
   });
 
   it('7. peso→%: F_total somente-leitura e repinta ao editar peso de farinha (§1.3/§3.A, issue 024)', () => {
@@ -74,7 +74,7 @@ describe('batchPanel (jsdom)', () => {
       draft.ingredients[0].weight = 1234; // flour-1 (Farinha Branca)
     });
 
-    expect(ftotalInput.value).toBe('1234,0'); // patchDynamic repinta o valor derivado
+    expect(ftotalInput.value).toBe('1.234,0'); // patchDynamic repinta o valor derivado
   });
 
   it('8. quantidade <1 reverte no blur (§5.C)', () => {
@@ -97,12 +97,12 @@ describe('batchPanel (jsdom)', () => {
     // 20 fermento) → alvo 2000g → F_nova = scaledFlourTotal (scaling.ts, §3.D
     // passo 2). O bug: F_total é campo editável em %→peso+total (não
     // `isDerived` em `patchDynamic`), então `applyTransform` atualiza o estado
-    // mas o input nunca repinta, ficando defasado em 1000,0.
+    // mas o input nunca repinta, ficando defasado em 1.000,0.
     const { root, store } = mount();
     const ftotalInput = root.querySelector(
       'input[aria-label="Peso de Farinha Total"]',
     ) as HTMLInputElement;
-    expect(ftotalInput.value).toBe('1000,0');
+    expect(ftotalInput.value).toBe('1.000,0');
     expect(ftotalInput.readOnly).toBe(false); // editável em %→peso+total
 
     const expected = scaledFlourTotal(store.getState().recipe, 2000)!;
@@ -110,7 +110,7 @@ describe('batchPanel (jsdom)', () => {
     expect(applied).toBe(true);
     expect(store.getState().recipe.flourTotalWeight).toBeCloseTo(expected, 6);
 
-    expect(ftotalInput.value).not.toBe('1000,0'); // campo deve repintar o novo F_total
+    expect(ftotalInput.value).not.toBe('1.000,0'); // campo deve repintar o novo F_total
     expect(ftotalInput.value).toBe(formatWeight(expected));
   });
 

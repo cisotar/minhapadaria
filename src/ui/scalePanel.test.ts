@@ -34,7 +34,7 @@ function mount() {
 }
 
 describe('scalePanel (jsdom, fixture §12 sem Azeite)', () => {
-  it('10. alvo 2000 + clicar "Re-escalar" → Peso da farinha exibe 1041,7 (golden §12)', () => {
+  it('10. alvo 2000 + clicar "Re-escalar" → Peso da farinha exibe 1.041,7 (golden §12)', () => {
     const { scaleRoot, tableRoot } = mount();
     const targetInput = scaleRoot.querySelector(
       'input[aria-label="Peso alvo para escalonamento"]',
@@ -47,7 +47,7 @@ describe('scalePanel (jsdom, fixture §12 sem Azeite)', () => {
 
     const row = tableRoot.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
     const weightCell = row.querySelector('td.readonly') as HTMLElement;
-    expect(weightCell.textContent).toBe('1041,7');
+    expect(weightCell.textContent).toBe('1.041,7');
   });
 
   it('11. modo peso→% → botão desabilitado; alvo 0 + clique → nenhuma mudança de estado', () => {

@@ -42,11 +42,11 @@ function valueOf(root: HTMLElement, label: string): string | undefined {
 }
 
 describe('renderPrintView', () => {
-  it('7. conteúdo: nome da receita, F_total 1000, hidratação 70 e preço presentes', () => {
+  it('7. conteúdo: nome da receita, F_total 1.000, hidratação 70 e preço presentes', () => {
     const root = render();
     const text = root.textContent ?? '';
     expect(text).toContain('Pão Rústico de Azeite'); // nome da receita
-    expect(text).toContain('1000'); // F_total (§12)
+    expect(text).toContain('1.000'); // F_total (§12)
     expect(text).toContain('70'); // hidratação nominal 70% (§12)
     expect(text).toContain('R$'); // com custos → precificação em R$
   });

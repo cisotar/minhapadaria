@@ -6,12 +6,9 @@
  * (architecture.md: "jsdom só se um teste de UI precisar") e mesma montagem
  * (`createMemoryStorage` + `createPrefsStore` + `createAppState(goldenSeed())`).
  *
- * Nota de formatação (desvio consciente vs texto solto do plano): "Farinha Real
- * Consumida" usa `formatWeight` (dono único, format.ts) que NUNCA agrupa milhar
- * (§9: "obrigatório para o gabarito §12 — 1041,7, não 1.041,7"; format.test.ts
- * caso 16). Por isso o golden §12 (1100g) exibe `1100,0 g`, não `1.100,0 g`
- * (grafia solta do texto do plano/mockup estático) — consistente com o dono
- * único de formatação de peso, sem reimplementar arredondamento.
+ * Nota de formatação: "Farinha Real Consumida" usa `formatWeight` (dono único,
+ * format.ts), que agrupa milhar com ponto e decimal com vírgula (§9;
+ * format.test.ts caso 16). Golden §12 (1100g) exibe `1.100,0 g`.
  */
 import { describe, it, expect } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
@@ -37,7 +34,7 @@ describe('hydrationPanel (jsdom)', () => {
 
     expect(nominal.textContent).toBe('70,00%');
     expect(real.textContent).toBe('72,73%');
-    expect(flour.textContent).toBe('1100,0 g');
+    expect(flour.textContent).toBe('1.100,0 g');
   });
 
   it('11. F_total=0 (sem farinhas) → Nominal "—", Real ainda numérico, sem crash', () => {

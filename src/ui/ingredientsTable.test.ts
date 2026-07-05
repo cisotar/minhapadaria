@@ -74,18 +74,21 @@ describe('ingredientsTable (jsdom)', () => {
     expect(setShowCostsSpy).toHaveBeenCalledWith(true);
   });
 
-  it('5. ordem fixa das colunas do <thead> (§2.A.2)', () => {
+  it('5. ordem das colunas do <thead> — Unidade após Custo, Ações por último (diretiva de layout)', () => {
     const { root } = mount();
     const headers = Array.from(root.querySelectorAll('thead th')).map((th) => th.textContent);
+    // Desvio consciente vs spec §2.A.2/mockup: "Unidade" foi movida para logo
+    // depois de "Custo" e a coluna de ações (botão remover) é a última da linha.
     expect(headers).toEqual([
       'Ingrediente',
-      'Unidade',
       '%',
       'Peso (g)',
       'Preço pago',
       'Peso do produto',
       'Custo/g',
       'Custo',
+      'Unidade',
+      '', // coluna de ações (aria-label "Ações", sem texto visível)
     ]);
   });
 
@@ -110,7 +113,7 @@ describe('ingredientsTable (jsdom)', () => {
     const { root } = mount();
     const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
     const pwInput = row.querySelector('input[aria-label="Peso do produto de Farinha Branca"]') as HTMLInputElement;
-    expect(pwInput.value).toBe('1,0'); // packageSize=1 (na unidade "kg" do seletor, formatWeight sem milhar)
+    expect(pwInput.value).toBe('1,0'); // packageSize=1 (na unidade "kg" do seletor, sem milhar por ser <1000)
 
     pwInput.value = '0';
     pwInput.dispatchEvent(new Event('input', { bubbles: true }));

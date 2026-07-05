@@ -149,17 +149,22 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   }
 
   function buildThead(): HTMLTableSectionElement {
+    // Ordem das colunas (diretiva de layout do coordenador — desvio consciente
+    // vs `mockups/calculadora.html`/spec §2.A.2): as colunas de dados/custo
+    // vêm primeiro; "Unidade" foi movida para logo depois de "Custo" e antes da
+    // coluna de ações (botão remover), que é sempre a última da linha (§10).
     const thead = h('thead');
     thead.appendChild(
       h('tr', {}, [
         h('th', {}, ['Ingrediente']),
-        h('th', {}, ['Unidade']),
         h('th', { className: 'num' }, ['%']),
         h('th', { className: 'num' }, ['Peso (g)']),
         h('th', { className: 'num cost-col' }, ['Preço pago']),
         h('th', { className: 'num cost-col' }, ['Peso do produto']),
         h('th', { className: 'num cost-col' }, ['Custo/g']),
         h('th', { className: 'num cost-col' }, ['Custo']),
+        h('th', {}, ['Unidade']),
+        h('th', { className: 'col-actions', 'aria-label': 'Ações' }),
       ]),
     );
     return thead;
@@ -235,8 +240,10 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
         fullRender(); // add/remove é mudança estrutural (§5.B)
       });
     }
-    // `.row.row--tight` (design-system.css, issue 022) — era style inline.
-    const nameCell = h('td', {}, [h('div', { className: 'row row--tight' }, [nameInput, removeBtn])]);
+    // Nome só com o input; o botão remover foi para a coluna de ações no fim da
+    // linha (diretiva de layout do coordenador — última ação horizontal, §10).
+    const nameCell = h('td', {}, [nameInput]);
+    const actionsCell = h('td', { className: 'col-actions' }, [removeBtn]);
 
     // Unidade — sólidos "g" fixo; líquidos/gorduras alternador g/mL (§2.A.2).
     const unitCell = h('td');
@@ -453,14 +460,17 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const costCell = h('td', { className: 'num cost-col readonly' });
     costCell.textContent = ing.recipeCost !== undefined ? formatCurrency(ing.recipeCost) : '—';
 
+    // Ordem: Ingrediente · % · Peso · [custos] · Unidade · Ações (diretiva do
+    // coordenador — Unidade após Custo, botão remover na extrema direita).
     tr.appendChild(nameCell);
-    tr.appendChild(unitCell);
     tr.appendChild(pctCell);
     tr.appendChild(weightCell);
     tr.appendChild(priceCell);
     tr.appendChild(pwCell);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(unitCell);
+    tr.appendChild(actionsCell);
 
     // §1.3/§4: só um dos dois é derivado por vez, conforme o modo vigente
     // neste `fullRender()` — patchAllDerived escreve no alvo certo.
@@ -540,14 +550,17 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const costCell = h('td', { className: 'num cost-col readonly' });
     costCell.textContent = sd.totalCost !== undefined ? formatCurrency(sd.totalCost) : '—';
 
+    // Mesma ordem das linhas de ingrediente; o Fermento não tem botão remover
+    // (linha consolidada da sub-receita), então a célula de ações fica vazia.
     tr.appendChild(nameCell);
-    tr.appendChild(unitCell);
     tr.appendChild(pctCell);
     tr.appendChild(weightCell);
     tr.appendChild(dashPrice);
     tr.appendChild(dashPw);
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
+    tr.appendChild(unitCell);
+    tr.appendChild(h('td', { className: 'col-actions' }));
 
     // §1.3: peso do fermento é SEMPRE derivado, nos dois modos.
     return { tr, refs: { derivedWeightTarget: weightCell, derivedPctTarget: null, costGCell, costCell } };
@@ -573,7 +586,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       });
       fullRender(); // add/remove é mudança estrutural
     });
-    tr.appendChild(h('td', { colspan: 8, className: 'table-add-cell' }, [addBtn])); // issue 022 — era style inline
+    tr.appendChild(h('td', { colspan: 9, className: 'table-add-cell' }, [addBtn])); // colspan = nº de colunas (com Unidade + Ações)
     return tr;
   }
 
@@ -582,13 +595,16 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const pctCell = h('td', { className: 'num' });
     const weightCell = h('td', { className: 'num' });
     const costCell = h('td', { className: 'num cost-col' });
+    // Colunas: Ingrediente · % · Peso · [Preço·PesoProduto·Custo/g] · Custo ·
+    // Unidade · Ações. As duas últimas (Unidade/Ações) não têm total (colspan 2).
     tfoot.appendChild(
       h('tr', {}, [
-        h('td', { colspan: 2 }, ['Total da massa']),
+        h('td', {}, ['Total da massa']),
         pctCell,
         weightCell,
         h('td', { className: 'cost-col', colspan: 3 }),
         costCell,
+        h('td', { colspan: 2 }),
       ]),
     );
     return { tfoot, refs: { pctCell, weightCell, costCell } };

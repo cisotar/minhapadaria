@@ -154,14 +154,49 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
     });
     app.appendChild(exportBar);
 
+    // Cada `render*` anexa uma `section.card` a `app`; capturamos a referência
+    // logo após, via `lastElementChild`, sem alterar as assinaturas usadas nos
+    // testes (que ignoram retorno).
     renderBatchPanel(app, store); // §2.E/§2.E.1 — hospeda modeToggle (§1.3/§1.5) e scalePanel (§3.D)
+    const batchCard = app.lastElementChild as HTMLElement;
     renderIngredientsTable(app, store);
+    const ingredientsCard = app.lastElementChild as HTMLElement;
+    // O card de Ingredientes dimensiona-se pelo CONTEÚDO (não estica à largura
+    // da página): cresce/encolhe conforme as colunas visíveis do toggle "Exibir
+    // custos" (spec §10 desktop-first). Classe do design system, só keyword de
+    // layout — sem valor visual novo.
+    ingredientsCard.classList.add('card--fit');
     renderSourdoughTable(app, store, editedCostIds);
+    const sourdoughCard = app.lastElementChild as HTMLElement;
 
     const grid = h('div', { className: 'grid-2' });
     app.appendChild(grid);
     renderHydrationPanel(grid, store); // §2.C/§2.D
     renderPricingPanel(grid, store); // §3.E/§4
+
+    // Simetria da tela (pedido de layout): os demais blocos acompanham a MESMA
+    // largura recalculada pelo card de Ingredientes — nunca larguras
+    // independentes. Medição pura de layout (não é lógica de negócio nem token
+    // visual): lê a largura renderizada e a espelha nos irmãos; um
+    // `ResizeObserver` re-sincroniza quando a tabela cresce/encolhe (toggle de
+    // custos, add/remove de linhas). Em jsdom (testes) não há layout
+    // (`width === 0`) nem `ResizeObserver` — o sync é um no-op, sem afetar o
+    // comportamento observado pelos testes.
+    const followers = [exportBar, batchCard, sourdoughCard, grid];
+    const syncWidths = (): void => {
+      const width = ingredientsCard.getBoundingClientRect().width;
+      if (width <= 0) return; // sem layout (jsdom) — nada a espelhar
+      for (const el of followers) {
+        el.style.width = `${width}px`;
+        el.style.marginInline = 'auto'; // centraliza junto com o card--fit de Ingredientes
+      }
+    };
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => syncWidths());
+      ro.observe(ingredientsCard);
+    } else {
+      syncWidths();
+    }
   }
 
   if (autosaveEnabled) {

@@ -168,6 +168,8 @@
         <tr><td><code>.row--tight</code></td><td>Issue 022 — modificador de <code>.row</code> com <code>gap:var(--sp-2)</code> (mais compacto que o padrão <code>var(--sp-3)</code>) — par nome+botão remover de uma linha de tabela.</td></tr>
         <tr><td><code>.table-add-cell</code></td><td>Issue 022 — célula que hospeda o botão "+ ingrediente"/"+ farinha do fermento" no fim do <code>&lt;tbody&gt;</code>: <code>padding:var(--sp-2) var(--sp-3)</code>.</td></tr>
         <tr><td><code>.subrow-indent</code></td><td>Issue 022 — indentação da sub-linha de farinha do fermento (§2.B.3) sob a linha-cabeçalho "Farinha": <code>padding-left:calc(var(--sp-3) + var(--sp-4))</code>.</td></tr>
+        <tr><td><code>.card--fit</code></td><td>Refatoração de layout da Calculadora — card dimensionado pelo CONTEÚDO (<code>width:fit-content;max-width:100%</code>) em vez de esticar à largura da página. Aplicado ao card de Ingredientes: cresce/encolhe com as colunas visíveis (toggle "Exibir custos"), sem esticar 3 colunas à força (spec §10 desktop-first). Os demais cards da tela recebem por JS (<code>calculadora.ts</code>) a MESMA largura recalculada, para interface simétrica.</td></tr>
+        <tr><td><code>.col-actions</code></td><td>Refatoração de layout da Calculadora — coluna de ações da linha (botão remover), sempre visível à direita de todas as colunas de dados/custo: <code>width:1%;white-space:nowrap;text-align:center</code> (coluna que encolhe pelo conteúdo). O botão remover deixou de ficar embaixo do nome e passou a ser a última ação horizontal da linha.</td></tr>
       </tbody>
     </table>
     <div class="title-row">

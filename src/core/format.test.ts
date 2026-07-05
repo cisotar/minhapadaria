@@ -72,9 +72,9 @@ describe('formatCostPerGram (spec §9/§2.A.1 — R$ 4 casas)', () => {
   });
 });
 
-describe('formatWeight (spec §9 — peso 1 casa, sem milhar)', () => {
-  it('16. 1041.6666 → "1041,7" (§12, sem separador de milhar)', () => {
-    expect(formatWeight(1041.6666)).toBe('1041,7');
+describe('formatWeight (spec §9 — peso 1 casa, com ponto de milhar)', () => {
+  it('16. 1041.6666 → "1.041,7" (§12, com separador de milhar)', () => {
+    expect(formatWeight(1041.6666)).toBe('1.041,7');
   });
   it('17. 0 → "0,0"', () => {
     expect(formatWeight(0)).toBe('0,0');
