@@ -4,6 +4,16 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 004 — fermento por Partes)**
+
+1. **computeSourdoughWeights retorna null (não throw) em partes inválidas**: guarda defensiva (§5.C). Semelhante a percentageFromWeight (issue 003, F_total ≤ 0 → 0), mantém contrato limpo para recalc em lote issue 008. UI bloqueia via isValidSourdoughParts; backend nunca toca em partes inválidas.
+
+2. **Parte farinha=0 retorna com hydration null (não erro)**: interpretação literal de §5.C (estado inválido ≠ inviável). Se usuario entrar fermento com zero farinha (ex.: 1:0:1 Isca:Farinha:Água), resultado tem flourWeight=0, waterWeight>0, hydration=null. Não bloqueio; UI e issue 010 (validações) decidem se avisar ou rejeitar. Motivo: bloqueia derivação de 0 pelas farinhas (§3.B), preserva pureza.
+
+3. **SUM_EPSILON vive em bakers.percentagesSumTo100, dono único**: issue 003 introduziu percentagesSumTo100 com epsilon 1e-9. Issue 004 importa dela (não reduplica). flourPercentagesSumTo100 delega a percentagesSumTo100 (refactor bakers.ts/bakers.test.ts: +2 novos testes 21–22). Mesma tolerância vale para sourdoughFlourPercentagesSumTo100 (§2.B.3).
+
+---
+
 **2026-07-05 (issue 003 — baker's percentage)**
 
 1. **percentageFromWeight retorna 0 quando F_total ≤ 0, não null**: guarda de divisão por zero (§5.C) mantém assinatura `number` limpa. UI futura (issue 008) pode distinguir "indefinido" (F_total=0) de "valor calculado" na exibição, sem mudar tipo. Afeta issue 008 (recalc em lote): percentageFromWeight permanece `number → number`, contrato preservado.
@@ -31,6 +41,20 @@
 2. **Google Fonts CDN vs auto-hospedagem**: mockups usam `<link rel="stylesheet" href="https://fonts.googleapis.com/...">` no design-system.css. **Decisão**: app (index.html, receitas.html, historico.html) carrega apenas `design-system.css` via Vite, com fonte fallback `system-ui` até issue de UI decidir auto-hospedagem. Alinhado com spec §10 (app 100% client-side) e §11.1 (zero secrets em front-end). Ação diferida para issue 014+.
 
 3. **Polyfill modulepreload em dist/**: achado do revisor-design (baixa prioridade): Vite injeta `<link rel="modulepreload" as="script" ...>` em dist/index.html que contém `fetch()` same-origin para chunks. Artefato de build sem risco (fetch é same-origin, sem headers de autorização, offline ok). Sem ação necessária.
+
+---
+
+## Iteração 004 — 2026-07-05 ~01:55–~02:25 (fermento por Partes)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 004-sourdough-parts |
+| **Timestamp** | 2026-07-05 01:55 |
+| **O que foi feito** | src/core/sourdough.ts: 6 funções puras (sourdoughTotalWeight — W_ferm = F_total × %/100, reuso de bakers.weightFromPercentage; partsSum — Σ Isca+Farinha+Água; isValidSourdoughParts — guarda SomaPartes>0 e partes≥0; computeSourdoughWeights — rateio interno e hidratação DERIVADA; distributeSourdoughFlourWeights — Farinha_i = FarinhaFerm × P_i/100; sourdoughFlourPercentagesSumTo100 — predicado delega a percentagesSumTo100). Sem DOM, sem localStorage, precisão total (§1.6/§2.B/§3.B/§5.C). src/core/sourdough.test.ts: 12 testes TDD (sourdoughTotalWeight 1, partsSum 1, computeSourdoughWeights 5 casos limites, isValidSourdoughParts 1, distributeSourdoughFlourWeights 2, sourdoughFlourPercentagesSumTo100+pureza 2). Refactor bakers.ts: percentagesSumTo100 extraído e exportado como dono único de SUM_EPSILON; flourPercentagesSumTo100 delega (comportamento idêntico, +2 testes em bakers.test.ts → 22 total). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: sourdough.test.ts (12) + bakers.test.ts (22, +2 de percentagesSumTo100) + format.test.ts (23) + golden-example.test.ts (1 falha intencional) = 58 total. Pass: 57. Fail: 1 intencional. Build Vite: verde. Gates: testes 57 pass ✓, 1 fail esperada ✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado (§2.B/§2.B.2/§2.B.3/§3.B/§5.C implementado; hidratação derivada correta; null em farinha=0 literal; SUM_EPSILON centralizado; prefixo spec em cabeçalhos). Sem achados. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec adicionados aos 2 arquivos novos (sourdough.ts, sourdough.test.ts). Reuso total: sourdoughTotalWeight reusa weightFromPercentage; sourdoughFlourPercentagesSumTo100 reusa percentagesSumTo100; %SUM_EPSILON centralizado em bakers.ts, importado por sourdough.test.ts. Premissa de issue 003 preservada: fermento é sub-receita com own Ingredient[], farinhas do fermento não entram em flourTotal (bakers.ts). |
 
 ---
 

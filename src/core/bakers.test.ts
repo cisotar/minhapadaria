@@ -16,6 +16,7 @@ import {
   weightFromPercentage,
   percentageFromWeight,
   flourPercentagesSumTo100,
+  percentagesSumTo100,
 } from './bakers';
 
 // Fábrica mínima de Ingredient para os testes (só os campos usados pelo core).
@@ -115,6 +116,17 @@ describe('flourPercentagesSumTo100 (spec §1.1/§2.A — predicado puro)', () =>
         ing('flour', 333.4, 33.34),
       ]),
     ).toBe(true);
+  });
+});
+
+describe('percentagesSumTo100 (spec §1.1/§2.A/§2.B.3 — predicado genérico reusável)', () => {
+  it('21. lista genérica [50, 50] → true; [50, 40] → false', () => {
+    expect(percentagesSumTo100([50, 50])).toBe(true);
+    expect(percentagesSumTo100([50, 40])).toBe(false);
+  });
+  it('22. drift [33.33, 33.33, 33.34] → true (epsilon anti-drift IEEE-754)', () => {
+    expect(percentagesSumTo100([33.33, 33.33, 33.34])).toBe(true);
+    expect(percentagesSumTo100([100])).toBe(true);
   });
 });
 

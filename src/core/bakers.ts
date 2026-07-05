@@ -19,9 +19,18 @@
  */
 import type { Ingredient } from './types';
 
-// Tolerância só para blindar drift IEEE-754 na soma de percentuais.
-// NÃO é arredondamento de valor: 80+20 é exato; 33,33+33,33+33,34 pode driftar.
-const SUM_EPSILON = 1e-9;
+/**
+ * Predicado genérico: uma lista de percentuais soma exatamente 100%.
+ * Dono único da tolerância anti-drift IEEE-754 (SUM_EPSILON) — reusado pelo
+ * predicado de farinhas principais (§1.1/§2.A) e pelas farinhas do fermento
+ * (§2.B.3, sourdough.ts). NÃO é arredondamento de valor (§9): 80+20 é exato;
+ * 33,33+33,33+33,34 pode driftar e precisa da tolerância.
+ */
+export function percentagesSumTo100(percentages: readonly number[]): boolean {
+  const SUM_EPSILON = 1e-9;
+  const sum = percentages.reduce((acc, p) => acc + p, 0);
+  return Math.abs(sum - 100) < SUM_EPSILON;
+}
 
 /**
  * F_total = Σ pesos das farinhas principais (category 'flour'). §1.1, §3.A, §1.5.
@@ -60,8 +69,8 @@ export function percentageFromWeight(weight: number, flourTotal: number): number
  * Epsilon anti-drift IEEE-754 (SUM_EPSILON), não caixa de arredondamento.
  */
 export function flourPercentagesSumTo100(ingredients: readonly Ingredient[]): boolean {
-  const sum = ingredients
+  const flourPercentages = ingredients
     .filter((i) => i.category === 'flour')
-    .reduce((acc, i) => acc + i.percentage, 0);
-  return Math.abs(sum - 100) < SUM_EPSILON;
+    .map((i) => i.percentage);
+  return percentagesSumTo100(flourPercentages);
 }
