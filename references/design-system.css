@@ -512,34 +512,89 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .best-worst .worst .label { color: var(--status-crit-text); }
 .best-worst .card-mini .value { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* ============ Impressão / Salvar em PDF (issue 019, spec §8) ============
-   Relatório imprimível montado por src/export/print.ts. Apenas classes novas e
-   TOKENS existentes — :root imutável (regra da issue). `#print-root` fica oculto
-   na tela e é o ÚNICO bloco visível na impressão; toda a moldura (nav, header,
-   #app, barra de ações) some via `@media print`. A barra de ações reusa
-   `.row.row--mb.row--sticky` (revisão da issue 019: `.export-bar` removida
-   por duplicar `.row`) para hospedar os botões Exportar XLSX / Imprimir;
-   `window.print()` dispara apenas no clique (nunca automático, §8). */
+/* ============ Impressão / Salvar em PDF (issue 019 base, refactor issue 028) ============
+   Relatório imprimível montado por src/export/print.ts. Refactor 028: o layout
+   deixou de ser lista rótulo→valor (`.print-*`) e passou a reusar `.card`/
+   `.table` da tela (mesma estrutura thead/tbody/tfoot), com uma PALETA DEDICADA
+   DE IMPRESSÃO (tokens `--print-*`) escopada a `#print-root` DENTRO de
+   `@media print` — o `:root` de tela permanece imutável (regra de ouro do
+   projeto) e `#print-root` fica `display:none` na tela, então não há perda
+   visual. `#print-root` é o ÚNICO bloco visível na impressão; toda a moldura
+   (nav, header, #app, barra de ações) some via `@media print`.
+   Semântica contábil (§ "Direção visual" da issue 028): preto é o padrão de
+   TUDO (títulos, th, labels, %, peso, data, margem); azul-escuro só em CRÉDITO
+   (dinheiro entrando: preço/faturamento/lucro≥0); vermelho só em DÉBITO
+   (dinheiro saindo: custo/g, custo por ingrediente, custo total, custo/unidade,
+   lucro<0/prejuízo). `window.print()` dispara apenas no clique (nunca
+   automático, §8). */
 #print-root { display: none; }
 
-.print-view { color: var(--text); font-size: var(--fs-body); }
-.print-view .print-title {
-  color: var(--primary); font-size: var(--fs-display); font-weight: 700;
-  margin: 0 0 var(--sp-4); padding-bottom: var(--sp-2);
-  border-bottom: 2px solid var(--border-strong);
-}
-.print-view .print-section {
-  color: var(--text-2); font-size: var(--fs-title); font-weight: 650;
-  margin: var(--sp-4) 0 var(--sp-2); break-after: avoid;
-}
-.print-view .print-line {
-  display: flex; justify-content: space-between; gap: var(--sp-4);
-  padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); break-inside: avoid;
-}
-.print-view .print-label { color: var(--text-muted); }
-.print-view .print-value { font-variant-numeric: tabular-nums; }
-
 @media print {
+  /* Paleta dedicada de impressão (issue 028): tokens `--print-*` escopados a
+     `#print-root`, só aqui dentro — `:root` de tela intocado. */
+  #print-root {
+    --print-bg: #FFFFFF;
+    --print-text: #111111;         /* padrão de tudo: títulos, th, labels, %, peso, data, margem */
+    --print-border: #B8B8B8;
+    --print-border-strong: #333333;
+    --print-credit: #0B2E59;       /* só CRÉDITO (dinheiro entrando) */
+    --print-debit: #B3261E;        /* só DÉBITO (dinheiro saindo / prejuízo) */
+    --print-muted: #5A5A5A;
+    color: var(--print-text);
+    font-family: var(--font-sans);
+  }
+
+  /* O `.card` vira "página" do PDF: fundo branco, borda fina, sem sombra de tela. */
+  #print-root .card {
+    background: var(--print-bg);
+    color: var(--print-text);
+    border: 1px solid var(--print-border);
+    box-shadow: none;
+  }
+  #print-root .card h1 {
+    color: var(--print-text);
+    font-size: var(--fs-display); font-weight: 700; margin: 0 0 2px;
+  }
+  #print-root .pdf-meta {
+    color: var(--print-muted); font-size: var(--fs-small);
+    padding-bottom: var(--sp-3);
+    border-bottom: 2px solid var(--print-border-strong);
+    margin-bottom: var(--sp-4);
+  }
+  #print-root h2.pdf-section {
+    color: var(--print-text); font-size: var(--fs-small);
+    text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+    margin: var(--sp-4) 0 var(--sp-2);
+    padding-bottom: 0; border-bottom: none; /* reset do `.card > h2` de tela */
+    break-after: avoid;
+  }
+
+  /* Tabelas herdam `.table` da tela; aqui só recolorimos p/ contraste de impressão. */
+  #print-root .table th { color: var(--print-text); border-bottom-color: var(--print-border-strong); }
+  #print-root .table td { color: var(--print-text); border-bottom-color: var(--print-border); break-inside: avoid; }
+  #print-root .table tfoot td { border-top-color: var(--print-border-strong); }
+
+  /* Tabela chave→valor (`.kv`): rótulo à esquerda, valor à direita; última linha negrito. */
+  #print-root .kv { width: 100%; border-collapse: collapse; margin-bottom: var(--sp-3); }
+  #print-root .kv td { border-bottom: 1px solid var(--print-border); padding: var(--sp-1) var(--sp-2); color: var(--print-text); }
+  #print-root .kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  #print-root .kv tr:last-child td { border-bottom: none; font-weight: 700; }
+
+  /* Semântica contábil (issue 028): crédito azul (entra), débito vermelho (sai). */
+  #print-root .pdf-credit { color: var(--print-credit); font-weight: 700; }
+  #print-root .pdf-debit  { color: var(--print-debit);  font-weight: 700; }
+  #print-root .pdf-muted-row td { color: var(--print-muted); font-style: italic; }
+  #print-root .pdf-alert {
+    margin-top: var(--sp-3);
+    border: 1px solid var(--print-debit); color: var(--print-debit);
+    font-weight: 700; padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);
+  }
+  #print-root .pdf-footer {
+    margin-top: var(--sp-4); padding-top: var(--sp-2);
+    border-top: 1px solid var(--print-border);
+    text-align: right; color: var(--print-muted); font-size: var(--fs-small);
+  }
+
   /* Só o relatório imprime; nav/header/#app/barra de ações somem. Seletor
      escopado a `body:has(#print-root)` (revisão da issue 019, achado
      CRÍTICO): a regra antiga era global (`body > *:not(#print-root)`) e

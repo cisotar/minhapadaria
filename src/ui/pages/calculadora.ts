@@ -1,5 +1,5 @@
 /**
- * calculadora.ts — Composition root da página Calculadora (index.html), issues 014/015/016/017.
+ * calculadora.ts — Composition root da página Calculadora (index.html), issues 014/015/016/017/028.
  *
  * O que faz: instancia `createPrefsStore` (011), o estado inicial via
  * `goldenSeed` (§12) + `createAppState` (§1.6) — com o `normalize` opcional
@@ -59,7 +59,7 @@ import { renderPricingPanel } from '../pricingPanel';
 import { h, clear, on } from '../dom';
 import { formatDate } from '../../core/format';
 import { workbookToBlob, downloadBlob } from '../../export/download';
-import { renderPrintView, mountPrintButton } from '../../export/print';
+import { renderRecipePrintView, renderRecipeCostsPrintView, mountPrintButton } from '../../export/print';
 
 /** Dependências injetáveis (issue 025) — default = instâncias reais de produção. */
 export interface InitCalculadoraDeps {
@@ -120,10 +120,11 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
       );
     }
     // §8 (issue 019, spec literal "botão fixo no topo" — revisão: barra sticky):
-    // barra fixa no topo — Exportar XLSX + Imprimir/Salvar em PDF. Consome o
-    // estado JÁ recalculado (store.getState()), sem recalcular (§1.6);
-    // `includeCosts` segue a pref global "Exibir custos" (§2.A.2). O #print-root
-    // fica no <body> (único bloco visível em @media print, design-system.css).
+    // barra fixa no topo — Exportar XLSX + Imprimir Receita + Imprimir Custos
+    // (issue 028: 2 PDFs por contexto). Consome o estado JÁ recalculado
+    // (store.getState()), sem recalcular (§1.6); o botão "Imprimir Custos" é
+    // gated pela pref global "Exibir custos" (§2.A.2). O #print-root fica no
+    // <body> (único bloco visível em @media print, design-system.css).
     const printRoot = h('div', { id: 'print-root' });
     document.body.appendChild(printRoot);
 
@@ -145,13 +146,29 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
       }).then((blob) => downloadBlob(blob, `minha-padaria-receita-${stamp}.xlsx`));
     });
     exportBar.appendChild(xlsxBtn);
+    // Issue 028: 2 PDFs por contexto — "Imprimir Receita" (ingredientes/
+    // proporções, zero $) e "Imprimir Custos" (custo/g, precificação). Ambos
+    // consomem o estado JÁ recalculado (§1.6); §8: imprime SÓ no clique.
     mountPrintButton(exportBar, () => {
-      // §8: renderiza o relatório atual e imprime — SÓ no clique, nunca no init.
       clear(printRoot);
       const { recipe, summary } = store.getState();
-      renderPrintView(printRoot, { recipe, summary, includeCosts: prefs.getShowCosts() });
+      renderRecipePrintView(printRoot, { recipe, summary });
       window.print();
-    });
+    }, 'Imprimir Receita');
+    // Botão de custos gated pela pref global "Exibir custos" (§2.A.2, issue 028
+    // — gate por botão inteiro). `store.setShowCosts` notifica (state.ts) →
+    // o `subscribe` abaixo alterna `.hidden` sem código de reatividade novo.
+    const printCostsBtn = mountPrintButton(exportBar, () => {
+      clear(printRoot);
+      const { recipe, summary } = store.getState();
+      renderRecipeCostsPrintView(printRoot, { recipe, summary });
+      window.print();
+    }, 'Imprimir Custos');
+    const syncCostsBtn = (): void => {
+      printCostsBtn.classList.toggle('hidden', !prefs.getShowCosts());
+    };
+    syncCostsBtn();
+    store.subscribe(syncCostsBtn);
     app.appendChild(exportBar);
 
     // Cada `render*` anexa uma `section.card` a `app`; capturamos a referência

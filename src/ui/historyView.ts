@@ -1,11 +1,11 @@
 /**
- * historyView.ts — Dashboard de Fornadas (spec §14.4/§14.5/§14.6/§14.7) · issue 018.
+ * historyView.ts — Dashboard de Fornadas (spec §14.4/§14.5/§14.6/§14.7) · issues 018/028.
  *
  * O que faz: `renderHistoryView(root, deps)` monta, dentro de `root`, TODA a
  * tela "Histórico de Fornadas" (mockup `mockups/historico.html`): a barra de
- * ações fixa no topo (`.row.row--mb.row--sticky`, §8, revisão issue 019 —
- * Exportar XLSX + Imprimir/Salvar em PDF via `export/print.ts`
- * `renderHistoryPrintView`/`mountPrintButton`), o registro rápido
+ * ações fixa no topo (`.row.row--mb.row--sticky`, §8, issue 019 base, refactor
+ * issue 028 — Exportar XLSX + Imprimir Fornadas/Financeiro via `export/print.ts`
+ * `renderHistoryPrintView`/`renderHistoryCostsPrintView`/`mountPrintButton`), o registro rápido
  * (`bakeForm.ts`), a barra de filtros (receita/intervalo/granularidade,
  * `.filter-bar`/`.period-toggle`), os KPIs do período (`.kpi-row`) com
  * comparação vs. período anterior, o indicador melhor/pior (`.best-worst`), o
@@ -77,7 +77,7 @@ import type { RecipeStore } from '../storage/recipes';
 import type { BakeStore } from '../storage/bakes';
 import type { PrefsStore } from '../storage/prefs';
 import { workbookToBlob, downloadBlob } from '../export/download';
-import { mountPrintButton, renderHistoryPrintView } from '../export/print';
+import { mountPrintButton, renderHistoryPrintView, renderHistoryCostsPrintView } from '../export/print';
 import { h, clear, on } from './dom';
 import { applyValidation, marginChipClass } from './cellHelpers';
 import { renderBakeForm } from './bakeForm';
@@ -246,15 +246,26 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
     }).then((blob) => downloadBlob(blob, `minha-padaria-historico-${stamp}.xlsx`));
   });
   actionBar.appendChild(exportXlsxBtn);
+  // Issue 028: 2 PDFs por contexto — "Imprimir Fornadas" (produção, zero $) e
+  // "Imprimir Financeiro" (custo/faturamento/lucro). Ambos consomem a MESMA
+  // fatia filtrada (`lastExport`) sem recalcular (§1.6); `window.print()` só no
+  // clique (§8, nunca no init).
   mountPrintButton(actionBar, () => {
-    // §8: renderiza o relatório do período filtrado atual e imprime — SÓ no
-    // clique, nunca no init (achado ALTO da revisão: faltava no Histórico).
     if (lastExport === null) return;
     clear(printRoot);
-    const includeCosts = deps.prefs?.getShowCosts() ?? false; // §2.A.2
-    renderHistoryPrintView(printRoot, { entries: lastExport.entries, summary: lastExport.summary, includeCosts });
+    renderHistoryPrintView(printRoot, { entries: lastExport.entries, summary: lastExport.summary });
     window.print();
-  });
+  }, 'Imprimir Fornadas');
+  // Botão de custos: gated pela pref global "Exibir custos" (§2.A.2, issue 028
+  // — gate por botão inteiro, não só por coluna). Sem toggle nesta tela, então
+  // `.hidden` é resolvido uma vez no mount (mesmo padrão do XLSX com custos).
+  const printFinBtn = mountPrintButton(actionBar, () => {
+    if (lastExport === null) return;
+    clear(printRoot);
+    renderHistoryCostsPrintView(printRoot, { entries: lastExport.entries, summary: lastExport.summary });
+    window.print();
+  }, 'Imprimir Financeiro');
+  printFinBtn.classList.toggle('hidden', !(deps.prefs?.getShowCosts() ?? false));
 
   function setGranularity(g: Granularity, btn: HTMLButtonElement): void {
     granularity = g;

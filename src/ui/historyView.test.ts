@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 /**
- * historyView.test.ts — Testes jsdom do dashboard de Fornadas (issue 018,
- * spec §14.4/§14.5/§14.6/§14.7). Casos do Plano Técnico da issue.
+ * historyView.test.ts — Testes jsdom do dashboard de Fornadas (issues 018/028,
+ * spec §14.4/§14.5/§14.6/§14.7). Casos do Plano Técnico das issues. Issue 028
+ * adiciona caso 12: gate do botão "Imprimir Financeiro" pela pref showCosts.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
 import { createRecipeStore, type RecipeStore } from '../storage/recipes';
 import { createBakeStore, type BakeStore } from '../storage/bakes';
+import { createPrefsStore } from '../storage/prefs';
 import { goldenSeed } from './seed';
 import { renderHistoryView } from './historyView';
 import type { Recipe, BakeEntry } from '../core/types';
@@ -31,6 +33,7 @@ interface MountOpts {
   now?: () => Date;
   confirm?: (message: string) => boolean;
   headerRoot?: HTMLElement;
+  prefs?: ReturnType<typeof createPrefsStore>;
 }
 
 function mount(opts: MountOpts = {}) {
@@ -48,6 +51,7 @@ function render(m: ReturnType<typeof mount>) {
     now: m.opts.now ?? fixedNow('2026-07-05T00:00:00'),
     confirm: m.opts.confirm,
     headerRoot: m.opts.headerRoot,
+    prefs: m.opts.prefs,
   });
 }
 
@@ -284,5 +288,31 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     setDateInput(m.root, 'De', '2026-06-01');
     setDateInput(m.root, 'Até', '2026-06-10');
     expect(subtitle!.textContent).toBe('2026-06-01 – 2026-06-10');
+  });
+
+  it('12. gate do botão "Imprimir Financeiro" pela pref showCosts (issue 028)', () => {
+    const findFin = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll('button')).find((b) => b.textContent === 'Imprimir Financeiro') as
+        | HTMLButtonElement
+        | undefined;
+
+    // showCosts = false → botão de custos oculto (`.hidden`)
+    const off = mount({ prefs: createPrefsStore({ storage: createMemoryStorage() }) });
+    off.opts.prefs!.setShowCosts(false);
+    render(off);
+    const finOff = findFin(off.root);
+    expect(finOff).toBeDefined();
+    expect(finOff!.classList.contains('hidden')).toBe(true);
+    // botão de Fornadas (sem custo) sempre presente e visível
+    const fornadasBtn = Array.from(off.root.querySelectorAll('button')).find((b) => b.textContent === 'Imprimir Fornadas') as HTMLButtonElement;
+    expect(fornadasBtn.classList.contains('hidden')).toBe(false);
+
+    // showCosts = true → botão de custos visível
+    const on = mount({ prefs: createPrefsStore({ storage: createMemoryStorage() }) });
+    on.opts.prefs!.setShowCosts(true);
+    render(on);
+    const finOn = findFin(on.root);
+    expect(finOn).toBeDefined();
+    expect(finOn!.classList.contains('hidden')).toBe(false);
   });
 });
