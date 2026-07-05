@@ -116,6 +116,35 @@ _(preenchido pelo escriba conforme o código nasce — caminho → responsabilid
 | `src/export/print.ts` | **Views de impressão "Salvar em PDF"** — (a) `renderPrintView(root, {recipe, summary, includeCosts})` monta, em `root`, resumo imprimível da receita (nome, ingredientes por categoria, fermento §2.B, hidratação §2.C/§2.D, precificação §3.E sse includeCosts). (b) `renderHistoryPrintView(root, {entries, summary, includeCosts})` (revisão issue 019: §8 "impressão aplicável também a Histórico §14") monta relatório histórico filtrado—lista fornadas + agregados período (§14.5). Ambas usam **EXCLUSIVAMENTE** `dom.ts h()` (nunca `innerHTML`, regra de ouro 3): nome receita/ingrediente/notas usuário vira nó texto escapado via `textContent`. (c) `mountPrintButton(actionsRoot, onPrint?)` cria botão fixo "Imprimir / Salvar em PDF" que dispara `window.print()` **SOMENTE no clique** (§8 nunca automático, comportamento especificado). Novo helper `escapeHtml(str): string` (ponto ÚNICO escape STRING→HTML para builders standalone — via primária DOM textContent já cobre 99%, débito remoção 027). Reuso total (regra 2): **não recalcula NADA** — consome `recipe`+`summary` de `recalculate()` e `entries`+`summary` de `aggregatePeriod()`. Formatação via `formatPercent`/`formatWeight`/`formatCurrency` (format.ts 002, §9 arredondamento exibição). Wiring: calculadora e histórico montam botão + renderPrintView/renderHistoryPrintView em `#print-root` novo div (media print CSS). **Media print CSS nova design-system**: `body:has(#print-root) { background: white; color: black; … }` bloqueia cor/layout em impressão (correção achado CRÍTICO: histórico/receitas não imprimem página branca). Tabs/componentes ocultos em media print. Zero rede, zero secret (§8, §10, §11.1, regra de ouro 3). Docs MDN consultadas (regra de ouro 4): Window.print(). | §2.B, §2.C, §2.D, §3.E, §8, §9, §10, §14.5 |
 | `src/export/print.test.ts` | **Testes jsdom de impressão** — 8 casos TDD: `renderPrintView` receita escape XSS (nome `<script>`), formatação peso/% reusada (format.ts), com-sem-custos toggle; `renderHistoryPrintView` agregado período renderiza corretamente; `mountPrintButton` inicialização botão + handler window.print() disparado clique; `escapeHtml` cobertura (não é via primária, é helper fallback, débito remoção 027); media print CSS aplicado (body:has selector). Montagem: createMemoryStorage + createAppState golden + entries fixture. Verifica DOM renderizado (nenhum nó `<script>` em DOM após render, formatters aplicados, button handler injetável). | §8, §9, §10, §14.5 |
 
+---
+
+## v1 Completa — Mapa de módulos fechado (2026-07-05 09:10)
+
+**27/27 issues concluídas**, 295 testes 100% verde, 3 telas funcionais + export + backup. Arquitetura estável:
+
+- **Core (9 módulos)**: types·format·bakers·sourdough·hydration·costs·pricing·scaling·recalc — puro, sem DOM, TDD obrigatório, teste dourado §12 permanente.
+- **Storage (5 módulos)**: local·recipes·prefs·bakes·backup — persistência localStorage, seam BAKES_STORAGE_KEY integrada, validação pré-escrita, zero rede.
+- **UI (13 módulos)**: dom (helpers + extensão svg)·seed·state·ingredientsTable·sourdoughTable·hydrationPanel·modeToggle·batchPanel·pricingPanel·scalePanel + pages calculadora/receitas/historico·recipesList·bakeForm·historyView·trendChart + cellHelpers — zero fórmula, delegam core+storage.
+- **Export (3 módulos)**: download·xlsx·print + testes — XLSX/PDF 100% cliente (exceljs 4.4.0), media print CSS, validação achado CRÍTICO 019.
+
+**Helpers únicos** (regra de ouro 2: zero duplicação):
+- `marginChipClass` (cellHelpers) — mapa MarginStatus → classe chip, reuso pricingPanel+recipesList.
+- `svg()` (dom.ts) — SVG namespace, trendChart.ts SVG puro sem lib.
+- `parseLocalDate()` (format.ts) — parse data local sem UTC shift, bakeForm+historyView.
+- `downloadBlob()` (export/download.ts) — dono único Blob→URL→click→revoke, recipesList+calculadora.
+
+**Decisão técnica final (issue 020)**:
+- **Repaint F_total pós-escalonamento**: `patchDynamic` (state.ts) detecta F_total mudado sem foco, repinta label derivado. Corrige bug real encontrado verificação final: escala muda F_total, pricingPanel+hydrationPanel recalculam, batchPanel não repinta. Teste regressão 9 batchPanel.test.ts valida correção permanente.
+
+**Pendências para humano (de manhã)**:
+1. Reconciliar spec §3.E receita/lucro: texto 14,76/5,90 vs código 14,77/5,91 — achado A, PROGRESS topo.
+2. Typo §2.B.2 310→315 — confirmado revisor.
+3. Seed padrão com/sem azeite — goldenSeed vs teste §12 puro.
+4. types.ts null-widening vs §6 — contrato null≠0 confirmação.
+5. UI polish 027 — aria-live calculadora, gráfico animação, escapeHtml removal.
+
+---
+
 ## Decisões técnicas registradas
 
 | Data | Decisão | Motivo |

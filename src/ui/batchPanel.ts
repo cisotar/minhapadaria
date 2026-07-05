@@ -264,11 +264,21 @@ export function renderBatchPanel(root: HTMLElement, store: AppStateStore): void 
     dynamicFields.appendChild(buildQtyField());
   }
 
-  /** Repinta F_total quando ele é o campo derivado (per-unit OU peso→%, §1.3/§3.A/issue 024) — nunca recria um input em foco. */
+  /**
+   * Repinta F_total (§1.3/§3.A/issue 024) — sempre que ele não estiver com o
+   * foco do usuário. Nos modos derivados (per-unit OU peso→%) o campo é
+   * somente-leitura e o valor vem de `recalculate`; em %→peso+total ele é
+   * editável mas ainda pode mudar por uma ação EXTERNA ao próprio campo — o
+   * escalonamento por peso alvo (`scalePanel.ts`/`applyTargetScaling`, §3.D)
+   * grava `flourTotalWeight` sem passar pelo `input` deste campo, então sem
+   * este repaint o valor exibido ficava defasado (achado da verificação
+   * final, golden §12: alvo 2000g não atualizava o campo). Guarda
+   * `document.activeElement !== ftotalInput` evita sobrescrever o que o
+   * usuário está digitando (mesmo padrão de não recriar input em foco).
+   */
   function patchDynamic(): void {
     const { recipe } = store.getState();
-    const isDerived = recipe.batchPlanningMode === 'per-unit' || recipe.calculationMode === 'weight-to-percentage';
-    if (isDerived && ftotalInput) {
+    if (ftotalInput && document.activeElement !== ftotalInput) {
       ftotalInput.value = formatWeight(recipe.flourTotalWeight);
     }
   }

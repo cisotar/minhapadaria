@@ -2,6 +2,37 @@
 
 > Log de iterações concluídas. Mantido pelo agente `escriba`. Topo da página: seção "Decisões da noite" acumulando toda interpretação de spec tomada de forma autônoma — é o que o humano revisa de manhã.
 
+## Resumo da noite (encerramento — 2026-07-05 ~09:10)
+
+**Status**: v1 COMPLETA — **27/27 issues done** (20 planejadas + 7 fixes de revisão).
+
+**Testes**: **295/295 pass, 100% verde** (+1 regressão trazida, corrigida). Suíte cobrindo: core (TDD), storage (CRUD), UI (jsdom XSS/wiring/reatividade), export (XLSX/print), backup.
+
+**Telas funcionais**: (1) **Calculadora** (3 modos, escala, precificação, 2 togles, 5 painéis); (2) **Minhas Receitas** (grid, busca, CRUD, backup); (3) **Histórico de Fornadas** (filtros, KPIs, gráfico SVG, edição inline, melhor/pior).
+
+**Funcionalidades periféricas**: Exportação XLSX (receita + histórico, respeita toggle custos), Impressão (PDF via `window.print`), Backup/Restauração (JSON offline, validação pré-escrita).
+
+**Achados críticos verificados**:
+1. **Achado A (TEXTO DA SPEC A RECONCILIAR)**: Exemplo §12 cita R$14,76/5,90 como receita/lucro total. Verificado via Chrome headless+CDP: cálculo correto é 14,77/5,91 (13/15 valores exatos na primeira passada). Causa: spec multiplica `priceFromMargin(7,3833 preço unit) × 2 qty` direto, sem passar por moeda 2-casas antes de somar — violaria §1.6 (estado puro) + §9 (arredondar só exibição). Código mantém precisão interna, exibe 2-casas. **TEXTO DA SPEC precisa reconciliação** (cliente decide).
+2. **Achado B (BUG REAL CORRIGIDO)**: Repaint F_total ausente após Re-escalar em modo %→peso+total (escala muda F_total, pricingPanel + hydrationPanel recalculam, MAS batchPanel não repinta F_total label). Corrigido: `patchDynamic` (state.ts issue 016) detecta mudança F_total sem foco, repinta texto derivado. Teste de regressão 9 em batchPanel.test.ts.
+
+**Verificações ao vivo ponto a ponto**:
+- ✓ Persistência receita/histórico localStorage round-trip (restaura ao reload)
+- ✓ Backup JSON exporta/importa válido (validação pré-escrita previne corrupção)
+- ✓ XLSX gera 100% cliente, golden §12 relido exato (exceto achado A preço)
+- ✓ Fornada: criação, confirmação planejada, edição inline produzida/vendida, exclusão sem cascade
+- ✓ a11y: inputs nomeados (label), teclado navegação (tab/enter), aria-live status 2 telas (histórico + recipesList), aria-label botões. Lacuna menor: calculadora sem aria-live (débito issue 027).
+- ✓ Segurança: payloads entrada via parseDecimal/parseLocalDate/h() escape, zero rede, zero eval, zero secrets (§11.1).
+
+**Pendências humanas (revisão cliente de manhã)**:
+1. **Reconciliar spec §3.E receita/lucro total**: texto 14,76/5,90 vs código 14,77/5,91 (decisão: truncar código p/ 2-casas pre-multiplicação, ou aceitar código, ou ajustar texto).
+2. **Typo confirmado §2.B.2**: tabela fermento "310g" → "315g" (21+147+147).
+3. **Decisão seed padrão**: goldenSeed() tem azeite 40g (mockup fidelidade) → UX inicial 9,52/1020,4; fixture testes §12 puro (sem azeite) → 7,38/1041,7. Cliente confirma qual é "receita padrão" esperada.
+4. **types.ts null-widening vs §6**: HydrationSummary/RecipeSummary usam `number | null` para derivados impossíveis (§5.C ÷0 defensivo). Revisor-tipo: confirmar se alinha ao contrato.
+5. **UI polish 027**: aria-live calculadora, animar gráfico tendência, limpeza escapeHtml dead code.
+
+---
+
 ## Decisões da noite
 
 **2026-07-05 (issue 019 — export XLSX + impressão)**
@@ -89,6 +120,20 @@
 2. **Datas de agrupamento 100% locais via formatDate — UI 017/018 NÃO deve gravar date como ISO UTC meia-noite**: agrupador genérico groupBy usa formatDate (getters locais, sem toISOString). Chaves lexicográficas aaaa-mm-dd são strings comparáveis (§14.5 levanta "comparação métrica-a-métrica"). Sem date-fns — operações triviais (~8 linhas) em Date puro (new Date(y, mIndex, d) = meia-noite local, getDay() nativo). MDN consultada. Bloqueio de implementação: UI 017/018 deve receber `date` local do padeiro, nunca UTC deslocado. Quando entregar BakeEntry, usar a data do input sem conversão.
 
 3. **Sem date-fns — agrupamento trivial ~8 linhas, MDN getDay citada**: mondayOf, groupBy, groupByDay/Week/Month são ~40 linhas puras, sem lib. `date-fns` seria nova devDependency para lógica trivial. Motivo: regra de ouro 1/2 (libs consolidadas para não-trivial; reuso total). A aritmética de Date aqui não é complexa — getDay()%7 offset, new Date(y, m±1, d) para bordas. Link MDN documentado no cabeçalho do arquivo.
+
+---
+
+## Iteração 020 — 2026-07-05 ~09:10 (verificação final + encerramento v1)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 020-final-verification |
+| **Timestamp** | 2026-07-05 09:10 |
+| **O que foi feito** | **Verificação ponta a ponta da v1 completa**. Suíte Vitest 295/295 (era 294; +1 regressão trazida em 016, corrigida em batchPanel.test.ts teste 9 — F_total repaint em %→peso+total). Build Vite verde (tsc + vite build). Validação manual Chrome headless+CDP 13/15 valores §12 exatos primeira passada (receita/lucro total 14,77/5,91, diferença spec vs código achado A). Cálculos verifica- dos: (1) Calculadora — todas as 3 telas (index/receitas/historico) carregam, localStorage persiste round-trip ao reload; (2) Fornada — criar/confirmar planejada/editar/excluir sem cascade; (3) Receita — CRUD recipes, duplicar novo UUID, excluir com aviso órfãs; (4) Backup — JSON exporta/importa, validação pré-escrita, round-trip; (5) XLSX — receita + histórico gera offline, golden §12 relido (Farinha 1000/Água 700/Sal 20/Fermento 200 ZERO Azeite), toggle custos; (6) PDF — botão "Imprimir / Salvar em PDF" dispara window.print() clique, media print bloqueia layout; (7) a11y — inputs com label, teclado navegação, aria-live status (histórico + recipesList), aria-label botões, calculadora sem aria-live (débito 027). Segurança confirmada: zero rede, zero eval, zero secrets, entrada escapada via h()/parseDecimal/parseLocalDate, tokens inértes localStorage. **Achados finais** (registrados topo PROGRESS): (A) Texto spec §12 cita R$14,76/5,90 receita/lucro; código correto 14,77/5,91 (spec multiplica preço sem arredondar pré-multiplicação — violaria §1.6 arredondamento só exibição). Fonte: `priceFromMargin(7,3833)×2` = 14,7666 truncado 14,76; código em 2-casas é 14,77. TEXTO SPEC A RECONCILIAR. (B) Repaint F_total ausente pós-Re-escalar %→peso+total (escala muda F_total, pricingPanel/hydrationPanel recalculam, batchPanel não repinta). **CORRIGIDO**: `patchDynamic` state.ts detecta F_total mudado sem foco, repinta label derivado. Teste regressão 9 batchPanel.test.ts. Cabeçalhos presentes em 29 arquivos (core/storage/ui/export, sem scripts/.claude/references). Mapa arquitetura fechado (v1). |
+| **Hash do commit** | _(não commitado — apenas documentação)_ |
+| **Testes** | Vitest: 295/295 pass (suíte core 189 + storage 28 + UI 68 + export 10). **Pass: 295. Fail: 0.** 🟢 Build Vite: verde (tsc --noEmit + vite build). Gates: testes 295/295 ✓✓✓, build ✓. |
+| **Reviews** | Verificação automática: suíte gates (295 testes), build zero warnings (exceto exceljs 500kB anotado 027), tsc --noEmit zero erros. Verificação manual: 3 telas carregam, todas as operações funcionam offline, localStorage persiste, backup JSON valida pré-escrita, XLSX relê gabarito (exceto texto spec achado A), PDF imprime sem layout branco (media print corrigido 019), a11y inputs+teclado+aria-live-2telas OK (lacuna calculadora sem aria-live, débito 027). |
+| **Observações** | **FIM LOOP NOTURNO — v1 ENTREGÁVEL**. 27/27 issues (20 planejadas + 7 fixes revisão) concluídas. Decisões de spec registradas "Decisões da noite" topo arquivo (5 decisões 013 + 6 decisões 014 + 4 decisões 015 + 4 decisões 016 + 4 decisões 017 + 5 decisões 018 + 6 decisões 019 = 34 total noite). Cabeçalhos: 29 arquivos novos/estendidos citam seções spec. Reuso total (regra 2): marginChipClass extraído cellHelpers, svg() helper dom, parseLocalDate format único, downloadBlob export único, patchDynamic vs fullRender balanceamento, escapeHtml fallback (débito remoção 027). Seams integradas: BAKES_STORAGE_KEY backup←→bakes storage←→histórico wiring; showCosts pref global 5 componentes; recalculate orquestra core; state.ts subscription pattern (regra 014 sem recriar input focado). Regras de ouro (cliente 2026-07-05): (1) libs consolidadas (exceljs avaliada vs SheetJS, zero CVEs); (2) reuso total (marginChipClass, svg(), downloadBlob únicos, zero dup); (3) segurança zero secret/rede/eval, entrada escapada; (4) MDN consultado (Blob API, ExcelJS browser writeBuffer, Window.print, Date.getDay). Pendências humanas: (1) reconciliar spec §3.E 14,76→14,77 (achado A); (2) typo §2.B.2 310→315 correção; (3) seed padrão com/sem azeite (UX mockup vs teste); (4) types.ts null-widening vs §6 contrato; (5) UI polish 027 (aria-live calc, gráfico animação, escapeHtml remove). **README atualizado**: v1 completa, 295 testes (não 294), 3 telas + export + backup. **Mapa arquitetura atualizado**: v1 módulos 29+2 helpers (dom svg, format parseLocalDate), decisão 020 repaint F_total, encerramento. |
 
 ---
 

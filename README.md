@@ -29,7 +29,12 @@ Todos importam [references/design-system.css](references/design-system.css) — 
 
 ## Status
 
-**Alpha funcional — primeiras 2 telas implementadas (issues 004–017)**
+**v1 completa — 3 telas funcionais, core testado por TDD, exportação e backup (issues 004–027)**
+
+A v1 entrega a aplicação inteira do fluxo da spec v5, 100% client-side (sem
+backend, sem rede em runtime): formular receitas em baker's percentage, calcular
+custo e precificação, gerenciar receitas salvas e acompanhar o histórico de
+fornadas — com exportação (XLSX/PDF) e backup local (JSON).
 
 ### Scaffold (✓ Concluído)
 - [x] Vite + TypeScript strict + Vitest
@@ -54,17 +59,48 @@ Todos importam [references/design-system.css](references/design-system.css) — 
 - [x] Backup/restauração JSON (exportar/importar com validação pré-escrita)
 - [x] Estado vazio + status region (aria-live pt-BR)
 
-### Testes (✓ Cobertura Alta)
-- [x] Core: 189 testes (TDD, zero mock)
-- [x] UI/Storage: 40+ testes jsdom (XSS, recálculo, wiring)
-- [x] **Total: 229 testes, 100% pass**
+### Tela Histórico de Fornadas (✓ Funcional)
+- [x] Registro rápido de fornada (receita, data, produzida/vendida, custo/preço, observações)
+- [x] Filtros por período e receita
+- [x] KPIs do período (produzido, vendido, custo, receita, lucro, desperdício)
+- [x] Gráfico de tendência + melhor/pior dia
+- [x] Listagem cronológica das fornadas
 
-### Próximas (🔄 Em planejamento)
-- [ ] Tela Histórico de Fornadas (filtros, gráficos, KPIs — issues 018–020+)
-- [ ] Impressão/exportação XLSX (issue 019)
-- [ ] Refinamentos design (issue 022)
-- [ ] Testes headless + smoke (issue 020)
+### Exportação e Backup (✓ Funcional)
+- [x] Exportar receita em XLSX (ExcelJS, respeita o toggle "Exibir custos")
+- [x] Imprimir / Salvar em PDF (via `window.print`)
+- [x] Backup completo (receitas + fornadas) em JSON, exportar/importar com round-trip validado
+
+### Testes (✓ Cobertura Alta)
+- [x] Core: TDD, zero mock, teste dourado permanente do exemplo §12
+- [x] UI/Storage/Export: testes jsdom (XSS inerte, recálculo, wiring, persistência)
+- [x] **Total: 295 testes, 100% pass** (29 arquivos)
+
+## Como rodar
+
+Requer Node 18+ (desenvolvido em Node 24). Sem serviços externos.
+
+```bash
+npm install      # instala dependências
+npm run dev      # servidor de desenvolvimento (Vite, hot reload)
+npm run build    # type-check (tsc --noEmit) + build de produção em dist/
+npm run preview  # serve o build de produção localmente
+```
+
+Páginas: `index.html` (Calculadora), `receitas.html` (Minhas Receitas),
+`historico.html` (Histórico de Fornadas). Abrir uma receita salva na
+Calculadora: `index.html?recipe=<id>`.
+
+## Como testar
+
+```bash
+npm test            # Vitest em modo watch
+npm test -- --run   # execução única (CI), todos os testes uma vez
+```
 
 ## Segurança
 
-Nenhuma integração externa (ex: Google Docs — ver Seção 11.1 da spec) deve expor API keys/secrets no front-end nem em commits. Ver `.gitignore`.
+Aplicação 100% client-side: nenhuma chamada de rede em runtime, nenhum `eval`,
+todos os dados no `localStorage` do navegador. Nenhuma integração externa (ex:
+Google Docs — ver Seção 11.1 da spec) deve expor API keys/secrets no front-end
+nem em commits. Ver `.gitignore`.

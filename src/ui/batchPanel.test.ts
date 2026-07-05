@@ -11,6 +11,8 @@ import { createPrefsStore } from '../storage/prefs';
 import { createAppState } from './state';
 import { goldenSeed } from './seed';
 import { renderBatchPanel } from './batchPanel';
+import { applyTargetScaling, scaledFlourTotal } from '../core/scaling';
+import { formatWeight } from '../core/format';
 
 function mount(mutate?: (r: ReturnType<typeof goldenSeed>) => void) {
   const root = document.createElement('div');
@@ -88,6 +90,28 @@ describe('batchPanel (jsdom)', () => {
 
     expect(qtyInput.value).toBe('2'); // reverte ao último valor válido
     expect(qtyInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('9. %→peso + fornada inteira: F_total repinta após Re-escalar (§3.D, achado da verificação final)', () => {
+    // Este seed (mount()/goldenSeed) tem soma 196% (100+70+4+2 ingredientes +
+    // 20 fermento) → alvo 2000g → F_nova = scaledFlourTotal (scaling.ts, §3.D
+    // passo 2). O bug: F_total é campo editável em %→peso+total (não
+    // `isDerived` em `patchDynamic`), então `applyTransform` atualiza o estado
+    // mas o input nunca repinta, ficando defasado em 1000,0.
+    const { root, store } = mount();
+    const ftotalInput = root.querySelector(
+      'input[aria-label="Peso de Farinha Total"]',
+    ) as HTMLInputElement;
+    expect(ftotalInput.value).toBe('1000,0');
+    expect(ftotalInput.readOnly).toBe(false); // editável em %→peso+total
+
+    const expected = scaledFlourTotal(store.getState().recipe, 2000)!;
+    const applied = store.applyTransform((recipe) => applyTargetScaling(recipe, 2000));
+    expect(applied).toBe(true);
+    expect(store.getState().recipe.flourTotalWeight).toBeCloseTo(expected, 6);
+
+    expect(ftotalInput.value).not.toBe('1000,0'); // campo deve repintar o novo F_total
+    expect(ftotalInput.value).toBe(formatWeight(expected));
   });
 
   it('6. modo peso→% → botão "Por unidade" desabilitado (§2.E.1)', () => {
