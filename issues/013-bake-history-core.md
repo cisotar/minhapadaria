@@ -31,10 +31,10 @@ Histórico de produção/vendas (spec §14): registro por fornada, snapshots de 
 - Confirmar planejada → conta nas agregações.
 
 ## Critérios de aceite
-- [ ] Fórmulas §14.3 exatas; snapshots nunca recalculados da receita atual.
-- [ ] Planned fora dos totais até confirmação (§14.4/14.6).
-- [ ] Órfãs íntegras e visíveis (§14.7).
-- [ ] Backup (012) passa a incluir o histórico real.
+- [x] Fórmulas §14.3 exatas; snapshots nunca recalculados da receita atual.
+- [x] Planned fora dos totais até confirmação (§14.4/14.6).
+- [x] Órfãs íntegras e visíveis (§14.7).
+- [x] Backup (012) passa a incluir o histórico real.
 
 ## Referências
 - spec §5.D, §6, §14 · date-fns docs (se adotada)

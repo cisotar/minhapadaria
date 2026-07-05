@@ -25,10 +25,10 @@ Coração da arquitetura (spec §1.6): UMA função reconstrói todo o derivado 
 - Alteração de qualquer campo → resultado igual a recalcular do zero (sem cache intermediário).
 
 ## Critérios de aceite
-- [ ] Função única; derivados nunca realimentam o cálculo (§1.6).
-- [ ] Fermento por proporção nos dois modos (§1.3).
-- [ ] Transição §1.5 sem perda de dados.
-- [ ] Teste dourado §12 verde e permanente na suíte.
+- [x] Função única; derivados nunca realimentam o cálculo (§1.6).
+- [x] Fermento por proporção nos dois modos (§1.3).
+- [x] Transição §1.5 sem perda de dados.
+- [x] Teste dourado §12 verde e permanente na suíte.
 
 ## Referências
 - spec §1.2–1.6, §9, §12 · architecture.md convenções

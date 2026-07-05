@@ -28,10 +28,10 @@ Persistência local (spec §10): receitas com estado completo (§2.F); preferên
 - Toggle custos: default false; set true → persiste.
 
 ## Critérios de aceite
-- [ ] Round-trip sem perda: save→load deep-equal (datas incluídas).
-- [ ] Duplicação integral (§2.F).
-- [ ] Toggle custos persistido, default oculto (§2.A.2).
-- [ ] Zero rede; dados 100% locais (regra de ouro 3).
+- [x] Round-trip sem perda: save→load deep-equal (datas incluídas).
+- [x] Duplicação integral (§2.F).
+- [x] Toggle custos persistido, default oculto (§2.A.2).
+- [x] Zero rede; dados 100% locais (regra de ouro 3).
 
 ## Referências
 - spec §2.A.2, §2.F, §6, §10 · MDN localStorage, crypto.randomUUID

@@ -28,11 +28,11 @@ Relatórios (spec §8): XLSX estruturado (não CSV) e "PDF" = página HTML forma
 - Nome de ingrediente com `<b>x</b>` → escapado no HTML de impressão.
 
 ## Critérios de aceite
-- [ ] XLSX abre no LibreOffice/Excel com seções por categoria (§8).
-- [ ] Opção com/sem custos nos dois relatórios.
-- [ ] Impressão só por botão; sem diálogo automático (§8).
-- [ ] Lib escolhida justificada com link da doc oficial.
-- [ ] Zero rede em runtime; escape de dados do usuário no HTML.
+- [x] XLSX abre no LibreOffice/Excel com seções por categoria (§8).
+- [x] Opção com/sem custos nos dois relatórios.
+- [x] Impressão só por botão; sem diálogo automático (§8).
+- [x] Lib escolhida justificada com link da doc oficial.
+- [x] Zero rede em runtime; escape de dados do usuário no HTML.
 
 ## Referências
 - spec §8, §12, §14.5 · architecture.md (candidatas) · docs oficiais exceljs / SheetJS

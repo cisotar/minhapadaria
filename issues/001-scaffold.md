@@ -21,10 +21,10 @@ Base técnica do app 100% client-side (spec §10). Stack decidida em `references
 - `.gitignore`: `node_modules/`, `dist/`, `.env*` (spec §11.1).
 
 ## Critérios de aceite
-- [ ] `npm run build` gera as 3 páginas.
-- [ ] `npm test -- --run` roda e falha SOMENTE no teste dourado placeholder.
-- [ ] TS strict ativo; zero dependência de runtime além do Vite toolchain.
-- [ ] design-system.css importado, tokens intactos (nunca editar `references/design-system.css` tokens).
+- [x] `npm run build` gera as 3 páginas.
+- [x] `npm test -- --run` roda e falha SOMENTE no teste dourado placeholder.
+- [x] TS strict ativo; zero dependência de runtime além do Vite toolchain.
+- [x] design-system.css importado, tokens intactos (nunca editar `references/design-system.css` tokens).
 
 ## Referências
 - spec §10, §12 · references/architecture.md (stack, estrutura) · docs oficiais: vitejs.dev/guide (MPA), vitest.dev

@@ -29,10 +29,10 @@ Todas as estruturas de dados da spec §6 e a camada de parsing/formatação pt-B
 - `formatDate(new Date(2026, 6, 4))` → `"2026-07-04"`.
 
 ## Critérios de aceite
-- [ ] Interfaces idênticas às da spec §6 (nomes e campos).
-- [ ] Entrada aceita vírgula e ponto; exibição sempre vírgula.
-- [ ] Nenhuma função de formatação usada em cálculo interno (regra §9).
-- [ ] Cabeçalho do módulo cita §6/§7.1/§9.
+- [x] Interfaces idênticas às da spec §6 (nomes e campos).
+- [x] Entrada aceita vírgula e ponto; exibição sempre vírgula.
+- [x] Nenhuma função de formatação usada em cálculo interno (regra §9).
+- [x] Cabeçalho do módulo cita §6/§7.1/§9.
 
 ## Regras de ouro
 - `Intl.NumberFormat('pt-BR')` (plataforma, lib "consolidada" nativa) preferível a formatação manual — consultar MDN antes.

@@ -27,9 +27,9 @@ Escalonamento explícito (spec §3.D — única ação não-imediata, §1.6) e p
 - W_alvo 0 ou soma 0 → inválido explícito.
 
 ## Critérios de aceite
-- [ ] Fermento na soma (decisão 3); golden 192% → 1041,7g exibido.
-- [ ] Per-unit deriva F_total, restrito a %→peso (§2.E.1).
-- [ ] Escalonamento é função explícita, não reação de campo (§1.6).
+- [x] Fermento na soma (decisão 3); golden 192% → 1041,7g exibido.
+- [x] Per-unit deriva F_total, restrito a %→peso (§2.E.1).
+- [x] Escalonamento é função explícita, não reação de campo (§1.6).
 
 ## Referências
 - spec §1.6, §2.E.1, §3.D, §12, decisões 3 e 16

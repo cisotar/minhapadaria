@@ -23,13 +23,13 @@ Tela principal (spec §2.A, §4; mockup `mockups/calculadora.html`). UI consome 
 - Ferramenta opcional: /design ou DesignSync se disponível; senão mockup + design system bastam.
 
 ## Critérios de aceite
-- [ ] Colunas, ordem e toggle idênticos a §2.A.2/mockup; nada oculto no desktop (§10).
-- [ ] Editar % de água atualiza peso instantaneamente (e vice-versa no modo peso→%).
-- [ ] g/mL alterna exibição, canônico em g.
-- [ ] Blur com farinhas ≠100% reverte campo com erro (§5.A).
-- [ ] Nome `<script>` renderiza inerte (escape).
-- [ ] Zero lógica de negócio no DOM — só chamadas ao core.
-- [ ] Strings UI pt-BR.
+- [x] Colunas, ordem e toggle idênticos a §2.A.2/mockup; nada oculto no desktop (§10).
+- [x] Editar % de água atualiza peso instantaneamente (e vice-versa no modo peso→%).
+- [x] g/mL alterna exibição, canônico em g.
+- [x] Blur com farinhas ≠100% reverte campo com erro (§5.A).
+- [x] Nome `<script>` renderiza inerte (escape).
+- [x] Zero lógica de negócio no DOM — só chamadas ao core.
+- [x] Strings UI pt-BR.
 
 ## Referências
 - spec §1.6, §2.A, §4, §5, §9, §10 · mockups/calculadora.html · brandbook §4.1 · references/design-system.css

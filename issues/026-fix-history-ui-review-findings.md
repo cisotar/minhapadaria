@@ -17,10 +17,10 @@ Achados baixos das revisões da issue 018 (ambas aprovadas). Estilos inline novo
 5. Documentar em `references/design-system.html` que `.chip-warn` também cobre "atenção operacional" (badge órfã) — ou criar variante semântica.
 
 ## Critérios de aceite
-- [ ] parseDecimal recebe valor cru.
-- [ ] Teste preço negativo verde.
-- [ ] Subtítulo do período no header.
-- [ ] Suíte 100% verde.
+- [x] parseDecimal recebe valor cru.
+- [x] Teste preço negativo verde.
+- [x] Subtítulo do período no header.
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §7.1, §14.6 · reviews da issue 018 (2026-07-05 ~06:55)

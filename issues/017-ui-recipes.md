@@ -18,12 +18,12 @@ Gerenciamento de receitas (spec §2.F; mockup `mockups/receitas.html`). Também 
 - Reusar componentes/classes já criados nas issues 014–016 (regra de ouro 2).
 
 ## Critérios de aceite
-- [ ] 5 operações §2.F funcionais ponta a ponta com persistência.
-- [ ] Duplicar gera cópia integral independente (editar cópia não afeta original).
-- [ ] Excluir pede confirmação; fornadas da receita permanecem órfãs (§14.7).
-- [ ] Backup: export → limpar storage → import → receitas de volta.
-- [ ] Nome `<img onerror>` renderiza inerte.
-- [ ] Strings pt-BR; layout fiel ao mockup.
+- [x] 5 operações §2.F funcionais ponta a ponta com persistência.
+- [x] Duplicar gera cópia integral independente (editar cópia não afeta original).
+- [x] Excluir pede confirmação; fornadas da receita permanecem órfãs (§14.7).
+- [x] Backup: export → limpar storage → import → receitas de volta.
+- [x] Nome `<img onerror>` renderiza inerte.
+- [x] Strings pt-BR; layout fiel ao mockup.
 
 ## Referências
 - spec §2.F, §10, §14.7 · mockups/receitas.html · brandbook · issues 011/012

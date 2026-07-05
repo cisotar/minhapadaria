@@ -20,12 +20,12 @@ Painel de controle de escala e produção (spec §2.E), precificação sincroniz
 - Validações via 010 (margem ≤99,9, qtd ≥1 etc.).
 
 ## Critérios de aceite
-- [ ] Banner + destaque visíveis SEMPRE que peso→% ativo; somem na volta (§1.3).
-- [ ] Editar margem 40% com custo 8,86/2un → preço R$7,38 na tela (golden §12).
-- [ ] Escalonar alvo 2000g → farinha exibida 1041,7g (§12).
-- [ ] Per-unit: F_unit 250 × N 4 → F_total 1000 somente-leitura.
-- [ ] Cores de margem pelos tokens (sem hex novo).
-- [ ] Zero lógica de negócio no DOM; strings pt-BR.
+- [x] Banner + destaque visíveis SEMPRE que peso→% ativo; somem na volta (§1.3).
+- [x] Editar margem 40% com custo 8,86/2un → preço R$7,38 na tela (golden §12).
+- [x] Escalonar alvo 2000g → farinha exibida 1041,7g (§12).
+- [x] Per-unit: F_unit 250 × N 4 → F_total 1000 somente-leitura.
+- [x] Cores de margem pelos tokens (sem hex novo).
+- [x] Zero lógica de negócio no DOM; strings pt-BR.
 
 ## Referências
 - spec §1.3, §1.5, §1.6, §2.E, §3.D, §3.E, §4 · mockups/calculadora.html · design-system.css tokens de estado

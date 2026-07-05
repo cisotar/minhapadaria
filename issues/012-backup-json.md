@@ -24,9 +24,9 @@ Proteção contra perda do localStorage (spec §10, decisão 11): exportar TODOS
 - exportedAt em formato ISO.
 
 ## Critérios de aceite
-- [ ] Backup cobre receitas + histórico (§10).
-- [ ] Falha de import nunca corrompe/perde dados atuais.
-- [ ] Zero rede; arquivo local apenas.
+- [x] Backup cobre receitas + histórico (§10).
+- [x] Falha de import nunca corrompe/perde dados atuais.
+- [x] Zero rede; arquivo local apenas.
 
 ## Referências
 - spec §10, §11.2, decisão 11 · MDN Blob/FileReader

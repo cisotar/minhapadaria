@@ -25,10 +25,10 @@ Entrada única de custo: Preço Pago + Peso do Produto (spec §2.A.1); tudo mais
 - kg/L/mL normalizados: R$8 por 1kg ≡ R$8 por 1000g.
 
 ## Critérios de aceite
-- [ ] Custo/g e custo na receita sempre derivados, nunca entrada direta (decisão 18/23).
-- [ ] Isca fora de todo cálculo de custo.
-- [ ] Golden §12: custo total R$8,86 exato (antes de arredondar: 8.86).
-- [ ] Divisões por zero tratadas.
+- [x] Custo/g e custo na receita sempre derivados, nunca entrada direta (decisão 18/23).
+- [x] Isca fora de todo cálculo de custo.
+- [x] Golden §12: custo total R$8,86 exato (antes de arredondar: 8.86).
+- [x] Divisões por zero tratadas.
 
 ## Referências
 - spec §2.A.1, §2.B.2, §3.E, §5.C, §12

@@ -26,9 +26,9 @@ Núcleo da convenção de padeiro (spec §1.1–1.2, §3.A): farinha total é a 
 - F_total = 0 → pesos 0, sem divisão por zero no inverso (retorno 0 ou null documentado).
 
 ## Critérios de aceite
-- [ ] Fórmulas §3.A exatas, sem arredondamento interno.
-- [ ] Fermento tratado como linha genérica (peso = F_total × %/100) — sem caso especial.
-- [ ] Divisão por zero tratada (§5.C).
+- [x] Fórmulas §3.A exatas, sem arredondamento interno.
+- [x] Fermento tratado como linha genérica (peso = F_total × %/100) — sem caso especial.
+- [x] Divisão por zero tratada (§5.C).
 
 ## Referências
 - spec §1.1, §1.2, §2.A.2, §3.A, §12

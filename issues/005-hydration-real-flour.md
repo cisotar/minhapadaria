@@ -24,9 +24,9 @@ Painéis informativos do padeiro (spec §2.C, §2.D). Gordura (`fat`) NÃO hidra
 - F_total=0 → null, sem NaN.
 
 ## Critérios de aceite
-- [ ] `fat` excluído das duas hidratações; entra em peso/custo normalmente (§2.A).
-- [ ] Farinha Real Consumida = F_total + Farinha do Fermento (§2.D).
-- [ ] Zero NaN em bordas.
+- [x] `fat` excluído das duas hidratações; entra em peso/custo normalmente (§2.A).
+- [x] Farinha Real Consumida = F_total + Farinha do Fermento (§2.D).
+- [x] Zero NaN em bordas.
 
 ## Referências
 - spec §2.A, §2.C, §2.D, §12, decisão 15

@@ -26,11 +26,11 @@ Baixos:
 - Casos jsdom dos itens 1 e 2; suíte existente permanece verde.
 
 ## Critérios de aceite
-- [ ] Testes ?recipe/auto-save e Abrir verdes.
-- [ ] Subtítulo via classe do design system.
-- [ ] Sem px bruto na busca.
-- [ ] Decisão sobre "em branco" registrada.
-- [ ] Suíte 100% verde.
+- [x] Testes ?recipe/auto-save e Abrir verdes.
+- [x] Subtítulo via classe do design system.
+- [x] Sem px bruto na busca.
+- [x] Decisão sobre "em branco" registrada.
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §2.F, §10 · reviews da issue 017 (2026-07-05 ~06:20)

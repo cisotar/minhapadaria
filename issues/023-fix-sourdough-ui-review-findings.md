@@ -21,9 +21,9 @@ Baixo:
 - Os 2 casos jsdom acima; suíte existente permanece verde.
 
 ## Critérios de aceite
-- [ ] Testes §5.B e §5.C do fermento verdes.
-- [ ] Decisão sobre costPerKg registrada (core ou UI justificada).
-- [ ] Suíte 100% verde.
+- [x] Testes §5.B e §5.C do fermento verdes.
+- [x] Decisão sobre costPerKg registrada (core ou UI justificada).
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §2.B.5, §5.B, §5.C · review da issue 015 (2026-07-05 ~05:15)

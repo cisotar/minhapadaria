@@ -25,10 +25,10 @@ Baixos:
 - Os 4 casos jsdom acima; suíte existente permanece verde.
 
 ## Critérios de aceite
-- [ ] 4 testes novos verdes.
-- [ ] Sem classe morta no design system.
-- [ ] Sem estilos inline em ingredientsTable.ts (ou justificados um a um).
-- [ ] Suíte 100% verde.
+- [x] 4 testes novos verdes.
+- [x] Sem classe morta no design system.
+- [x] Sem estilos inline em ingredientsTable.ts (ou justificados um a um).
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §2.A, §2.A.2, §5.B, §5.C, §1.6 · review da issue 014 (2026-07-05 ~04:40)

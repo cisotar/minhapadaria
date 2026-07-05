@@ -28,10 +28,10 @@ Painel de precificação (spec §3.E, §4): três formas de entrada que converge
 - Preço ≤ custo → flag prejuízo true (aviso, não bloqueio §5.C).
 
 ## Critérios de aceite
-- [ ] 3 modos produzem estado sincronizado idêntico dado mesmo trio custo/entrada.
-- [ ] Margem clamp 0–99,9 (§5.C).
-- [ ] Golden §12 completo passa.
-- [ ] Faixas 30/15 e flag prejuízo (§4).
+- [x] 3 modos produzem estado sincronizado idêntico dado mesmo trio custo/entrada.
+- [x] Margem clamp 0–99,9 (§5.C).
+- [x] Golden §12 completo passa.
+- [x] Faixas 30/15 e flag prejuízo (§4).
 
 ## Referências
 - spec §3.E, §4, §5.C, §12, decisão 4

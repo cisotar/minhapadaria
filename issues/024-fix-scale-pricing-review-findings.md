@@ -19,10 +19,10 @@ Achados médio/baixo remanescentes das revisões da issue 016. O achado alto do 
 - Casos jsdom dos itens 1 e 2; suíte existente permanece verde.
 
 ## Critérios de aceite
-- [ ] F_total readonly e repintado em peso→% (§1.3/§3.A/§1.6).
-- [ ] 3 testes novos verdes.
-- [ ] Comentário do .grid-2 corrigido.
-- [ ] Suíte 100% verde.
+- [x] F_total readonly e repintado em peso→% (§1.3/§3.A/§1.6).
+- [x] 3 testes novos verdes.
+- [x] Comentário do .grid-2 corrigido.
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §1.3, §1.6, §3.A, §5.C · reviews da issue 016 (2026-07-05 ~05:50)

@@ -20,9 +20,9 @@ Achados médio/baixo do revisor-spec na auditoria da issue 013 (histórico de fo
 - Suíte existente permanece verde.
 
 ## Critérios de aceite
-- [ ] Nenhum bucket derivado apenas de fornadas planejadas (§14.4/§14.6).
-- [ ] fmt do teste importa formatDate.
-- [ ] Suíte 100% verde.
+- [x] Nenhum bucket derivado apenas de fornadas planejadas (§14.4/§14.6).
+- [x] fmt do teste importa formatDate.
+- [x] Suíte 100% verde.
 
 ## Referências
 - spec §14.4, §14.6 · review da issue 013 (iteração 2026-07-05 ~04:05)

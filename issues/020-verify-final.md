@@ -17,11 +17,11 @@ Fechamento da v1: validar o exemplo dourado na aplicação real (não só na su�
 - README: seção Status atualizada (o que a v1 entrega, como rodar, como testar); escriba fecha PROGRESS.md.
 
 ## Critérios de aceite
-- [ ] Todos os números do §12 conferidos na UI real (lista acima completa).
-- [ ] Persistência + backup + export verificados manualmente via preview.
-- [ ] Teclado: dá para editar a receita inteira sem mouse.
-- [ ] Zero requests de rede em runtime.
-- [ ] README com instruções de uso/build/teste.
+- [x] Todos os números do §12 conferidos na UI real (lista acima completa).
+- [x] Persistência + backup + export verificados manualmente via preview.
+- [x] Teclado: dá para editar a receita inteira sem mouse.
+- [x] Zero requests de rede em runtime.
+- [x] README com instruções de uso/build/teste.
 
 ## Referências
 - spec §9, §10, §12 · WAI-ARIA APG · README.md

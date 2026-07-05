@@ -23,12 +23,12 @@ Dashboard de fornadas (spec §14; mockup `mockups/historico.html`). Consome inte
 - **Escape XSS**: observações e nomes renderizados via textContent (campo de texto livre! §14.2).
 
 ## Critérios de aceite
-- [ ] Registro→listagem→agregação ponta a ponta consistente com o core 013.
-- [ ] Planejada: badge, fora dos KPIs, confirmável.
-- [ ] Vendida > produzida bloqueada na UI.
-- [ ] Gráfico renderiza com 0, 1 e N fornadas sem crash.
-- [ ] Observação `<script>alert(1)</script>` inerte.
-- [ ] Datas aaaa-mm-dd; strings pt-BR; fiel ao mockup.
+- [x] Registro→listagem→agregação ponta a ponta consistente com o core 013.
+- [x] Planejada: badge, fora dos KPIs, confirmável.
+- [x] Vendida > produzida bloqueada na UI.
+- [x] Gráfico renderiza com 0, 1 e N fornadas sem crash.
+- [x] Observação `<script>alert(1)</script>` inerte.
+- [x] Datas aaaa-mm-dd; strings pt-BR; fiel ao mockup.
 
 ## Referências
 - spec §5.D, §7.1, §14 · mockups/historico.html · docs oficiais da lib de gráfico escolhida

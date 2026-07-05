@@ -23,13 +23,13 @@ Sub-receita do fermento em tabela vertical estilo planilha (spec §2.B.2, decis�
 - Escape XSS em nomes de farinha do fermento (textContent).
 
 ## Critérios de aceite
-- [ ] Layout tabela vertical fiel ao §2.B.2/mockup (ex 1:7:7 → 21/147/147 exibidos, total 15/310g).
-- [ ] Alterar Parte redistribui pesos mantendo W_ferm; alterar Proporção% recalcula tudo (§4).
-- [ ] Hidratação derivada exibe "—" com parte farinha 0 (§5.C).
-- [ ] Isca sem campo de custo em nenhum estado.
-- [ ] Editável com box, derivado texto plano (decisão 24).
-- [ ] Golden §12 visível correto na tela (200g, 100/100, 100%, 1100g, 70%/72,73%).
-- [ ] Strings pt-BR; zero lógica de negócio no DOM.
+- [x] Layout tabela vertical fiel ao §2.B.2/mockup (ex 1:7:7 → 21/147/147 exibidos, total 15/310g).
+- [x] Alterar Parte redistribui pesos mantendo W_ferm; alterar Proporção% recalcula tudo (§4).
+- [x] Hidratação derivada exibe "—" com parte farinha 0 (§5.C).
+- [x] Isca sem campo de custo em nenhum estado.
+- [x] Editável com box, derivado texto plano (decisão 24).
+- [x] Golden §12 visível correto na tela (200g, 100/100, 100%, 1100g, 70%/72,73%).
+- [x] Strings pt-BR; zero lógica de negócio no DOM.
 
 ## Referências
 - spec §2.B, §2.C, §2.D, §4, §5.C · mockups/calculadora.html · brandbook §4.1

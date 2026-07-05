@@ -32,9 +32,9 @@ Camada de validação pura (spec §5) consumida pela UI: distinção bloqueio (r
 - Preço 4 ≤ custo 4.43 → warn.
 
 ## Critérios de aceite
-- [ ] Todos os itens §5.A–D cobertos, um teste por regra.
-- [ ] Nenhuma redistribuição automática em circunstância alguma (§5.A).
-- [ ] Mensagens pt-BR.
+- [x] Todos os itens §5.A–D cobertos, um teste por regra.
+- [x] Nenhuma redistribuição automática em circunstância alguma (§5.A).
+- [x] Mensagens pt-BR.
 
 ## Referências
 - spec §5, §14.6, §7.1

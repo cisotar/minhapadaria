@@ -26,9 +26,9 @@ Sub-receita do fermento (spec §2.B, §3.B): peso total vem da proporção sobre
 - 2 farinhas do fermento 50/50 sobre FarinhaFerm=100 → 50g cada.
 
 ## Critérios de aceite
-- [ ] Fórmulas §3.B exatas; W_ferm = Isca + FarinhaFerm + ÁguaFerm (aditivo).
-- [ ] Hidratação somente derivada; null quando indefinida.
-- [ ] SomaPartes=0 bloqueado; partes negativas rejeitadas (§5.C).
+- [x] Fórmulas §3.B exatas; W_ferm = Isca + FarinhaFerm + ÁguaFerm (aditivo).
+- [x] Hidratação somente derivada; null quando indefinida.
+- [x] SomaPartes=0 bloqueado; partes negativas rejeitadas (§5.C).
 
 ## Referências
 - spec §2.B, §3.B, §5.C, §12
