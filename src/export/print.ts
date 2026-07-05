@@ -17,9 +17,9 @@
  * Reuso / camadas (regra de ouro 2, §1.6): NÃO recalcula nada — consome o
  * `state`+`summary` de `recalculate` e formata para pt-BR com `core/format.ts`
  * (§9: % 2 casas, peso 1, R$ 2 — arredondamento de exibição, dono único).
- * `escapeHtml` é o dono ÚNICO do escape de STRING→HTML do app (não existia;
- * grep confirmou ausência em format.ts) — a via primária (DOM) já escapa por
- * `textContent`; `escapeHtml` cobre eventuais builders de string standalone.
+ * Escape de STRING→HTML: 100% via `dom.ts h()`/`textContent` (regra de ouro
+ * 3) — não há builder de string standalone no app (revisão issue 027, achado
+ * baixo #2: removido o `escapeHtml` morto, sem uso em produção).
  *
  * `window.print()` disparado só em handler de clique — nunca em init (§8).
  * Zero rede, zero secret, sem eval (§11.1). Docs oficiais (regra de ouro 4):
@@ -46,25 +46,15 @@ export interface HistoryPrintViewOptions {
   includeCosts: boolean;
 }
 
-/**
- * Escapa uma string para inserção segura em HTML (dono único do app). A view de
- * impressão usa DOM/`textContent` (já seguro); esta função existe para qualquer
- * builder de string standalone que venha a interpolar dado do usuário (§8,
- * regra de ouro 3). Ordem importa: `&` primeiro.
- */
-export function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 // "—" quando o derivado é impossível (§5.C, contrato null≠0).
 const DASH = '—';
 const pct = (n: number | null): string => (n === null ? DASH : `${formatPercent(n)}%`);
 const money = (n: number | null): string => (n === null ? DASH : formatCurrency(n));
+// Peso derivado (ex.: fermento, revisão issue 027 achado médio #1): mesmo
+// tratamento null≠0 de pct()/money() — `?? 0` mascarava derivado impossível
+// como "0 g".
+const weight = (n: number | null | undefined): string =>
+  n === null || n === undefined ? DASH : `${formatWeight(n)} g`;
 
 const CATEGORY_SECTIONS: { key: Recipe['ingredients'][number]['category']; title: string }[] = [
   { key: 'flour', title: 'Farinhas' },
@@ -109,9 +99,9 @@ export function renderPrintView(root: HTMLElement, opts: PrintViewOptions): void
   // Fermento Natural (§2.B).
   const sd = recipe.sourdough;
   view.appendChild(h('h2', { className: 'print-section' }, ['Fermento Natural']));
-  view.appendChild(line('Peso total', `${formatWeight(sd.totalWeight ?? 0)} g`));
-  view.appendChild(line('Farinha do fermento', `${formatWeight(sd.flourWeight ?? 0)} g`));
-  view.appendChild(line('Água do fermento', `${formatWeight(sd.waterWeight ?? 0)} g`));
+  view.appendChild(line('Peso total', weight(sd.totalWeight)));
+  view.appendChild(line('Farinha do fermento', weight(sd.flourWeight)));
+  view.appendChild(line('Água do fermento', weight(sd.waterWeight)));
 
   // Hidratação (§2.C/§2.D).
   view.appendChild(h('h2', { className: 'print-section' }, ['Hidratação']));

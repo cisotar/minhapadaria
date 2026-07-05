@@ -76,7 +76,6 @@ import type { BakeEntry, BakeHistorySummary } from '../core/types';
 import type { RecipeStore } from '../storage/recipes';
 import type { BakeStore } from '../storage/bakes';
 import type { PrefsStore } from '../storage/prefs';
-import { buildHistoryWorkbook } from '../export/xlsx';
 import { workbookToBlob, downloadBlob } from '../export/download';
 import { mountPrintButton, renderHistoryPrintView } from '../export/print';
 import { h, clear, on } from './dom';
@@ -235,10 +234,16 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const exportXlsxBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Exportar XLSX']);
   on(exportXlsxBtn, 'click', () => {
     if (lastExport === null) return;
+    // Code-split (revisão issue 027, achado baixo #3): ExcelJS (~942 kB) só
+    // entra no bundle no clique, via `import()` dinâmico — nunca no
+    // carregamento inicial da tela do Histórico.
     const includeCosts = deps.prefs?.getShowCosts() ?? false; // §2.A.2
-    const wb = buildHistoryWorkbook(lastExport.entries, lastExport.summary, { includeCosts });
+    const { entries, summary } = lastExport;
     const stamp = formatDate(nowFn()); // aaaa-mm-dd (§7.1)
-    void workbookToBlob(wb).then((blob) => downloadBlob(blob, `minha-padaria-historico-${stamp}.xlsx`));
+    void import('../export/xlsx').then(({ buildHistoryWorkbook }) => {
+      const wb = buildHistoryWorkbook(entries, summary, { includeCosts });
+      return workbookToBlob(wb);
+    }).then((blob) => downloadBlob(blob, `minha-padaria-historico-${stamp}.xlsx`));
   });
   actionBar.appendChild(exportXlsxBtn);
   mountPrintButton(actionBar, () => {

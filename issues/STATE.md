@@ -28,4 +28,4 @@
 | 024 | Fix — achados da revisão da issue 016 (escala/preço UI) | fix | 016 | done | 05fba78 |
 | 025 | Fix — achados da revisão da issue 017 (tela receitas) | fix | 017 | done | b3f33de |
 | 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | done | 62b3826 |
-| 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | todo | |
+| 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | doing | |

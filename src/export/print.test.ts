@@ -13,11 +13,15 @@
  * Histórico de Fornadas §14"): `renderHistoryPrintView` — (11) conteúdo do
  * resumo + fornada confirmada; (12) fornada planejada marcada, fora dos
  * totais; (13) sem custos → sem "R$"/seção financeira.
+ *
+ * Caso 14 (revisão issue 027, achado médio #1): pesos do fermento (Peso
+ * total/Farinha/Água) com derivado impossível → "—", nunca "0 g" (`?? 0`
+ * mascarava o contrato null≠0 do §5.C).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { recalculate } from '../core/recalc';
 import { goldenSeed } from '../ui/seed';
-import { renderPrintView, renderHistoryPrintView, mountPrintButton, escapeHtml } from './print';
+import { renderPrintView, renderHistoryPrintView, mountPrintButton } from './print';
 import { computeBakeDerived, aggregatePeriod } from '../core/bakes';
 import type { BakeEntry } from '../core/types';
 
@@ -26,6 +30,15 @@ function render(recipe = goldenSeed(), includeCosts = true): HTMLElement {
   const root = document.createElement('div');
   renderPrintView(root, { recipe: state, summary, includeCosts });
   return root;
+}
+
+/** Valor (`.print-value`) da `.print-line` cujo rótulo (`.print-label`) === label. */
+function valueOf(root: HTMLElement, label: string): string | undefined {
+  for (const el of Array.from(root.querySelectorAll('.print-line'))) {
+    const l = el.querySelector('.print-label')?.textContent;
+    if (l === label) return el.querySelector('.print-value')?.textContent ?? undefined;
+  }
+  return undefined;
 }
 
 describe('renderPrintView', () => {
@@ -45,9 +58,6 @@ describe('renderPrintView', () => {
     expect(root.querySelector('script')).toBeNull();
     expect(root.querySelector('b')).toBeNull();
     expect(root.textContent).toContain('<b>x</b>'); // presente como TEXTO
-    // dono único do escape de string (§8): usado por builders standalone.
-    expect(escapeHtml('<b>x</b>')).toBe('&lt;b&gt;x&lt;/b&gt;');
-    expect(escapeHtml('<script>')).not.toContain('<script>');
   });
 
   it('9. sem auto-print: montar a view não chama window.print; só o clique no botão', () => {
@@ -69,6 +79,19 @@ describe('renderPrintView', () => {
     const text = root.textContent ?? '';
     expect(text).not.toContain('Precificação');
     expect(text).not.toContain('R$');
+  });
+
+  it('14. pesos do fermento com derivado impossível (§5.C, revisão 027): "—", nunca "0 g"', () => {
+    const { state, summary } = recalculate(goldenSeed());
+    // Simula o derivado impossível (contrato null≠0) sem tocar em core/**.
+    state.sourdough.totalWeight = undefined;
+    state.sourdough.flourWeight = undefined;
+    state.sourdough.waterWeight = undefined;
+    const root = document.createElement('div');
+    renderPrintView(root, { recipe: state, summary, includeCosts: true });
+    expect(valueOf(root, 'Peso total')).toBe('—');
+    expect(valueOf(root, 'Farinha do fermento')).toBe('—');
+    expect(valueOf(root, 'Água do fermento')).toBe('—');
   });
 });
 

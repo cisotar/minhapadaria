@@ -58,7 +58,6 @@ import { renderHydrationPanel } from '../hydrationPanel';
 import { renderPricingPanel } from '../pricingPanel';
 import { h, clear, on } from '../dom';
 import { formatDate } from '../../core/format';
-import { buildRecipeWorkbook } from '../../export/xlsx';
 import { workbookToBlob, downloadBlob } from '../../export/download';
 import { renderPrintView, mountPrintButton } from '../../export/print';
 
@@ -134,10 +133,16 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
     const exportBar = h('div', { className: 'row row--mb row--sticky' });
     const xlsxBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Exportar XLSX']);
     on(xlsxBtn, 'click', () => {
+      // Code-split (revisão issue 027, achado baixo #3): ExcelJS (~942 kB) só
+      // entra no bundle no clique, via `import()` dinâmico (doc oficial Vite/
+      // Rollup) — nunca no carregamento inicial da tela.
       const { recipe, summary } = store.getState();
-      const wb = buildRecipeWorkbook(recipe, summary, { includeCosts: prefs.getShowCosts() });
+      const includeCosts = prefs.getShowCosts();
       const stamp = formatDate(new Date()); // aaaa-mm-dd (§7.1)
-      void workbookToBlob(wb).then((blob) => downloadBlob(blob, `minha-padaria-receita-${stamp}.xlsx`));
+      void import('../../export/xlsx').then(({ buildRecipeWorkbook }) => {
+        const wb = buildRecipeWorkbook(recipe, summary, { includeCosts });
+        return workbookToBlob(wb);
+      }).then((blob) => downloadBlob(blob, `minha-padaria-receita-${stamp}.xlsx`));
     });
     exportBar.appendChild(xlsxBtn);
     mountPrintButton(exportBar, () => {
