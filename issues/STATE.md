@@ -14,7 +14,7 @@
 | 010 | Validações §5 consolidadas | core | 008 | done | 7e1fcfd |
 | 011 | Storage receitas CRUD + toggle custos | storage | 002 | done | b2fbaf4 |
 | 012 | Backup/restauração JSON | storage | 011 | done | f0f9bba |
-| 013 | Fornadas — cálculos, agregações, persistência | core | 002, 011 | todo | |
+| 013 | Fornadas — cálculos, agregações, persistência | core | 002, 011 | done | 9c6b58a |
 | 014 | UI calculadora — tabela de insumos | ui | 008, 010, 011 | todo | |
 | 015 | UI calculadora — fermento + hidratação | ui | 014 | todo | |
 | 016 | UI calculadora — escala, precificação, banner | ui | 009, 015 | todo | |
@@ -22,3 +22,4 @@
 | 018 | UI histórico — dashboard fornadas | ui | 013, 014 | todo | |
 | 019 | Export XLSX + impressão | export | 008, 013 | todo | |
 | 020 | Verificação final §12 + a11y + README | verify | 009, 010, 016–019 | todo | |
+| 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | todo | |
