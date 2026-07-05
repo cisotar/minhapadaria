@@ -32,19 +32,13 @@
  * Seções implementadas: §1.6, §3.E, §4, §5.C, §9.
  */
 import { parseDecimal, formatPercent, formatCurrency } from '../core/format';
-import { marginStatus, isLoss, type MarginStatus } from '../core/pricing';
+import { marginStatus, isLoss } from '../core/pricing';
 import { validateMargin, validatePriceVsUnitCost, type ValidationResult } from '../core/validation';
 import { h, on } from './dom';
 import type { AppStateStore } from './state';
-import { moneyPlain, applyValidation } from './cellHelpers';
+import { moneyPlain, applyValidation, marginChipClass } from './cellHelpers';
 
 type ActiveField = 'price' | 'margin' | 'profit' | null;
-
-const CHIP_CLASS: Record<MarginStatus, string> = {
-  green: 'chip-ok',
-  yellow: 'chip-warn',
-  red: 'chip-crit',
-};
 
 /** Quantidade (número livre, §9 não define casas fixas) — só troca separador (§7.1). */
 function quantityPlain(n: number): string {
@@ -170,7 +164,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
       chip.classList.add('chip-crit');
       chip.textContent = `Prejuízo ${formatCurrency(profit)}`;
     } else if (margin !== null) {
-      chip.classList.add(CHIP_CLASS[marginStatus(margin)]);
+      chip.classList.add(marginChipClass(marginStatus(margin)));
       chip.textContent = `Margem ${formatPercent(margin)}%`;
     } else {
       chip.textContent = '—';

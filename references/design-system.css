@@ -331,6 +331,20 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .recipe-card .actions { display: flex; gap: var(--sp-2); margin-top: auto; flex-wrap: wrap; }
 .recipe-card .actions .btn { font-size: var(--fs-small); padding: 4px 10px; }
 
+/* ============ Estado vazio (Seção 2.F, issue 017) ============ */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--sp-3); padding: var(--sp-6) var(--sp-5);
+  color: var(--text-muted); text-align: center;
+}
+
+/* ============ Mensagem de status do backup (Seção 10, issue 017) ============
+   `role="status"`/`aria-live="polite"` no elemento (wiring da UI) — aqui só a
+   cor por estado, via tokens já existentes (mesmos de `.chip-crit`/`.chip-ok`). */
+.form-status { font-size: var(--fs-small); font-weight: 600; min-height: 1em; }
+.form-status--error { color: var(--danger); }
+.form-status--ok { color: var(--status-ok-text); }
+
 /* ============ Barra de filtros (Histórico, Seção 14.5) ============ */
 .filter-bar {
   display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap;

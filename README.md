@@ -29,7 +29,41 @@ Todos importam [references/design-system.css](references/design-system.css) — 
 
 ## Status
 
-Fase de spec e design. Sem código de produção ainda — próximo passo natural é quebrar a spec v5 em issues (`/break`) e iniciar a implementação.
+**Alpha funcional — primeiras 2 telas implementadas (issues 004–017)**
+
+### Scaffold (✓ Concluído)
+- [x] Vite + TypeScript strict + Vitest
+- [x] Design system live (tokens + componentes CSS)
+- [x] Core calculation engine (baker's percentage, custo, precificação, fermento natural, hidratação)
+
+### Tela Calculadora (✓ Funcional)
+- [x] Tabela de ingredientes (edição inline, %, peso, custo)
+- [x] Sub-receita do fermento (partes, peso, custo, hidratação derivada)
+- [x] Painel de Hidratação (nominal/real, farinha consumida)
+- [x] Modo de cálculo (peso→%, %), toggle com banner
+- [x] Escalonamento por peso alvo
+- [x] Painel de Precificação (preço/margem/lucro sincronizados, status cores)
+- [x] Auto-save debounced + flush ao fechar aba
+
+### Tela Minhas Receitas (✓ Funcional)
+- [x] Grid de receitas com cards (custo/margem/datas)
+- [x] Busca/filtro de nomes
+- [x] Criar nova receita (golden seed)
+- [x] Abrir/renomear/duplicar/excluir
+- [x] Alerta de fornadas órfãs (§14.7)
+- [x] Backup/restauração JSON (exportar/importar com validação pré-escrita)
+- [x] Estado vazio + status region (aria-live pt-BR)
+
+### Testes (✓ Cobertura Alta)
+- [x] Core: 189 testes (TDD, zero mock)
+- [x] UI/Storage: 40+ testes jsdom (XSS, recálculo, wiring)
+- [x] **Total: 229 testes, 100% pass**
+
+### Próximas (🔄 Em planejamento)
+- [ ] Tela Histórico de Fornadas (filtros, gráficos, KPIs — issues 018–020+)
+- [ ] Impressão/exportação XLSX (issue 019)
+- [ ] Refinamentos design (issue 022)
+- [ ] Testes headless + smoke (issue 020)
 
 ## Segurança
 

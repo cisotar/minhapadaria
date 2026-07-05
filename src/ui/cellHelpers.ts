@@ -9,11 +9,17 @@
  * categoria, §2.A.1/§7). Comportamento idêntico ao pré-extração — sem mudança
  * de lógica, só de local.
  *
- * Seções implementadas: §2.A.1, §5, §7, §9 (via format.ts).
+ * Extensão (issue 017, regra de ouro 2): `marginChipClass` — mapa
+ * `MarginStatus → classe .chip-*` (design-system.css) antes duplicado como
+ * `CHIP_CLASS` em `pricingPanel.ts` (§4); agora único ponto, reusado também
+ * por `recipesList.ts` (chip de margem do card de receita, §2.F).
+ *
+ * Seções implementadas: §2.A.1, §4, §5, §7, §9 (via format.ts).
  */
 import { formatCurrency } from '../core/format';
 import type { ValidationResult } from '../core/validation';
 import type { Ingredient, PackageCost } from '../core/types';
+import type { MarginStatus } from '../core/pricing';
 
 /**
  * Opções de unidade da coluna "Peso do produto" por categoria (§2.A.1/§7):
@@ -27,6 +33,19 @@ export const UNIT_OPTIONS: Record<Ingredient['category'], PackageCost['packageUn
   liquid: ['L', 'mL'],
   fat: ['g', 'kg', 'mL', 'L'],
 };
+
+/** Classe de chip (design-system.css) para cada faixa de `marginStatus` (§4).
+ *  Fonte única — `pricingPanel.ts`/`recipesList.ts` reusam (regra de ouro 2). */
+export const MARGIN_CHIP_CLASS: Record<MarginStatus, string> = {
+  green: 'chip-ok',
+  yellow: 'chip-warn',
+  red: 'chip-crit',
+};
+
+/** Classe de chip (design-system.css) correspondente a um `MarginStatus` (§4). */
+export function marginChipClass(status: MarginStatus): string {
+  return MARGIN_CHIP_CLASS[status];
+}
 
 /** Formata moeda (format.ts, dono único) e remove o prefixo "R$" — campo
  *  editável de Preço Pago mostra só o número (mockups/calculadora.html),

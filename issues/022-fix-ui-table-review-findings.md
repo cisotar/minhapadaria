@@ -18,7 +18,7 @@ Testes jsdom faltantes em `src/ui/ingredientsTable.test.ts` (4 médios):
 
 Baixos:
 5. `.unit-suffix` em `references/design-system.css` está morta (não consumida) — remover OU aplicar onde o mockup previa; ajustar `design-system.html` conforme.
-6. 7 estilos inline via `style` em `ingredientsTable.ts` (~linha 106) — extrair para classes utilitárias com tokens, documentadas. **Ampliado pela review da 015**: +8 ocorrências em `sourdoughTable.ts` (linhas ~124/134/207/285/301/302/576/591). **Ampliado pela review da 016**: +2 (`modeToggle.ts` ~61 `margin-left:auto` → utilitário `.push-right`; `batchPanel.ts` ~61 `display:contents` → classe `.contents` ou remover wrapper). Total 17; extrair todas para classes utilitárias tokenizadas documentadas em `references/design-system.html`.
+6. 7 estilos inline via `style` em `ingredientsTable.ts` (~linha 106) — extrair para classes utilitárias com tokens, documentadas. **Ampliado pela review da 015**: +8 ocorrências em `sourdoughTable.ts` (linhas ~124/134/207/285/301/302/576/591). **Ampliado pela review da 016**: +2 (`modeToggle.ts` ~61 `margin-left:auto` → utilitário `.push-right`; `batchPanel.ts` ~61 `display:contents` → classe `.contents` ou remover wrapper). **Ampliado pela review da 017**: +3 em `recipesList.ts` (~90/105/117 — incl. terceiro `margin-left:auto`; priorizar `.push-right`). Total 20; extrair todas para classes utilitárias tokenizadas documentadas em `references/design-system.html`.
 7. Soma do "Total da massa" feita no DOM (~linha 153) — avaliar expor peso total no RecipeSummary do core e consumir de lá (§1.6).
 
 ## Testes exigidos (TDD)

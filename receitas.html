@@ -6,7 +6,24 @@
   <title>Minhas Receitas</title>
 </head>
 <body>
-  <!-- Espelha mockups/receitas.html — UI implementada na issue 017. -->
+  <!-- Navegação global (espelha mockups/*.html) — Receitas é a página ativa. -->
+  <nav class="app-nav">
+    <a href="/index.html">Calculadora</a>
+    <a href="/receitas.html" class="active">Receitas</a>
+    <a href="/historico.html">Histórico</a>
+  </nav>
+
+  <!-- Cabeçalho de página padrão (design-system.css .page-header, spec §2.F).
+       O <h1> estático é preenchido por receitas.ts; a barra de ações
+       (busca/criar/backup) e o subtítulo dinâmico são responsabilidade de
+       `renderRecipesList` (issue 017), montados dentro de #app. -->
+  <header class="page-header">
+    <div class="inner" id="rc-header"></div>
+  </header>
+
+  <!-- Ponto de montagem da UI (issue 017): grid de receitas via recipesList.ts. -->
+  <div id="app" class="page"></div>
+
   <script type="module" src="/src/ui/pages/receitas.ts"></script>
 </body>
 </html>

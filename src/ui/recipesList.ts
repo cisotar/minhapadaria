@@ -1,0 +1,301 @@
+/**
+ * recipesList.ts — Tela "Minhas Receitas" (spec §2.F/§10/§14.7) · issue 017.
+ *
+ * O que faz: `renderRecipesList(root, deps)` monta, dentro de `root`, a barra
+ * de ações (busca, "+ Nova receita", "Exportar backup"/"Restaurar backup" +
+ * `<input type="file">` oculto), o subtítulo "N receita(s) cadastrada(s)", a
+ * região de status (`role="status"`/`aria-live`, §5/§10) e o grid de cards
+ * (`.recipe-grid`/`.recipe-card`, design-system.css) OU o estado vazio
+ * (`.empty-state`) — espelhando `mockups/receitas.html`.
+ *
+ * Reuso total (regra de ouro 2): as 5 operações §2.F (criar/abrir/renomear/
+ * duplicar/excluir) e o backup vêm prontos de `src/storage/recipes.ts` e
+ * `src/storage/backup.ts` — esta tela só faz o wiring de DOM. Números do
+ * card (Custo unit./Margem) vêm de `recalculate` (core, §1.6); formatação de
+ * `format.ts` (§9); classe do chip de `marginChipClass` (cellHelpers.ts,
+ * extraído de `pricingPanel.ts` nesta issue). DOM só via `h/clear/on`
+ * (dom.ts) — nome da receita (dado do usuário) nunca vai a `innerHTML`
+ * (regra de ouro 3: escape via `textContent`, XSS inerte).
+ *
+ * Sem diálogo/modal no design system: usa `window.confirm`/`window.prompt`
+ * (API nativa, regra de ouro 1) por padrão, mas SEMPRE injetáveis via `deps`
+ * para determinismo em teste jsdom (nenhum `window.confirm` real roda nos
+ * testes). Excluir avisa que fornadas ficam órfãs (§14.7 — `remove` já não
+ * toca `mp.bakes.v1`, sem cascade). Restaurar backup: falha de import nunca
+ * perde dados (validação de `importBackup` ocorre ANTES de qualquer escrita,
+ * decisão 012.3) — mensagem pt-BR na região de status + `onError` opcional.
+ *
+ * Diferenças conscientes vs. `mockups/receitas.html` (registradas, regra do
+ * cliente — divergência documentada):
+ *  1. A barra de ações/subtítulo é renderizada dentro de `root` (o mesmo nó
+ *     recebido por este módulo, testável isoladamente em jsdom) em vez de
+ *     dentro do `<header class="page-header">` estático do shell — o título
+ *     `<h1>` estático continua no shell (`receitas.html`/`receitas.ts`).
+ *  2. Margem do card usa `formatPercent` (2 casas, §9) — "40,00%" — em vez
+ *     do "40,0%" (1 casa) do HTML estático do mockup; `format.ts` é a fonte
+ *     única de formatação (regra de ouro 2), não a demo estática.
+ *  3. "Abrir" aponta para `index.html` (arquivo real da Calculadora), não
+ *     `calculadora.html` (nome usado só no mockup).
+ *
+ * Seções implementadas: §2.F, §4 (chip de margem), §5 (mensagens de erro),
+ * §7.1 (datas aaaa-mm-dd), §9 (formatação), §10 (backup local), §14.7
+ * (fornadas órfãs).
+ */
+import { recalculate } from '../core/recalc';
+import { marginStatus } from '../core/pricing';
+import { formatCurrency, formatPercent, formatWeight, formatDate } from '../core/format';
+import type { Recipe } from '../core/types';
+import type { RecipeStore } from '../storage/recipes';
+import type { StorageLike } from '../storage/local';
+import {
+  collectBackupData,
+  exportBackup,
+  importBackup,
+  applyBackupData,
+  downloadBackupFile,
+  readBackupFile,
+} from '../storage/backup';
+import { goldenSeed } from './seed';
+import { h, clear, on } from './dom';
+import { marginChipClass } from './cellHelpers';
+
+export interface RecipesListDeps {
+  recipeStore: RecipeStore;
+  storage: StorageLike;
+  /** Injetável para teste (default `window.confirm`). */
+  confirm?: (message: string) => boolean;
+  /** Injetável para teste (default `window.prompt`). */
+  prompt?: (message: string, defaultValue?: string) => string | null;
+  /** Injetável para teste (default `location.assign`). */
+  navigate?: (url: string) => void;
+  /** Injetável para teste (default `readBackupFile`, FileReader real). */
+  readFile?: (file: File) => Promise<string>;
+  /** Injetável para teste (default `downloadBackupFile`, Blob/anchor real). */
+  download?: (json: string) => void;
+  /** Notificado (além da região de status) quando o import de backup falha. */
+  onError?: (message: string) => void;
+}
+
+export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): void {
+  const { recipeStore, storage } = deps;
+  const confirmFn = deps.confirm ?? ((message: string) => window.confirm(message));
+  const promptFn = deps.prompt ?? ((message: string, def?: string) => window.prompt(message, def));
+  const navigateFn = deps.navigate ?? ((url: string) => { window.location.assign(url); });
+  const readFileFn = deps.readFile ?? readBackupFile;
+  const downloadFn = deps.download ?? ((json: string) => downloadBackupFile(json));
+
+  let searchTerm = '';
+
+  // --- Barra de ações (§2.F: criar + busca; §10: backup) ---
+  const toolbar = h('div', { className: 'row', style: 'margin-bottom:var(--sp-2)' });
+  const searchInput = h('input', {
+    className: 'input',
+    type: 'search',
+    placeholder: 'Buscar receita…',
+    'aria-label': 'Buscar receita',
+    style: 'width:220px',
+  }) as HTMLInputElement;
+  const newBtn = h(
+    'button',
+    { type: 'button', className: 'btn btn-primary' },
+    ['+ Nova receita'],
+  ) as HTMLButtonElement;
+  const exportBtn = h(
+    'button',
+    { type: 'button', className: 'btn btn-secondary', style: 'margin-left:auto' },
+    ['Exportar backup'],
+  ) as HTMLButtonElement;
+  const restoreBtn = h(
+    'button',
+    { type: 'button', className: 'btn btn-secondary' },
+    ['Restaurar backup'],
+  ) as HTMLButtonElement;
+  const fileInput = h('input', {
+    type: 'file',
+    accept: 'application/json',
+    'aria-label': 'Selecionar arquivo de backup',
+    style: 'display:none',
+  }) as HTMLInputElement;
+
+  toolbar.appendChild(searchInput);
+  toolbar.appendChild(newBtn);
+  toolbar.appendChild(exportBtn);
+  toolbar.appendChild(restoreBtn);
+  toolbar.appendChild(fileInput);
+  root.appendChild(toolbar);
+
+  const subtitle = h('p', {
+    style: 'color:var(--text-muted);font-size:var(--fs-small);margin:0 0 var(--sp-3)',
+  });
+  root.appendChild(subtitle);
+
+  // Região de status do backup (§5/§10): erro de import nunca perde dados —
+  // aria-live anuncia a mensagem pt-BR sem exigir foco do usuário.
+  const status = h('div', { className: 'form-status', role: 'status', 'aria-live': 'polite' });
+  root.appendChild(status);
+
+  const listRoot = h('div');
+  root.appendChild(listRoot);
+
+  function showStatus(message: string, kind: 'error' | 'ok'): void {
+    status.textContent = message;
+    status.classList.remove('form-status--error', 'form-status--ok');
+    status.classList.add(kind === 'error' ? 'form-status--error' : 'form-status--ok');
+    if (kind === 'error') deps.onError?.(message);
+  }
+
+  function clearStatus(): void {
+    status.textContent = '';
+    status.classList.remove('form-status--error', 'form-status--ok');
+  }
+
+  // --- Operações §2.F ---
+
+  function createRecipe(): void {
+    // Semente de valores padrão (§2.F "em branco ou a partir de valores
+    // padrão" — decisão registrada na issue: só o caminho "valores padrão"
+    // está funcional nesta tela; "em branco" fica de follow-up de design).
+    const created = recipeStore.create(goldenSeed());
+    navigateFn(`index.html?recipe=${encodeURIComponent(created.id)}`);
+  }
+
+  function duplicateRecipe(id: string): void {
+    recipeStore.duplicate(id); // deep clone + novo id/nome/datas (011) — independência já garantida
+    renderList();
+  }
+
+  function renameRecipe(id: string, currentName: string): void {
+    const result = promptFn('Novo nome da receita:', currentName);
+    if (result === null || result === '' || result === currentName) return; // cancelado/vazio/sem mudança
+    recipeStore.rename(id, result);
+    renderList();
+  }
+
+  function deleteRecipe(id: string, name: string): void {
+    // §14.7: fornadas da receita excluída permanecem órfãs — sem cascade,
+    // `remove` já não toca `mp.bakes.v1`. A mensagem avisa isso explicitamente.
+    const message = `Excluir "${name}"? As fornadas já registradas desta receita continuarão no histórico como fornadas órfãs.`;
+    if (!confirmFn(message)) return;
+    recipeStore.remove(id);
+    renderList();
+  }
+
+  function exportBackupNow(): void {
+    clearStatus();
+    const data = collectBackupData({ recipeStore, storage });
+    const json = exportBackup(data);
+    downloadFn(json);
+  }
+
+  function restoreBackupFrom(file: File): void {
+    readFileFn(file)
+      .then((json) => {
+        const data = importBackup(json); // lança ANTES de qualquer escrita (decisão 012.3)
+        applyBackupData(data, { recipeStore, storage });
+        showStatus('Backup restaurado com sucesso.', 'ok');
+        renderList();
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Não foi possível restaurar o backup.';
+        showStatus(message, 'error'); // storage intacto — importBackup não escreveu nada
+      })
+      .finally(() => {
+        fileInput.value = '';
+      });
+  }
+
+  on(newBtn, 'click', createRecipe);
+  on(exportBtn, 'click', exportBackupNow);
+  on(restoreBtn, 'click', () => fileInput.click());
+  on(fileInput, 'change', () => {
+    const file = fileInput.files?.[0];
+    if (file) restoreBackupFrom(file);
+  });
+  on(searchInput, 'input', () => {
+    searchTerm = searchInput.value;
+    renderList();
+  });
+
+  // --- Render do grid/estado vazio ---
+
+  function matchesSearch(recipe: Recipe): boolean {
+    if (searchTerm === '') return true;
+    return recipe.name.toLowerCase().includes(searchTerm.toLowerCase());
+  }
+
+  function buildEmptyState(): HTMLElement {
+    const wrap = h('div', { className: 'empty-state' });
+    wrap.appendChild(h('p', {}, ['Você ainda não tem receitas.']));
+    const btn = h(
+      'button',
+      { type: 'button', className: 'btn btn-primary' },
+      ['Criar primeira receita'],
+    ) as HTMLButtonElement;
+    on(btn, 'click', createRecipe);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function buildCard(recipe: Recipe): HTMLElement {
+    const { summary } = recalculate(recipe); // §1.6 — única fonte dos derivados do card
+
+    const card = h('div', { className: 'recipe-card' });
+    card.appendChild(h('h3', {}, [recipe.name])); // textContent — escapa XSS (regra 3)
+    card.appendChild(
+      h('div', { className: 'meta' }, [
+        `Editado ${formatDate(recipe.updatedAt)} · F total ${formatWeight(recipe.flourTotalWeight)} g`,
+      ]),
+    );
+
+    const stats = h('div', { className: 'stats' });
+    stats.appendChild(
+      h('div', {}, [
+        h('span', { className: 'stat-label' }, ['Custo unit.']),
+        h('span', { className: 'stat-value' }, [
+          summary.costPerUnit !== null ? formatCurrency(summary.costPerUnit) : '—',
+        ]),
+      ]),
+    );
+    const marginChip = h('span', { className: 'chip' }, [
+      summary.profitMargin !== null ? `${formatPercent(summary.profitMargin)}%` : '—',
+    ]);
+    if (summary.profitMargin !== null) {
+      marginChip.classList.add(marginChipClass(marginStatus(summary.profitMargin))); // §4
+    }
+    stats.appendChild(h('div', {}, [h('span', { className: 'stat-label' }, ['Margem']), marginChip]));
+    card.appendChild(stats);
+
+    const actions = h('div', { className: 'actions' });
+    const openLink = h('a', {
+      className: 'btn btn-primary',
+      href: `index.html?recipe=${encodeURIComponent(recipe.id)}`,
+    }, ['Abrir']);
+    const dupBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Duplicar']) as HTMLButtonElement;
+    const renameBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Renomear']) as HTMLButtonElement;
+    const deleteBtn = h('button', { type: 'button', className: 'btn btn-danger' }, ['Excluir']) as HTMLButtonElement;
+    on(dupBtn, 'click', () => duplicateRecipe(recipe.id));
+    on(renameBtn, 'click', () => renameRecipe(recipe.id, recipe.name));
+    on(deleteBtn, 'click', () => deleteRecipe(recipe.id, recipe.name));
+    actions.appendChild(openLink);
+    actions.appendChild(dupBtn);
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+    card.appendChild(actions);
+    return card;
+  }
+
+  function renderList(): void {
+    const all = recipeStore.list();
+    subtitle.textContent = `${all.length} receita${all.length === 1 ? '' : 's'} cadastrada${all.length === 1 ? '' : 's'}`;
+    clear(listRoot);
+    if (all.length === 0) {
+      listRoot.appendChild(buildEmptyState());
+      return;
+    }
+    const grid = h('section', { className: 'recipe-grid' });
+    for (const recipe of all.filter(matchesSearch)) grid.appendChild(buildCard(recipe));
+    listRoot.appendChild(grid);
+  }
+
+  renderList();
+}
