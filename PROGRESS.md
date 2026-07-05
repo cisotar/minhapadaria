@@ -4,6 +4,32 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 010 — validações §5)**
+
+1. **Contrato ValidationResult = ValidationIssue|null (null=OK)**: bloqueio (reverte/impede UI) ⇒ valid:false, level:'block'; aviso (permite valor, sinaliza) ⇒ valid:true, level:'warn'. null significa "tudo OK, nada a reportar" — alinhado ao core (issue 005/006 retornam `number|null` para ÷0 defensivo; aqui null ≠ 0 ≠ erro, é "sem mensagem"). UI 014/016/018 deve tratar null como estado válido silencioso e checar `if (issue) { ... }` antes de exibir.
+
+2. **today injetado em validateBakeDate, nunca new Date() interno**: validateBakeDate recebe `today: Date` como parâmetro (caller calcula `new Date()`), preservando pureza e determinismo total (sem I/O interno). Garante testes previsíveis (fixture today=2026-07-05, valida 2026-07-04=passado/OK, 2026-07-06=futuro/warn, 2026-07-05=hoje/OK). Sem mudança de assinatura no engine; recalculate não toca em histórico (§14.6 é responsabilidade de issue 011/012 storage).
+
+3. **Validação sobre valor CRUS, nunca sobre arredondado de exibição**: validatePercentageSum recebe `percentages: number[]` (pesos reais em precisão total, nunca formatCurrency/formatPercent de §9), compara com SUM_EPSILON 1e-9 (dono em bakers.percentagesSumTo100). Motivo: divergência de epsilon — se UI arredondar para 2 casas (60,00+40,00=100,00 exato) mas core calcular 60,0001+39,9999=100,0000, validação cai diferente. Bloqueio: validar ANTES de arredondar; exibição de % nunca sinaliza se soma válida ou não (é contrato da entrada).
+
+4. **Partes 0:0:1 passa validateSourdoughParts mas warn em validateSourdoughFlourPart**: `isValidSourdoughParts({isca:0, flour:0, water:1})` retorna true (SomaPartes=1>0, todas≥0 § §5.B literal). Mas `validateSourdoughFlourPart(0, 'fermento')` retorna warn (mínimo 1 farinha recomendado §5.B, literal "pelo menos 1 farinha em cada grupo"). UI chama AS DUAS — primeira passa guarda, segunda avisa sobre composição sem farinha (edge case defensivo: fermento só com água é inviável biologicamente, mas não bloqueado por §5.C; issue 011 em histórico pode avisar ao gravar "fornada com fermento 0% farinha").
+
+---
+
+## Iteração 010 — 2026-07-05 ~03:25 (validações §5)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 010-validation |
+| **Timestamp** | 2026-07-05 03:25 |
+| **O que foi feito** | src/core/validation.ts: 13 funções puras (validatePercentageSum — bloqueia soma ≠ 100% §5.A; validateFlourCount — mínimo 1 farinha por grupo §5.B; validateProductQuantity — ≥ 1 §5.C; validateNonNegative — ingrediente peso ≥ 0 §5.C; validateSourdoughParts — guarda SomaPartes>0 e partes≥0, reusa isValidSourdoughParts; validateSourdoughFlourPart — aviso se farinha=0 no grupo §5.B; validateSourdoughProportion — aviso se %fermento fora [0, 100] §5.C; validateMargin — aviso faixa [0, 99.9] §5.C; validatePriceVsUnitCost — bloqueia se prejuízo §5.C, reusa isLoss; validatePackageSize — bloqueia se ≤ 0 §5.C; validateQuantityProduced — ≥ 1 §5.C; validateQuantitySold — ≥ 0, aviso se > produzida §5.D; validateBakeDate — aviso se futuro §14.6; todos puros, today injetado, valor cru nunca arredondado). Contrato ValidationResult = ValidationIssue|null (null=OK, bloqueia level:'block' valid:false, aviso level:'warn' valid:true). Sem DOM, sem localStorage, sem rede, pureza total (§5/§14.6/§7.1/§10/§11.1). src/core/validation.test.ts: 15 casos TDD cobrindo regras 5.A/5.B/5.C/5.D/14.6; soma percentagem, count farinhas, quantidades, partes sourdough, proporção fermento, margem, prejuízo, tamanho embalagem, quantidade produzida/vendida, data fornada; includes golden §12 nas bordas; nenhuma redistribuição/mutação (§5.A garantido por teste). Gates: testes 141/141 verde (novos 15 casos + suíte existente 126); build Vite verde. |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: validation.test.ts (15 novos) + recalc.test.ts (8) + scaling.test.ts (11) + pricing.test.ts (18) + costs.test.ts (13) + hydration.test.ts (14) + sourdough.test.ts (12) + bakers.test.ts (22) + format.test.ts (23) + golden-example.test.ts (5 asserts) = 141 total. **Pass: 141. Fail: 0.** 🟢 Build Vite: verde. Gates: testes 141 pass ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados estruturais no código da issue 010 (validation.ts/test.ts fielmente §5/§14.6). Contrato ValidationResult null=OK aprovado (alinha core issues 005/006). **DECISÕES DIFERIDAS PARA REVISOR HUMANO** (registradas em "Decisões da noite" acima): (a) ValidationResult null vs block/warn; (b) today injetado; (c) validação valor cru; (d) 0:0:1 passes guarda, warns em flour-part. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em validation.ts (§5.A/§5.B/§5.C/§5.D/§14.6/§7.1, §10/§11.1) e validation.test.ts. Reuso total: validatePercentageSum delega percentagesSumTo100 (bakers.ts dono); validateSourdoughParts reusa isValidSourdoughParts (sourdough.ts); validatePriceVsUnitCost reusa isLoss (pricing.ts); validateSourdoughFlourPart usa validateFlourCount; validateBakeDate usa formatDate (format.ts para parsing ISO 8601 pt-BR). Nenhuma função redistribui % ou normaliza entrada (§5.A literal); todas retornam null ou {valid, level, message}. Alinhamento futuro: UI 014/016/018 devem tratar null como silencioso (OK) e checar type guard `if (issue) { show(...) }` antes de exibir. Mapa de módulos será atualizado agora. |
+
+---
+
 **2026-07-05 (issue 009 — escalonamento + per-unit)**
 
 1. **peso→% NORMALIZA batchPlanningMode para 'total'**: quando recalculate detecta modo 'weight-to-percentage' em state.batchPlanningMode='per-unit', força a 'total' (linha 78 recalc.ts). Alternativa seria ignorar silenciosamente e derivar F_total das farinhas de qualquer forma. Motivo: §2.E.1 diz "planejamento por unidade só em %→peso"; peso→% é implicitamente planejamento em lote inteiro. Decisão: reescrever o campo e deixar claro que modo é 'total' — evita UI inconsistente (campo exibindo 'per-unit' quando F_total vem de Σ pesos, §3.A). Revisor humano: conferir se esta normalização silenciosa é aceitável ou deve-se avisar/bloquear.
