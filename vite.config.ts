@@ -30,8 +30,10 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // Ambiente default 'node' (lógica pura de src/core). jsdom entra apenas
-    // quando houver teste de UI (architecture.md) — sem dependência extra agora.
+    // Ambiente default 'node' (lógica pura de src/core e maioria de src/storage).
+    // jsdom (devDependency, issue 014) é ligado só por arquivo, via comentário
+    // `// @vitest-environment jsdom` no topo do próprio teste de UI
+    // (src/ui/ingredientsTable.test.ts) — docs: https://vitest.dev/guide/environment.
     environment: 'node',
   },
 });

@@ -367,6 +367,32 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .chart-svg .dot-profit { fill: var(--mark-profit); }
 .chart-svg .direct-label { font-size: 11px; font-weight: 700; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 
+/* ============ Página (contêiner de conteúdo) — issue 014 ============
+   Espaçamento em grade vertical entre os cards de uma tela (index.html/
+   receitas.html/historico.html). Só tokens de espaçamento — sem max-width
+   fixo: não há token de largura em :root (imutável) e o plano da issue 014
+   só autoriza var(--sp-*)/var(--text-muted)/var(--fs-small) para as 3 classes
+   novas; diverge conscientemente do 1200px hardcoded do mockup
+   calculadora.html (decisão registrada na issue 014). */
+.page {
+  padding: var(--sp-5);
+  display: grid;
+  gap: var(--sp-5);
+}
+
+/* Par valor + seletor de unidade da célula "Peso do produto" (§2.A.1). Dois
+   campos lado a lado — sem largura fixa em px (só var(--sp-1) no
+   espaçamento entre eles); o valor usa o atributo HTML `size` (contagem de
+   caracteres, não CSS) para uma largura intrínseca razoável; reusa
+   .cell-input. */
+.pw-combo { display: flex; gap: var(--sp-1); justify-content: flex-end; }
+.pw-combo .cell-input { flex: 0 1 auto; width: auto; }
+.pw-combo select.cell-input { flex: 0 1 auto; text-align: left; }
+
+/* Rótulo discreto de unidade ao lado de um valor somente-leitura (ex.: "g"
+   depois de um peso) — mesmo tom/tamanho de .metric .label. */
+.unit-suffix { color: var(--text-muted); font-size: var(--fs-small); margin-left: var(--sp-1); }
+
 /* ============ Indicador melhor/pior período ============ */
 .best-worst { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
 .best-worst .card-mini {

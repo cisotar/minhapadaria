@@ -6,7 +6,24 @@
   <title>Calculadora — Pão com Fermento Natural</title>
 </head>
 <body>
-  <!-- Espelha mockups/calculadora.html — UI implementada na issue 014. -->
+  <!-- Navegação global (espelha mockups/*.html) — Calculadora é a página ativa. -->
+  <nav class="app-nav">
+    <a href="/index.html" class="active">Calculadora</a>
+    <a href="/receitas.html">Receitas</a>
+    <a href="/historico.html">Histórico</a>
+  </nav>
+
+  <!-- Cabeçalho de página padrão (design-system.css .page-header, spec §2.A). -->
+  <header class="page-header">
+    <div class="inner">
+      <h1>🍞 Calculadora de Pão com Fermento Natural</h1>
+      <p class="subtitle">Os ingredientes recalculam automaticamente a cada edição — sem enviar formulário (§1.6)</p>
+    </div>
+  </header>
+
+  <!-- Ponto de montagem da UI (issue 014): card Ingredientes via ingredientsTable.ts. -->
+  <div id="app" class="page"></div>
+
   <script type="module" src="/src/ui/pages/calculadora.ts"></script>
 </body>
 </html>

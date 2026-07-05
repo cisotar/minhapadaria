@@ -128,6 +128,37 @@
   </div>
 
   <section class="card">
+    <h2>Classes utilitárias (issue 014)</h2>
+    <p style="font-size:var(--fs-small);color:var(--text-muted);margin-top:calc(var(--sp-3) * -1)">
+      Usadas por <code>index.html</code>/<code>src/ui</code> (Calculadora) — só tokens, sem hex/px novo.
+    </p>
+    <table class="table" style="margin-bottom:var(--sp-4)">
+      <thead><tr><th>Classe</th><th>Uso</th></tr></thead>
+      <tbody>
+        <tr><td><code>.page</code></td><td>Container de página: espaçamento em grade vertical entre cards (padding/gap só <code>var(--sp-5)</code>) — ponto de montagem de <code>index.html</code> (<code>&lt;div id="app" class="page"&gt;</code>).</td></tr>
+        <tr><td><code>.pw-combo</code></td><td>Par valor + seletor de unidade da célula "Peso do produto" da tabela de insumos (§2.A.1) — dois campos lado a lado, sem largura fixa em px.</td></tr>
+        <tr><td><code>.unit-suffix</code></td><td>Rótulo discreto de unidade ao lado de um valor somente-leitura (ex.: "g" depois de um peso).</td></tr>
+      </tbody>
+    </table>
+    <div class="row" style="align-items:flex-end">
+      <div class="field">
+        <label>Peso do produto (exemplo <code>.pw-combo</code>)</label>
+        <div class="pw-combo">
+          <input class="cell-input num" value="1250">
+          <select class="cell-input"><option>g</option><option>kg</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Peso derivado (exemplo <code>.unit-suffix</code>)</label>
+        <div class="row">
+          <span class="readonly num">1.000,0</span>
+          <span class="unit-suffix">g</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
     <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">
       <h2 style="margin:0;border:none;padding:0">Tabela de insumos</h2>
       <label style="margin-left:auto;display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-small);font-weight:600;color:var(--text-2);cursor:pointer">
