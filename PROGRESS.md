@@ -4,6 +4,30 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 013 — histórico de fornadas)**
+
+1. **wastageRate/averageProfitMargin do período = agregado ponderado, não média aritmética das % por fornada**: spec §14.4 diz "média", leitura defensável. Solução implementada: wastageRate = totalWastage/totalProduced × 100 (taxa global do período), averageProfitMargin = totalProfit/totalRevenue × 100 (margem global do período). Motivo: sincronização com BakeEntry.totalCost (§14.3 é snapshot do tempo de confirmação) — somar custo/receita de período requer ponderar por volume, não média direta das %/fornada. Decisão adotada no código; revisor humano confirmar se alinha à intenção.
+
+2. **Datas de agrupamento 100% locais via formatDate — UI 017/018 NÃO deve gravar date como ISO UTC meia-noite**: agrupador genérico groupBy usa formatDate (getters locais, sem toISOString). Chaves lexicográficas aaaa-mm-dd são strings comparáveis (§14.5 levanta "comparação métrica-a-métrica"). Sem date-fns — operações triviais (~8 linhas) em Date puro (new Date(y, mIndex, d) = meia-noite local, getDay() nativo). MDN consultada. Bloqueio de implementação: UI 017/018 deve receber `date` local do padeiro, nunca UTC deslocado. Quando entregar BakeEntry, usar a data do input sem conversão.
+
+3. **Sem date-fns — agrupamento trivial ~8 linhas, MDN getDay citada**: mondayOf, groupBy, groupByDay/Week/Month são ~40 linhas puras, sem lib. `date-fns` seria nova devDependency para lógica trivial. Motivo: regra de ouro 1/2 (libs consolidadas para não-trivial; reuso total). A aritmética de Date aqui não é complexa — getDay()%7 offset, new Date(y, m±1, d) para bordas. Link MDN documentado no cabeçalho do arquivo.
+
+---
+
+## Iteração 013 — 2026-07-05 ~04:05 (histórico de fornadas)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 013-bakes-history |
+| **Timestamp** | 2026-07-05 04:05 |
+| **O que foi feito** | src/core/bakes.ts: 16 funções puras orquestrando histórico (spec §14.3–§14.7). Por-fornada: bakeTotalCost/bakeRevenue/bakeProfit/bakeWastage/bakeWastageRate (guarda ÷0→null per-unidade); computeBakeDerived (clona + preenche 5 derivados, §14.3). Planejadas (§14.6): isPlanned, confirmPlanned (deleta chave planned, passa a contar). Agregações (§14.4): aggregatePeriod (filtra planned antes de somar; wastageRate/averageProfitMargin = agregados PONDERADOS do período com guarda ÷0→0); groupBy genérico + groupByDay/Week/Month (chaves formatDate aaaa-mm-dd lexicográficas, sem date-fns; mondayOf: seg–dom literal). Filtros (§14.5): filterByRecipe, filterByDateRange (inclusivo bordas, formatDate). Comparação (§14.5): percentVariation (anterior 0→null), comparePeriods (métrica-a-métrica). Melhor/pior (§14.5): bestPeriod/worstPeriod por lucro. Órfãs (§14.7): isOrphan (recipeId não existe, SEM cascade delete). Sem DOM, sem localStorage, sem arredondamento (§9), pureza total, Date nativo (MDN getDay). src/storage/bakes.ts: BakeStore CRUD (list/get/listByRecipe/create/update/remove/replaceAll) persistindo BakeEntry[] sob BAKES_STORAGE_KEY (seam de backup.ts, fonte única). Serializa JSON nativo (Date→ISO toJSON), reviver dirigido SÓ date (nunca coage recipeName/notes a Date). State "cru" — sem recalc (core responsabilidade). I/O/tempo injetados (now, newId). **+replaceAll** (backup issue 012 integrada; restauração sem cascade, §14.7). Sem rede, sem secret (§10, §11.1). src/core/bakes.test.ts: 16 casos TDD (computeBakeDerived 2, wastageRate 2, isPlanned/confirmPlanned 2, aggregatePeriod 3, groupBy dia/semana/mês 3, filtros 2, variação/comparação 2, best/worst 1, isOrphan 1, pureza 2). src/storage/bakes.test.ts: 7 casos TDD (list/get/listByRecipe 2, create/update 3, remove 1, replaceAll 1). Total 23 testes. |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: bakes.test.ts core (16) + bakes.test.ts storage (7) + toda suíte (sourdough 12 + recipes.test 10 + backup 12 + scaling 11 + recalc 8 + bakers 22 + costs 13 + pricing 18 + hydration 14 + prefs 3 + format 23 + validation 15 + golden 5) = **189 total**. **Pass: 189. Fail: 0.** 🟢 Build Vite: verde. Gates: testes 189/189 ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado com **1 achado médio + 2 baixos** (diferidos para issue fix 021): (a) **bucket-fantasma em groupBy**: quando key inicia no dia 1 da semana mas period.start calcula segunda anterior (não cobrida por nenhuma fornada), buckets.entries() não contém a chave — benign (summaries lista apenas períodos com fornadas reais). Flag para clareza UI (017): "última semana" pode ter boundary sem dados. (b) **fmt duplicado em teste** (src/storage/bakes.test.ts linha ~30, data hardcoded 2026-07-05 sem usar formatDate helper — menor, caso de uso claro mas não-reusável). (c) **Confirmação humana: leitura "média" §14.4 como agregado ponderado**: spec diz "média", implementação usa taxa global (totalWastage/totalProduced, totalProfit/totalRevenue). Sem contradição textual, mas cliente deve validar intenção. Todos 3 aprovados, bloqueadores 0. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em bakes.ts (§14.3/§14.4/§14.5/§14.6/§14.7, MDN Date/getDay links), bakes.test.ts (both core + storage). Reuso total: computeBakeDerived reusa funções unitárias (bakeTotalCost/Revenue/Profit/Wastage/WastageRate); aggregatePeriod filtra isPlanned(e) antes de somar (reutiliza predicate); groupBy agrupador genérico (reusado 3×); filterByDateRange delega formatDate (format.ts); comparePeriods reutiliza percentVariation. Backup integrada: backup.ts exporta BAKES_STORAGE_KEY (fonte única), storage/bakes.ts importa e usa, collectBackupData sabe somar histórico real (sem corrupção). Mapa de módulos será atualizado agora. |
+
+---
+
 **2026-07-05 (issue 012 — backup/restauração)**
 
 1. **RESTAURAÇÃO = SUBSTITUIÇÃO TOTAL**: leitura literal de "restaurar" (§10) — o backup é o novo estado, receitas/histórico anteriores são descartados (sem merge). applyBackupData → replaceAll em recipes.ts + escrita direta de BAKES_STORAGE_KEY. Sem UX de "manter dados atuais" — nesse momento não existe. Revisor humano confirmar.
