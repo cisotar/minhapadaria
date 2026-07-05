@@ -7,7 +7,7 @@
 | 003 | Baker's percentage — F_total âncora | core | 002 | done | 17dd16e |
 | 004 | Fermento por Partes + hidratação derivada | core | 003 | done | 3de585e |
 | 005 | Hidratação nominal/real + Farinha Real | core | 003, 004 | done | 5e2bca9 |
-| 006 | Custos — custo/g, receita, fermento (isca zero) | core | 002, 004 | todo | |
+| 006 | Custos — custo/g, receita, fermento (isca zero) | core | 002, 004 | done | 22cd6a7 |
 | 007 | Precificação 3 modos + margem ≤99,9% + faixas | core | 006 | todo | |
 | 008 | Recálculo central + modos + transição | core | 005, 006, 007 | todo | |
 | 009 | Escalonamento por alvo + fornada por unidade | core | 008 | todo | |
