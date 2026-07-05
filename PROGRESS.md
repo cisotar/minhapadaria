@@ -4,6 +4,16 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 006 — custos)**
+
+1. **Soma compensada de Neumaier em totalRecipeCost/sourdoughCost — NÃO é arredondamento decimal**: elimina drift IEEE-754 acumulado na ordem dos termos (golden §12: 8+0,06+0,8 → 8,86 exato, não 8,860000000000001). Algoritmo de Neumaier (1974), variante do Kahan compensation, implementado em core puro (custo é o domínio) sem lib nova. NÃO viola §9 (arredondamento decimal é só exibição): compensatedSum retorna o mesmo `sum + compensation` exato em precisão total IEEE-754 dupla. Consumidor de totalRecipeCost (issue 008/UI) vê number cru; formatCurrency arredonda só na exibição.
+
+2. **Contrato para issue 008: Recipe.ingredients[] NÃO contém linha de fermento**: custo do fermento entra exclusivamente via `sourdoughCost` (parâmetro de totalRecipeCost), nunca packaged com category própria. Motivo: fermento é sub-receita (§2.B), não um ingrediente comum. Se houvesse linha de fermento em ingredients[], haveria dupla contagem (Isca+Farinha+Água via sourdoughCost + a mesma via ingredients[]). Bloqueia em tipo: Ingredient não tem flag "é fermento", e sourdoughCost só soma FarinhaFerm+ÁguaFerm (Isca sempre fora, §2.B.2).
+
+3. **Distinção null vs 0**: packageSize ≤ 0 → null (bloqueio §5.C, estado inválido); água/óleo @R$0/L → 0 (estado válido, peso×0=0). Consumidores em issue 008/010 não devem colapsar null em 0: null é "cálculo impossível" (UI valida antes); 0 é "contribuição zero legítima" (ex.: água gratuita, sal em peso puro sem custo).
+
+---
+
 **2026-07-05 (issue 005 — hidratação + farinha real)**
 
 1. **Hidratações (nominal, real) retornam number|null (não throw)**: null apenas quando denominador=0 (F_total=0 em nominal; F_total+FarinhaFerm=0 em real). Semelhante a issue 004 (computeSourdoughWeights null em partes inválidas) — interface limpa para recalc engine (issue 008). UI e issue 010 (validações) decidem sinalizar ao usuário. Motivo: bloqueio de ÷0 é tarefa do valor tácito (null), não da assinatura (number), mantém contrato puro.
@@ -51,6 +61,20 @@
 2. **Google Fonts CDN vs auto-hospedagem**: mockups usam `<link rel="stylesheet" href="https://fonts.googleapis.com/...">` no design-system.css. **Decisão**: app (index.html, receitas.html, historico.html) carrega apenas `design-system.css` via Vite, com fonte fallback `system-ui` até issue de UI decidir auto-hospedagem. Alinhado com spec §10 (app 100% client-side) e §11.1 (zero secrets em front-end). Ação diferida para issue 014+.
 
 3. **Polyfill modulepreload em dist/**: achado do revisor-design (baixa prioridade): Vite injeta `<link rel="modulepreload" as="script" ...>` em dist/index.html que contém `fetch()` same-origin para chunks. Artefato de build sem risco (fetch é same-origin, sem headers de autorização, offline ok). Sem ação necessária.
+
+---
+
+## Iteração 006 — 2026-07-05 ~02:20 (custos)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 006-costs |
+| **Timestamp** | 2026-07-05 02:20 |
+| **O que foi feito** | src/core/costs.ts: 6 funções puras (packageSizeInGrams — normaliza kg/L→×1000, mL/g→×1; costPerGram — Preço÷Peso, derivado nunca digitado, null se Peso≤0 §5.C; ingredientRecipeCost — peso×custo/g, propaga null; sourdoughCost — Σ FarinhaFerm×C + ÁguaFerm×C, Isca SEMPRE fora §2.B.2; sourdoughCostPerGram — Custo÷W_ferm, 0 se W_ferm≤0; totalRecipeCost — Σ ingredientes+fermento com compensatedSum de Neumaier, reduz drift IEEE-754, §3.E). Sem DOM, sem localStorage, precisão total (§2.A/§2.A.1/§2.B.2/§3.E/§5.C). src/core/costs.test.ts: 13 testes TDD (packageSizeInGrams 1, costPerGram 4, ingredientRecipeCost 1, sourdoughCost 3, sourdoughCostPerGram 1, totalRecipeCost 2, pureza 1). Golden §12 validado: 8,86 exato (farinha 8+água 0+sal 0,06+fermento 0,80), azeite 0,064/g e 2,56 para 40g (§2.A.1). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: costs.test.ts (13) + bakers.test.ts (22) + sourdough.test.ts (12) + hydration.test.ts (14) + format.test.ts (23) + golden-example.test.ts (1 falha intencional) = 85 total. Pass: 84. Fail: 1 intencional. Build Vite: verde. Gates: testes 84 pass ✓, 1 fail esperada ✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados (Neumaier validado como técnica de precisão legítima; soma compensada ≠ arredondamento decimal §9; Isca fora de sourdoughCost correto §2.B.2; contrato para issue 008: Recipe.ingredients[] NÃO contém fermento; distinção null/0 preservada para consumidores). |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em costs.ts (§2.A/§2.A.1/§2.B.2/§3.E/§5.C) e costs.test.ts. Reuso total: packageSizeInGrams normaliza unidades (§2.A); costPerGram base de ingredientRecipeCost e sourdoughCost; compensatedSum puro sem lib. Alinhamento futuro: issue 008 (recalc engine) recebe funções deste módulo; issue 010 (validações UI) decide se avisar sobre null vs 0. Mapa de módulos será atualizado agora. |
 
 ---
 
