@@ -313,4 +313,50 @@ describe('recipesList (jsdom)', () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].querySelector('h3')!.textContent).toBe('Baguete Tradicional');
   });
+
+  it('14. "Abrir" (issue 025): href do card === index.html?recipe=<encodeURIComponent(id)>', () => {
+    const storage = createMemoryStorage();
+    const recipeStore = makeStore(storage);
+    const created = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão & Cia' }); // "&" força encode
+    const { root } = mount({ storage, recipeStore });
+
+    const openLink = root.querySelector('.recipe-card a.btn-primary') as HTMLAnchorElement;
+    expect(openLink.textContent).toBe('Abrir');
+    expect(openLink.getAttribute('href')).toBe(`index.html?recipe=${encodeURIComponent(created.id)}`);
+  });
+
+  it('15. "Nova receita em branco" (issue 025, §2.F): recipeStore.create() SEM seed + navigate', () => {
+    const storage = createMemoryStorage();
+    const recipeStore = makeStore(storage);
+    const navigate = vi.fn();
+    const { root } = mount({ storage, recipeStore, navigate });
+
+    const before = recipeStore.list().map((r) => r.id);
+    const blankBtn = Array.from(root.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Nova receita em branco',
+    )!;
+    blankBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const after = recipeStore.list();
+    expect(after).toHaveLength(before.length + 1);
+    const created = after.find((r) => !before.includes(r.id))!;
+    // Sem seed: cai no `defaultRecipe()` mínimo do próprio store (recipes.ts) — zero ingredientes/fermento.
+    expect(created.ingredients).toHaveLength(0);
+    expect(created.sourdough.flours).toHaveLength(0);
+    expect(navigate).toHaveBeenCalledWith(`index.html?recipe=${created.id}`);
+  });
+
+  it('16. subtítulo dinâmico (issue 025 item 3): montado em headerRoot com classe .subtitle', () => {
+    const storage = createMemoryStorage();
+    const recipeStore = makeStore(storage);
+    recipeStore.create(goldenSeedNoFat());
+    const root = document.createElement('div');
+    const headerRoot = document.createElement('div');
+    renderRecipesList(root, { recipeStore, storage, headerRoot });
+
+    const subtitle = headerRoot.querySelector('.subtitle');
+    expect(subtitle).not.toBeNull();
+    expect(subtitle!.textContent).toBe('1 receita cadastrada');
+    expect(root.querySelector('.subtitle')).toBeNull(); // não duplica dentro de root
+  });
 });

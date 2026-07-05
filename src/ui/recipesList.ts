@@ -27,15 +27,34 @@
  *
  * Diferenças conscientes vs. `mockups/receitas.html` (registradas, regra do
  * cliente — divergência documentada):
- *  1. A barra de ações/subtítulo é renderizada dentro de `root` (o mesmo nó
- *     recebido por este módulo, testável isoladamente em jsdom) em vez de
- *     dentro do `<header class="page-header">` estático do shell — o título
- *     `<h1>` estático continua no shell (`receitas.html`/`receitas.ts`).
- *  2. Margem do card usa `formatPercent` (2 casas, §9) — "40,00%" — em vez
+ *  1. A barra de ações (busca/criar/backup) é renderizada dentro de `root`
+ *     (o mesmo nó recebido por este módulo, testável isoladamente em jsdom)
+ *     em vez de dentro do `<header class="page-header">` estático do shell.
+ *     Divergência revisada na issue 025 (achado "toolbar fora do header") e
+ *     mantida por decisão de arquitetura: a toolbar depende de estado/eventos
+ *     só resolvíveis dentro de `renderRecipesList` (busca reativa, `deps`
+ *     injetáveis) — mover para o shell estático quebraria o isolamento de
+ *     teste sem ganho visual (mesma ordem/classes do mockup). O `<h1>`
+ *     estático permanece no shell (`receitas.html`/`receitas.ts`); a issue
+ *     025 já move o subtítulo dinâmico para lá (item 2 abaixo) — só a
+ *     divergência da toolbar permanece registrada, a revisar com o cliente.
+ *  2. O subtítulo dinâmico ("N receita(s) cadastrada(s)") é montado em
+ *     `deps.headerRoot` (default `root`, para a suíte continuar isolada) com
+ *     a classe `.subtitle` já documentada em `design-system.css`
+ *     (`.page-header .subtitle`) — `receitas.ts` passa o `#rc-header` real
+ *     do shell, ao lado do `<h1>`, igual ao mockup (issue 025, item 3).
+ *  3. Margem do card usa `formatPercent` (2 casas, §9) — "40,00%" — em vez
  *     do "40,0%" (1 casa) do HTML estático do mockup; `format.ts` é a fonte
  *     única de formatação (regra de ouro 2), não a demo estática.
- *  3. "Abrir" aponta para `index.html` (arquivo real da Calculadora), não
+ *  4. "Abrir" aponta para `index.html` (arquivo real da Calculadora), não
  *     `calculadora.html` (nome usado só no mockup).
+ *
+ * "Criar em branco" (§2.F, issue 025 item 5): a spec pede as duas formas —
+ * "em branco ou a partir de valores padrão". "+ Nova receita" (padrão)
+ * semeia com `goldenSeed()`; "Nova receita em branco" chama
+ * `recipeStore.create()` SEM seed — `defaultRecipe()` (recipes.ts) já é um
+ * `Recipe` válido e mínimo (zero ingredientes, zero fermento), reuso total
+ * (regra de ouro 1), nenhuma lógica nova aqui.
  *
  * Seções implementadas: §2.F, §4 (chip de margem), §5 (mensagens de erro),
  * §7.1 (datas aaaa-mm-dd), §9 (formatação), §10 (backup local), §14.7
@@ -62,6 +81,14 @@ import { marginChipClass } from './cellHelpers';
 export interface RecipesListDeps {
   recipeStore: RecipeStore;
   storage: StorageLike;
+  /**
+   * Nó onde o subtítulo dinâmico (`.subtitle`) é montado — issue 025 item 3:
+   * `receitas.ts` passa `#rc-header` (o mesmo `<header class="page-header">`
+   * estático do shell, ao lado do `<h1>`), espelhando `mockups/receitas.html`.
+   * Default: `root` (mantém a suíte isolada/testável sem precisar de um shell
+   * de página completo em jsdom).
+   */
+  headerRoot?: HTMLElement;
   /** Injetável para teste (default `window.confirm`). */
   confirm?: (message: string) => boolean;
   /** Injetável para teste (default `window.prompt`). */
@@ -78,6 +105,7 @@ export interface RecipesListDeps {
 
 export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): void {
   const { recipeStore, storage } = deps;
+  const headerRoot = deps.headerRoot ?? root; // issue 025 item 3 — default preserva a suíte isolada
   const confirmFn = deps.confirm ?? ((message: string) => window.confirm(message));
   const promptFn = deps.prompt ?? ((message: string, def?: string) => window.prompt(message, def));
   const navigateFn = deps.navigate ?? ((url: string) => { window.location.assign(url); });
@@ -105,6 +133,14 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     { type: 'button', className: 'btn btn-primary' },
     ['+ Nova receita'],
   ) as HTMLButtonElement;
+  // issue 025 item 5 (§2.F "em branco ou a partir de valores padrão"): segunda
+  // ação explícita, sem seed — `recipeStore.create()` já usa `defaultRecipe()`
+  // (recipes.ts) como base mínima válida, reuso total (regra de ouro 1).
+  const newBlankBtn = h(
+    'button',
+    { type: 'button', className: 'btn btn-secondary' },
+    ['Nova receita em branco'],
+  ) as HTMLButtonElement;
   const exportBtn = h(
     'button',
     { type: 'button', className: 'btn btn-secondary push-right' },
@@ -124,13 +160,17 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
 
   toolbar.appendChild(searchInput);
   toolbar.appendChild(newBtn);
+  toolbar.appendChild(newBlankBtn);
   toolbar.appendChild(exportBtn);
   toolbar.appendChild(restoreBtn);
   toolbar.appendChild(fileInput);
   root.appendChild(toolbar);
 
-  const subtitle = h('p', { className: 'note-muted mb-3' }); // issue 022 — era style inline
-  root.appendChild(subtitle);
+  // issue 025 item 3: classe `.subtitle` (design-system.css, `.page-header
+  // .subtitle`) — montado em `headerRoot` (default `root`; `receitas.ts`
+  // passa `#rc-header`, o header estático real, igual ao mockup).
+  const subtitle = h('p', { className: 'subtitle' });
+  headerRoot.appendChild(subtitle);
 
   // Região de status do backup (§5/§10): erro de import nunca perde dados —
   // aria-live anuncia a mensagem pt-BR sem exigir foco do usuário.
@@ -155,10 +195,18 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   // --- Operações §2.F ---
 
   function createRecipe(): void {
-    // Semente de valores padrão (§2.F "em branco ou a partir de valores
-    // padrão" — decisão registrada na issue: só o caminho "valores padrão"
-    // está funcional nesta tela; "em branco" fica de follow-up de design).
+    // Semente de valores padrão (§2.F, caminho 1 de 2: "a partir de valores
+    // padrão") — mesmo gabarito usado na Calculadora quando não há `?recipe`.
     const created = recipeStore.create(goldenSeed());
+    navigateFn(`index.html?recipe=${encodeURIComponent(created.id)}`);
+  }
+
+  function createBlankRecipe(): void {
+    // §2.F, caminho 2 de 2 ("em branco"): sem seed — `recipeStore.create()`
+    // (recipes.ts) já cai no `defaultRecipe()` mínimo válido por padrão do
+    // próprio store (zero ingredientes/fermento), reuso total (regra de
+    // ouro 1) — nenhuma fórmula/estrutura nova aqui.
+    const created = recipeStore.create();
     navigateFn(`index.html?recipe=${encodeURIComponent(created.id)}`);
   }
 
@@ -208,6 +256,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   }
 
   on(newBtn, 'click', createRecipe);
+  on(newBlankBtn, 'click', createBlankRecipe);
   on(exportBtn, 'click', exportBackupNow);
   on(restoreBtn, 'click', () => fileInput.click());
   on(fileInput, 'change', () => {

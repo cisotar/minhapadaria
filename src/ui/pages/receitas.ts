@@ -5,10 +5,11 @@
  * O que faz: instancia `createRecipeStore()` (localStorage real, 011) +
  * `defaultStorage()` (mesmo backend, 010), preenche o `<h1>` estático do
  * cabeçalho (`#rc-header`, shell de `receitas.html`) e chama
- * `renderRecipesList(app, {recipeStore, storage})` — que monta a barra de
- * ações (busca/criar/backup), o subtítulo dinâmico e o grid/estado vazio
- * (017). Zero fórmula/lógica de negócio aqui: só composição/wiring (regra de
- * ouro 2).
+ * `renderRecipesList(app, {recipeStore, storage, headerRoot: header})` — que
+ * monta a barra de ações (busca/criar/backup) dentro de `#app` e o subtítulo
+ * dinâmico dentro de `#rc-header` (issue 025 item 3, ao lado do `<h1>`, igual
+ * ao mockup) — mais o grid/estado vazio (017). Zero fórmula/lógica de
+ * negócio aqui: só composição/wiring (regra de ouro 2).
  *
  * Seções implementadas: §2.F, §10 (backup local), §14.7 (fornadas órfãs).
  */
@@ -29,5 +30,5 @@ if (header) {
 
 const app = document.getElementById('app');
 if (app) {
-  renderRecipesList(app, { recipeStore, storage });
+  renderRecipesList(app, { recipeStore, storage, headerRoot: header ?? undefined });
 }
