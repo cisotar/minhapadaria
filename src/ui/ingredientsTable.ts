@@ -14,6 +14,22 @@
  * o campo (e o estado) ao último valor válido e sinaliza erro nativo via
  * `setCustomValidity`/`reportValidity`; aviso apenas anota, sem reverter.
  *
+ * Editabilidade sensível ao modo (issue 016, §1.3/§4): em `percentage-to-weight`
+ * (padrão), a % é a fonte de verdade (editável, exceto farinha única — trava
+ * 100%) e o Peso é derivado (texto plano, sem box). Em `weight-to-percentage`,
+ * a direção se INVERTE para qualquer ingrediente não-fermento (§1.3, "inclusive
+ * farinha e água"): o Peso vira editável e a % passa a ser derivada — a trava
+ * de farinha única só existe no modo padrão. A % recebe a classe `pct`
+ * (marcador do destaque obrigatório do banner, `.mode-alt .cell-input.pct`,
+ * design-system.css) nos dois modos; quando derivada, o campo continua sendo
+ * um `<input readonly>` (não texto plano) porque o PRÓPRIO destaque visual é
+ * o sinal exigido pela §1.3 — exceção documentada ao sinal invertido genérico
+ * do brandbook §4.1. O Fermento é a exceção da exceção (§1.3: "o peso do
+ * fermento nunca é editado diretamente"): sua % permanece sempre editável e
+ * seu Peso sempre derivado, nos dois modos — `buildFermentoRow` não muda.
+ * Alternar `calculationMode` é mudança ESTRUTURAL (editabilidade dos campos
+ * muda) — `fullRender()`, nunca só `patchAllDerived()`.
+ *
  * Zero lógica de negócio aqui: todo peso/custo/% deriva de `store.getState()`
  * (que só existe porque `recalculate` já rodou, 008); a única soma feita
  * nesta camada é o total de peso do rodapé (§2.A.2 "Total da massa"), porque
@@ -26,7 +42,7 @@
  * Escape XSS (regra de ouro 3, §11.1): nome de ingrediente e qualquer texto
  * do usuário passam só por `dom.ts` (`h`/`textContent`), nunca `innerHTML`.
  *
- * Seções implementadas: §2.A.2, §4, §5.A, §5.B, §5.C, §7.1, §9.
+ * Seções implementadas: §1.3, §2.A.2, §4, §5.A, §5.B, §5.C, §7.1, §9.
  */
 import { parseDecimal, formatPercent, formatWeight, formatCurrency, formatCostPerGram } from '../core/format';
 import {
@@ -45,9 +61,16 @@ import type { AppStateStore } from './state';
 // por sourdoughTable.ts. Comportamento idêntico ao anterior, só de local.
 import { UNIT_OPTIONS, moneyPlain, applyValidation } from './cellHelpers';
 
-/** Referências às células derivadas de uma linha — únicas repintadas via `subscribe`. */
+/**
+ * Referências às células derivadas de uma linha — únicas repintadas via
+ * `subscribe`. Exatamente um de `derivedWeightTarget`/`derivedPctTarget` é
+ * não-nulo por linha de ingrediente, conforme o modo vigente no momento do
+ * `fullRender()` (§1.3/§4, ver cabeçalho do arquivo); a linha do Fermento
+ * sempre usa `derivedWeightTarget` (peso sempre derivado, nos dois modos).
+ */
 interface RowRefs {
-  weightCell: HTMLElement;
+  derivedWeightTarget: HTMLElement | null;
+  derivedPctTarget: HTMLElement | null;
   costGCell: HTMLElement;
   costCell: HTMLElement;
 }
@@ -89,19 +112,27 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   let rowRefs = new Map<string, RowRefs>();
   let footRefs: FootRefs | null = null;
 
+  /** Escreve texto formatado num alvo derivado — `<input readonly>` usa `.value`, célula plana usa `.textContent` (§1.3/§4). */
+  function setDerivedDisplay(el: HTMLElement, text: string): void {
+    if (el instanceof HTMLInputElement) el.value = text;
+    else el.textContent = text;
+  }
+
   /** Repinta só as células derivadas + rodapé — nunca recria um input em foco. */
   function patchAllDerived(): void {
     const { recipe } = store.getState();
     for (const [id, refs] of rowRefs) {
       if (id === 'fermento') {
         const sd = recipe.sourdough;
-        refs.weightCell.textContent = formatWeight(sd.totalWeight ?? 0);
+        if (refs.derivedWeightTarget) setDerivedDisplay(refs.derivedWeightTarget, formatWeight(sd.totalWeight ?? 0));
         refs.costGCell.textContent = sd.costPerGram !== undefined ? formatCostPerGram(sd.costPerGram) : '—';
         refs.costCell.textContent = sd.totalCost !== undefined ? formatCurrency(sd.totalCost) : '—';
       } else {
         const ing = recipe.ingredients.find((i) => i.id === id);
         if (!ing) continue;
-        refs.weightCell.textContent = formatWeight(ing.weight);
+        // §1.3: só um dos dois é derivado por vez, conforme o modo (ver fullRender).
+        if (refs.derivedWeightTarget) setDerivedDisplay(refs.derivedWeightTarget, formatWeight(ing.weight));
+        else if (refs.derivedPctTarget) setDerivedDisplay(refs.derivedPctTarget, formatPercent(ing.percentage));
         refs.costGCell.textContent = ing.costPerGram !== undefined ? formatCostPerGram(ing.costPerGram) : '—';
         refs.costCell.textContent = ing.recipeCost !== undefined ? formatCurrency(ing.recipeCost) : '—';
       }
@@ -217,16 +248,26 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       unitCell.textContent = 'g';
     }
 
-    // % — trava 100% se única farinha (§2.A); senão editável, validação no blur (§5.A).
-    const isLockedFlour = ing.category === 'flour' && flourCount === 1;
+    // Modo de cálculo (§1.3/§4, ver cabeçalho do arquivo): decide qual dos
+    // dois campos (% ou Peso) é a fonte de verdade editável desta linha.
+    const mode = store.getState().recipe.calculationMode;
+    const isWeightToPct = mode === 'weight-to-percentage';
+    // Trava de farinha única (100%) só existe no modo padrão — em peso→% a %
+    // é sempre derivada, então a trava não se aplica (§1.3, "inclusive farinha e água").
+    const isLockedFlour = !isWeightToPct && ing.category === 'flour' && flourCount === 1;
+    const pctReadonly = isWeightToPct || isLockedFlour;
+
+    // % — classe `pct` sempre presente (marcador do destaque §1.3); em
+    // peso→% é derivada (readonly, mas com o destaque, ver cabeçalho);
+    // no modo padrão trava 100% se única farinha; senão editável (§5.A).
     const pctInput = h('input', {
-      className: 'cell-input num',
+      className: 'cell-input num pct',
       value: formatPercent(ing.percentage),
-      readonly: isLockedFlour,
+      readonly: pctReadonly,
       'aria-label': `Porcentagem de ${label}`,
     }) as HTMLInputElement;
     let lastValidPct = pctInput.value;
-    if (!isLockedFlour) {
+    if (!pctReadonly) {
       on(pctInput, 'input', () => {
         const parsed = parseDecimal(pctInput.value);
         if (parsed === null) return; // §7.1: digitação em curso, ainda não numérica
@@ -266,11 +307,55 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
         }
       });
     }
-    const pctCell = h('td', { className: 'num' }, [pctInput]);
+    // Só marca a célula como `.readonly` quando a % é REALMENTE derivada
+    // (peso→%, §1.3) — a trava de farinha única (100%) no modo padrão não
+    // muda essa classe (comportamento pré-016 preservado, ver `td.readonly`
+    // único por linha usado pelos testes de 014/016).
+    const pctCell = h('td', { className: isWeightToPct ? 'num readonly' : 'num' }, [pctInput]);
 
-    // Peso — derivado, texto plano SEM box (decisão 24/brandbook §4.1).
-    const weightCell = h('td', { className: 'num readonly' });
-    weightCell.textContent = formatWeight(ing.weight);
+    // Peso — derivado (texto plano, sem box, decisão 24/brandbook §4.1) no
+    // modo padrão; editável (§1.3, "inclusive farinha e água") em peso→%.
+    let weightCell: HTMLElement;
+    if (!isWeightToPct) {
+      weightCell = h('td', { className: 'num readonly' });
+      weightCell.textContent = formatWeight(ing.weight);
+    } else {
+      const wInput = h('input', {
+        className: 'cell-input num',
+        value: formatWeight(ing.weight),
+        'aria-label': `Peso de ${label}`,
+      }) as HTMLInputElement;
+      let lastValidWeight = wInput.value;
+      on(wInput, 'input', () => {
+        const parsed = parseDecimal(wInput.value);
+        if (parsed === null) return;
+        store.update((draft) => {
+          draft.ingredients[index].weight = parsed;
+        });
+      });
+      on(wInput, 'blur', () => {
+        const parsed = parseDecimal(wInput.value);
+        if (parsed === null) {
+          wInput.value = lastValidWeight;
+          return;
+        }
+        const issue = validateNonNegative(parsed, 'Peso');
+        applyValidation(wInput, issue, () => {
+          wInput.value = lastValidWeight;
+          const reverted = parseDecimal(lastValidWeight.replace(',', '.'));
+          if (reverted !== null) {
+            store.update((draft) => {
+              draft.ingredients[index].weight = reverted;
+            });
+          }
+        });
+        if (!issue || issue.level !== 'block') {
+          lastValidWeight = formatWeight(parsed);
+          wInput.value = lastValidWeight;
+        }
+      });
+      weightCell = h('td', { className: 'num' }, [wInput]);
+    }
 
     // Preço Pago — editável (§2.A.1); Preço Pago ≥ 0 (§5.C).
     const priceInput = h('input', {
@@ -379,7 +464,17 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
 
-    return { tr, refs: { weightCell, costGCell, costCell } };
+    // §1.3/§4: só um dos dois é derivado por vez, conforme o modo vigente
+    // neste `fullRender()` — patchAllDerived escreve no alvo certo.
+    return {
+      tr,
+      refs: {
+        derivedWeightTarget: isWeightToPct ? null : weightCell,
+        derivedPctTarget: isWeightToPct ? pctInput : null,
+        costGCell,
+        costCell,
+      },
+    };
   }
 
   /**
@@ -395,8 +490,11 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const nameCell = h('td', {}, ['Fermento']);
     const unitCell = h('td', {}, ['g']);
 
+    // §1.3: o Fermento é sempre por proporção, nos dois modos — a %
+    // permanece editável (nunca derivada); a classe `pct` só reflete o
+    // destaque visual global do banner, sem mudar comportamento.
     const pctInput = h('input', {
-      className: 'cell-input num',
+      className: 'cell-input num pct',
       value: formatPercent(sd.percentageOfTotalFlour),
       'aria-label': 'Proporção do fermento',
     }) as HTMLInputElement;
@@ -453,7 +551,8 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     tr.appendChild(costGCell);
     tr.appendChild(costCell);
 
-    return { tr, refs: { weightCell, costGCell, costCell } };
+    // §1.3: peso do fermento é SEMPRE derivado, nos dois modos.
+    return { tr, refs: { derivedWeightTarget: weightCell, derivedPctTarget: null, costGCell, costCell } };
   }
 
   function buildAddRow(): HTMLTableRowElement {
@@ -525,5 +624,17 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   }
 
   fullRender();
-  store.subscribe(() => patchAllDerived()); // §1.6: repintura central em qualquer `update`
+  // §1.3/§4: alternar `calculationMode` é mudança ESTRUTURAL (editabilidade
+  // de %/Peso se inverte) — exige `fullRender()`, não só `patchAllDerived()`.
+  // Qualquer outra mutação segue só repintando as células derivadas (§1.6).
+  let lastMode = store.getState().recipe.calculationMode;
+  store.subscribe(() => {
+    const mode = store.getState().recipe.calculationMode;
+    if (mode !== lastMode) {
+      lastMode = mode;
+      fullRender();
+    } else {
+      patchAllDerived();
+    }
+  });
 }

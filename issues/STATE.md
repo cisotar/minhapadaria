@@ -17,7 +17,7 @@
 | 013 | Fornadas — cálculos, agregações, persistência | core | 002, 011 | done | 9c6b58a |
 | 014 | UI calculadora — tabela de insumos | ui | 008, 010, 011 | done | df3e956 |
 | 015 | UI calculadora — fermento + hidratação | ui | 014 | done | 898b287 |
-| 016 | UI calculadora — escala, precificação, banner | ui | 009, 015 | todo | |
+| 016 | UI calculadora — escala, precificação, banner | ui | 009, 015 | doing | |
 | 017 | UI receitas + backup | ui | 011, 012, 014 | todo | |
 | 018 | UI histórico — dashboard fornadas | ui | 013, 014 | todo | |
 | 019 | Export XLSX + impressão | export | 008, 013 | todo | |
@@ -25,3 +25,4 @@
 | 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | todo | |
 | 022 | Fix — achados da revisão da issue 014 (tabela) | fix | 014 | todo | |
 | 023 | Fix — achados da revisão da issue 015 (fermento UI) | fix | 015 | todo | |
+| 024 | Fix — achados da revisão da issue 016 (escala/preço UI) | fix | 016 | todo | |

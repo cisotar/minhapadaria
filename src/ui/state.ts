@@ -22,7 +22,18 @@
  *    não muda, então notificar sem recalcular é seguro e `patchAllDerived` de
  *    014 é inócuo (reexibe os mesmos valores).
  *
- * Seções implementadas: §1.6 (recálculo em lote centralizado), §2.A.2, §4.
+ * Extensão aditiva (issue 016, retrocompatível): `applyTransform(transform)`
+ * serve as duas transformações que devolvem uma `Recipe` NOVA (ou `null`) em
+ * vez de mutar um draft in-place — a transição de volta ao modo padrão (§1.5,
+ * `transitionToPercentageMode`, recalc.ts) e o escalonamento por peso alvo
+ * (§3.D/§1.6, `applyTargetScaling`, scaling.ts), a ÚNICA ação não-imediata do
+ * app. Clona `current.recipe`, roda `transform` sobre o clone; `null` (alvo/
+ * modo inválido) não muta nem notifica (devolve `false`); caso contrário roda
+ * o mesmo `normalize` opcional + `recalculate` de `update` (regra de ouro 2 —
+ * não duplica o pipeline) e notifica (devolve `true`).
+ *
+ * Seções implementadas: §1.5, §1.6 (recálculo em lote centralizado), §2.A.2,
+ * §3.D, §4.
  */
 import { recalculate } from '../core/recalc';
 import type { Recipe, RecipeSummary } from '../core/types';
@@ -39,6 +50,13 @@ export interface AppStateStore {
   getState(): AppState;
   /** Clona o estado atual, aplica `mutator` sobre o clone e recalcula (§1.6). */
   update(mutator: (draft: Recipe) => void): void;
+  /**
+   * Clona o estado atual e roda `transform` sobre o clone (§1.5/§3.D):
+   * `null` (transição/escalonamento indisponível ou inválido) não muta nem
+   * notifica — devolve `false`; uma `Recipe` nova recalcula e notifica —
+   * devolve `true`.
+   */
+  applyTransform(transform: (draft: Recipe) => Recipe | null): boolean;
   /** Registra um assinante; devolve a função de cancelamento. */
   subscribe(fn: Listener): () => void;
   showCosts(): boolean;
@@ -73,6 +91,20 @@ export function createAppState(
       normalize?.(draft);
       current = runRecalculate(draft);
       notify();
+    },
+    applyTransform(transform) {
+      // §1.5/§3.D: mesma disciplina de `update` (clona, nunca muta o estado
+      // publicado), mas a transformação devolve a Recipe nova (ou `null`) em
+      // vez de mutar um draft — `transitionToPercentageMode`/
+      // `applyTargetScaling` já clonam internamente; clonar aqui garante que
+      // um `transform` mal comportado nunca veja o estado publicado.
+      const draft = structuredClone(current.recipe);
+      const next = transform(draft);
+      if (next === null) return false; // §5.C: alvo/modo inválido — nada a aplicar
+      normalize?.(next); // mesmo hook de `update` (regra de ouro 2 — não duplica o pipeline)
+      current = runRecalculate(next);
+      notify();
+      return true;
     },
     subscribe(fn) {
       listeners.add(fn);

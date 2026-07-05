@@ -202,6 +202,12 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 
 /* Campo de % em destaque durante modo alternativo */
 .mode-alt .input.pct { background: var(--mode-alt-field); border-color: var(--areia); }
+/* Mesmo destaque para a célula de % da tabela de insumos/fermento (`.cell-input`,
+   issue 016 §1.3/§4): em peso→% a % passa a ser derivada (readonly) mas o
+   sinal visual obrigatório do modo alternativo permanece — especificidade
+   (3 classes) supera `.cell-input[readonly]` (2), então o destaque aparece
+   mesmo com o campo somente-leitura. */
+.mode-alt .cell-input.pct { background: var(--mode-alt-field); border-color: var(--areia); }
 
 /* ============ Banner modo alternativo ============ */
 .banner-mode-alt {
@@ -378,6 +384,38 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   padding: var(--sp-5);
   display: grid;
   gap: var(--sp-5);
+}
+
+/* Grade de 2 colunas lado a lado (Hidratação + Precificação, mockup
+   calculadora.html) — issue 016. Só tokens (`var(--sp-5)`); largura mínima de
+   coluna (300px) é a mesma constante já usada nos mockups (`grid-2`/
+   `recipe-grid`/`kpi-row`), não um valor novo inventado. Desktop-first
+   (§10): cresce em colunas, nunca esconde conteúdo. */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-5);
+}
+
+/* Agrupamento horizontal genérico (chips de status, botões de ação, campos
+   lado a lado) — já usado inline em todos os mockups (`mockups/*.html`
+   `.row`) e no style guide (`design-system.html`). Promovido para cá na
+   revisão da issue 016 (achado ALTO): existia duplicado como `.field-row`
+   nesta folha, violando a regra de ouro 2 (reuso antes de criar). Só tokens
+   (`var(--sp-3)`); `align-items:center` é o padrão do mockup calculadora.html. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+/* Modificador para agrupamentos de `.field` (label + input, alturas
+   variáveis) que precisam alinhar pela base em vez do centro — mesmo uso que
+   `style="align-items:flex-end"` no mockup calculadora.html (Ancoragem,
+   Precificação). Só sobrescreve `align-items`, nenhum token novo. */
+.row--end {
+  align-items: flex-end;
 }
 
 /* Par valor + seletor de unidade da célula "Peso do produto" (§2.A.1). Dois
