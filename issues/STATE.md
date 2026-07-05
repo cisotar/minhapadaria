@@ -21,8 +21,8 @@
 | 017 | UI receitas + backup | ui | 011, 012, 014 | done | 0106863 |
 | 018 | UI histórico — dashboard fornadas | ui | 013, 014 | done | 9dd2cde |
 | 019 | Export XLSX + impressão | export | 008, 013 | done | 3838177 |
-| 020 | Verificação final §12 + a11y + README | verify | 009, 010, 016–019 | todo | |
-| 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | todo | |
+| 020 | Verificação final §12 + a11y + README | verify | 009, 010, 016–019, 021–027 | todo | |
+| 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | doing | |
 | 022 | Fix — achados da revisão da issue 014 (tabela) | fix | 014 | todo | |
 | 023 | Fix — achados da revisão da issue 015 (fermento UI) | fix | 015 | todo | |
 | 024 | Fix — achados da revisão da issue 016 (escala/preço UI) | fix | 016 | todo | |

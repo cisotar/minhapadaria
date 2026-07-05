@@ -151,8 +151,11 @@ function groupBy(
   keyOf: (date: Date) => string,
   boundsOf: (date: Date) => { start: Date; end: Date },
 ): BakeHistorySummary[] {
+  // §14.4/§14.6: planned:true fica FORA das agregações; filtrar ANTES do
+  // agrupamento evita bucket-fantasma (período cujas únicas fornadas são
+  // planejadas geraria summary zerado, elegível a bestPeriod/worstPeriod).
   const buckets = new Map<string, BakeEntry[]>();
-  for (const e of entries) {
+  for (const e of entries.filter((entry) => !isPlanned(entry))) {
     const key = keyOf(e.date);
     const list = buckets.get(key);
     if (list) list.push(e);

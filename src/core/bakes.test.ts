@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { BakeEntry, BakeHistorySummary } from './types';
+import { formatDate } from './format';
 import {
   computeBakeDerived,
   bakeWastageRate,
@@ -116,8 +117,8 @@ describe('bakes core — agregações (§14.4)', () => {
     const monday = new Date(2026, 6, 13); // segunda
     const weeks = groupByWeek([bake({ id: 's', date: sunday }), bake({ id: 'm', date: monday })]);
     expect(weeks).toHaveLength(2);
-    expect(fmt(weeks[0].periodStart)).toBe('2026-07-06');
-    expect(fmt(weeks[1].periodStart)).toBe('2026-07-13');
+    expect(formatDate(weeks[0].periodStart)).toBe('2026-07-06');
+    expect(formatDate(weeks[1].periodStart)).toBe('2026-07-13');
   });
 
   it('7. groupByMonth: 2026-07-31 e 2026-08-01 → meses distintos', () => {
@@ -125,8 +126,8 @@ describe('bakes core — agregações (§14.4)', () => {
     const aug = new Date(2026, 7, 1);
     const months = groupByMonth([bake({ id: 'j', date: jul }), bake({ id: 'a', date: aug })]);
     expect(months).toHaveLength(2);
-    expect(fmt(months[0].periodStart).slice(0, 7)).toBe('2026-07');
-    expect(fmt(months[1].periodStart).slice(0, 7)).toBe('2026-08');
+    expect(formatDate(months[0].periodStart).slice(0, 7)).toBe('2026-07');
+    expect(formatDate(months[1].periodStart).slice(0, 7)).toBe('2026-08');
   });
 
   it('15. aggregatePeriod de lista vazia → summary zerado sem NaN', () => {
@@ -138,6 +139,48 @@ describe('bakes core — agregações (§14.4)', () => {
     expect(s.averageProfitMargin).toBe(0);
     expect(Number.isNaN(s.wastageRate)).toBe(false);
     expect(Number.isNaN(s.averageProfitMargin)).toBe(false);
+  });
+
+  it('16. groupByDay: dia com só fornadas planejadas NÃO gera bucket (§14.4/§14.6)', () => {
+    const real = new Date(2026, 6, 5);
+    const plannedOnly = new Date(2026, 6, 6);
+    const days = groupByDay([
+      bake({ id: 'r', date: real }),
+      bake({ id: 'p', date: plannedOnly, planned: true, quantityProduced: 100, quantitySold: 100 }),
+    ]);
+    // só o dia real vira bucket; o dia só-planejado é descartado antes de agrupar
+    expect(days).toHaveLength(1);
+    expect(formatDate(days[0].periodStart)).toBe('2026-07-05');
+  });
+
+  it('17. groupByWeek: semana com só fornadas planejadas NÃO gera bucket (§14.4/§14.6)', () => {
+    const real = new Date(2026, 6, 6); // segunda 2026-07-06
+    const plannedNextWeek = new Date(2026, 6, 13); // segunda 2026-07-13
+    const weeks = groupByWeek([
+      bake({ id: 'r', date: real }),
+      bake({ id: 'p', date: plannedNextWeek, planned: true }),
+    ]);
+    expect(weeks).toHaveLength(1);
+    expect(formatDate(weeks[0].periodStart)).toBe('2026-07-06');
+  });
+
+  it('18. groupByMonth: mês com só fornadas planejadas NÃO gera bucket (§14.4/§14.6)', () => {
+    const real = new Date(2026, 6, 15);
+    const plannedNextMonth = new Date(2026, 7, 15);
+    const months = groupByMonth([
+      bake({ id: 'r', date: real }),
+      bake({ id: 'p', date: plannedNextMonth, planned: true }),
+    ]);
+    expect(months).toHaveLength(1);
+    expect(formatDate(months[0].periodStart).slice(0, 7)).toBe('2026-07');
+  });
+
+  it('19. groupByDay: TODAS planejadas → nenhum bucket', () => {
+    const days = groupByDay([
+      bake({ id: 'p1', date: new Date(2026, 6, 5), planned: true }),
+      bake({ id: 'p2', date: new Date(2026, 6, 6), planned: true }),
+    ]);
+    expect(days).toEqual([]);
   });
 });
 
@@ -201,6 +244,23 @@ describe('bakes core — melhor/pior (§14.5)', () => {
     expect(bestPeriod([])).toBeNull();
     expect(worstPeriod([])).toBeNull();
   });
+
+  it('20. bestPeriod/worstPeriod não retornam período só-planejado (§14.4/§14.6)', () => {
+    // dia real com PREJUÍZO + dia só-planejado; sem bucket-fantasma o pior é o real.
+    const lossDay = new Date(2026, 6, 5);
+    const plannedDay = new Date(2026, 6, 6);
+    const days = groupByDay([
+      bake({ id: 'loss', date: lossDay, quantityProduced: 10, quantitySold: 0, unitCost: 5, unitSalePrice: 9 }),
+      bake({ id: 'p', date: plannedDay, planned: true, quantityProduced: 100, quantitySold: 100 }),
+    ]);
+    expect(days).toHaveLength(1); // planejado não vira bucket
+    const worst = worstPeriod(days);
+    const best = bestPeriod(days);
+    // o único bucket é o dia real (prejuízo −50); nenhum bucket lucro-0 fantasma
+    expect(worst?.totalProfit).toBeCloseTo(-50, 10);
+    expect(best?.totalProfit).toBeCloseTo(-50, 10);
+    expect(formatDate(worst!.periodStart)).toBe('2026-07-05');
+  });
 });
 
 describe('bakes core — órfãs (§14.7)', () => {
@@ -212,13 +272,6 @@ describe('bakes core — órfãs (§14.7)', () => {
 });
 
 // --- Helpers de teste ---
-function fmt(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 function summary(o: Partial<BakeHistorySummary>): BakeHistorySummary {
   return {
     periodStart: o.periodStart ?? new Date(2026, 6, 5),
