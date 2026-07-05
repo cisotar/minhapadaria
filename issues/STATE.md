@@ -19,7 +19,7 @@
 | 015 | UI calculadora — fermento + hidratação | ui | 014 | done | 898b287 |
 | 016 | UI calculadora — escala, precificação, banner | ui | 009, 015 | done | 9a08803 |
 | 017 | UI receitas + backup | ui | 011, 012, 014 | done | 0106863 |
-| 018 | UI histórico — dashboard fornadas | ui | 013, 014 | doing | |
+| 018 | UI histórico — dashboard fornadas | ui | 013, 014 | done | 9dd2cde |
 | 019 | Export XLSX + impressão | export | 008, 013 | todo | |
 | 020 | Verificação final §12 + a11y + README | verify | 009, 010, 016–019 | todo | |
 | 021 | Fix — achados da revisão da issue 013 (bakes) | fix | 013 | todo | |
