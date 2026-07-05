@@ -19,8 +19,9 @@ export function goldenSeed(): Recipe {
     id: 'golden-seed',
     name: 'Pão Rústico de Azeite',
     calculationMode: 'percentage-to-weight',
-    batchPlanningMode: 'total',
-    flourTotalWeight: 1000, // F_total — âncora (§12)
+    batchPlanningMode: 'per-unit', // planejamento por unidade — único modo exposto na UI (refactor 2026-07-05)
+    flourPerUnit: 500, // F_unit × N(=2) = F_total 1000 do gabarito §12
+    flourTotalWeight: 1000, // F_total derivado (500 × 2) — valor inicial coerente com §12
     ingredients: [
       {
         id: 'flour-1',
