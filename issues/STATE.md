@@ -2,7 +2,7 @@
 
 | id | título | tipo | deps | status | commit |
 |----|--------|------|------|--------|--------|
-| 001 | Scaffold Vite + TS strict + Vitest (MPA 3 páginas) | infra | — | todo | |
+| 001 | Scaffold Vite + TS strict + Vitest (MPA 3 páginas) | infra | — | done | cb5ab4d |
 | 002 | Tipos §6 + parsing/formatação pt-BR | core | 001 | todo | |
 | 003 | Baker's percentage — F_total âncora | core | 002 | todo | |
 | 004 | Fermento por Partes + hidratação derivada | core | 003 | todo | |
