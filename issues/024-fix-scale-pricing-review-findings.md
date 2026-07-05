@@ -3,7 +3,7 @@ id: "024"
 titulo: Fix — achados da revisão da issue 016 (escala/precificação UI)
 tipo: fix
 deps: ["016"]
-status: todo
+status: done
 ---
 
 ## Contexto

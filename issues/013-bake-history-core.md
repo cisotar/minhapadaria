@@ -3,7 +3,7 @@ id: "013"
 titulo: Fornadas — cálculos, agregações dia/semana/mês, comparação, melhor/pior + persistência
 tipo: core
 deps: ["002", "011"]
-status: todo
+status: done
 ---
 
 ## Contexto

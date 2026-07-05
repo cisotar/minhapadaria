@@ -3,7 +3,7 @@ id: "004"
 titulo: Fermento por Partes — W_ferm, rateio Isca/Farinha/Água, hidratação derivada
 tipo: core
 deps: ["003"]
-status: todo
+status: done
 ---
 
 ## Contexto

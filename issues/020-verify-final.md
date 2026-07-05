@@ -3,7 +3,7 @@ id: "020"
 titulo: Verificação final — exemplo §12 ponta a ponta na UI, a11y, README
 tipo: verify
 deps: ["009", "010", "016", "017", "018", "019", "021", "022", "023", "024", "025", "026", "027"]
-status: todo
+status: done
 ---
 
 ## Contexto

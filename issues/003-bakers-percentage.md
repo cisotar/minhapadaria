@@ -3,7 +3,7 @@ id: "003"
 titulo: Baker's percentage — F_total âncora e pesos derivados
 tipo: core
 deps: ["002"]
-status: todo
+status: done
 ---
 
 ## Contexto

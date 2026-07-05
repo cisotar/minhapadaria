@@ -3,7 +3,7 @@ id: "025"
 titulo: Fix — achados da revisão da issue 017 (tela de receitas)
 tipo: fix
 deps: ["017"]
-status: todo
+status: done
 ---
 
 ## Contexto

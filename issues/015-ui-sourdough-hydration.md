@@ -3,7 +3,7 @@ id: "015"
 titulo: UI Calculadora — bloco do fermento (Partes) + painéis hidratação e farinha real
 tipo: ui
 deps: ["014"]
-status: todo
+status: done
 ---
 
 ## Contexto

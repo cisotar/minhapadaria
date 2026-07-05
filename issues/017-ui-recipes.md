@@ -3,7 +3,7 @@ id: "017"
 titulo: UI Tela de receitas — criar, abrir, renomear, duplicar, excluir + backup
 tipo: ui
 deps: ["011", "012", "014"]
-status: todo
+status: done
 ---
 
 ## Contexto

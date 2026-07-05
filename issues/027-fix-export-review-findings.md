@@ -3,7 +3,7 @@ id: "027"
 titulo: Fix — achados da revisão da issue 019 (export)
 tipo: fix
 deps: ["019"]
-status: todo
+status: done
 ---
 
 ## Contexto

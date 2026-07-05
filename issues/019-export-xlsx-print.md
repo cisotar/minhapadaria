@@ -3,7 +3,7 @@ id: "019"
 titulo: Exportação — XLSX com/sem custos + página de impressão (PDF)
 tipo: export
 deps: ["008", "013"]
-status: todo
+status: done
 ---
 
 ## Contexto

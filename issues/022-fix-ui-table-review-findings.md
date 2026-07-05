@@ -3,7 +3,7 @@ id: "022"
 titulo: Fix — achados da revisão da issue 014 (tabela de insumos)
 tipo: fix
 deps: ["014"]
-status: todo
+status: done
 ---
 
 ## Contexto

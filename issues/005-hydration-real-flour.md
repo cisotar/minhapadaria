@@ -3,7 +3,7 @@ id: "005"
 titulo: Hidratação nominal/real (fat fora) + Farinha Real Consumida
 tipo: core
 deps: ["003", "004"]
-status: todo
+status: done
 ---
 
 ## Contexto

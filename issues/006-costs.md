@@ -3,7 +3,7 @@ id: "006"
 titulo: Custos — custo/g derivado, custo na receita, custo do fermento (isca zero)
 tipo: core
 deps: ["002", "004"]
-status: todo
+status: done
 ---
 
 ## Contexto

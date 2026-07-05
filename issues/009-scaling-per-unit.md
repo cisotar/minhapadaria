@@ -3,7 +3,7 @@ id: "009"
 titulo: Escalonamento por peso alvo + fornada por unidade
 tipo: core
 deps: ["008"]
-status: todo
+status: done
 ---
 
 ## Contexto

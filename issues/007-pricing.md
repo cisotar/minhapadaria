@@ -3,7 +3,7 @@ id: "007"
 titulo: Precificação — 3 modos sincronizados, margem ≤99,9%, totais, faixas 30/15
 tipo: core
 deps: ["006"]
-status: todo
+status: done
 ---
 
 ## Contexto

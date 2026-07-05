@@ -3,7 +3,7 @@ id: "016"
 titulo: UI Calculadora — painel escala/produção, precificação, escalonamento, banner peso→%
 tipo: ui
 deps: ["009", "015"]
-status: todo
+status: done
 ---
 
 ## Contexto

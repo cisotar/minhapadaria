@@ -3,7 +3,7 @@ id: "001"
 titulo: Scaffold Vite + TypeScript strict + Vitest (MPA 3 páginas)
 tipo: infra
 deps: []
-status: todo
+status: done
 ---
 
 ## Contexto

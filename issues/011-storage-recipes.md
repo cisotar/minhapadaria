@@ -3,7 +3,7 @@ id: "011"
 titulo: Receitas em localStorage — CRUD, duplicar, estado completo + toggle custos persistido
 tipo: storage
 deps: ["002"]
-status: todo
+status: done
 ---
 
 ## Contexto

@@ -3,7 +3,7 @@ id: "018"
 titulo: UI Tela de histórico — registro de fornada, filtros, KPIs, gráfico, melhor/pior, órfãs
 tipo: ui
 deps: ["013", "014"]
-status: todo
+status: done
 ---
 
 ## Contexto

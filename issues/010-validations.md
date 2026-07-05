@@ -3,7 +3,7 @@ id: "010"
 titulo: Validações da Seção 5 consolidadas (blur, bloqueios, avisos)
 tipo: core
 deps: ["008"]
-status: todo
+status: done
 ---
 
 ## Contexto

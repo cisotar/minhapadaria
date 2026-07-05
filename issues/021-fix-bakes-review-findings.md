@@ -3,7 +3,7 @@ id: "021"
 titulo: Fix — achados da revisão da issue 013 (bakes)
 tipo: fix
 deps: ["013"]
-status: todo
+status: done
 ---
 
 ## Contexto

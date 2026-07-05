@@ -3,7 +3,7 @@ id: "014"
 titulo: UI Calculadora — tabela de insumos, edição inline, toggle custos, g/mL, linha do fermento
 tipo: ui
 deps: ["008", "010", "011"]
-status: todo
+status: done
 ---
 
 ## Contexto

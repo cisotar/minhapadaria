@@ -3,7 +3,7 @@ id: "012"
 titulo: Backup/restauração em arquivo JSON (obrigatório v1)
 tipo: storage
 deps: ["011"]
-status: todo
+status: done
 ---
 
 ## Contexto

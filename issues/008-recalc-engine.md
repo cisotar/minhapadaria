@@ -3,7 +3,7 @@ id: "008"
 titulo: Função central de recálculo em lote + modos %→peso / peso→% + transição
 tipo: core
 deps: ["005", "006", "007"]
-status: todo
+status: done
 ---
 
 ## Contexto

@@ -3,7 +3,7 @@ id: "023"
 titulo: Fix — achados da revisão da issue 015 (fermento/hidratação UI)
 tipo: fix
 deps: ["015"]
-status: todo
+status: done
 ---
 
 ## Contexto
