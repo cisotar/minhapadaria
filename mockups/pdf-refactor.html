@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockups — Refactor PDFs (issue 028)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  /* Paleta dedicada de impressão (issue 028) — só neste mockup; na
+     implementação real vira @media print em design-system.css, escopada,
+     :root da tela intocado. */
+  :root {
+    --print-bg: #FFFFFF;
+    --print-text: #111111;       /* padrão de tudo: títulos, th, labels, %, peso, data, margem */
+    --print-border: #B8B8B8;
+    --print-border-strong: #333333;
+    --print-credit: #0B2E59;     /* só valor de CRÉDITO (dinheiro entrando) */
+    --print-debit: #B3261E;      /* só valor de DÉBITO (dinheiro saindo / prejuízo) */
+    --print-muted: #5A5A5A;
+  }
+
+  body { background: var(--bg); padding: var(--sp-5) 0 var(--sp-6); }
+
+  .mockup-label {
+    max-width: 760px; margin: 0 auto var(--sp-2); padding: 0 var(--sp-3);
+    font-size: var(--fs-small); font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+
+  .pdf-page {
+    background: var(--print-bg);
+    color: var(--print-text);
+    font-family: var(--font-sans);
+    max-width: 760px;
+    margin: 0 auto var(--sp-6);
+    padding: var(--sp-5);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .pdf-page h1 {
+    color: var(--print-text);
+    font-size: var(--fs-display);
+    font-weight: 700;
+    margin: 0 0 2px;
+  }
+  .pdf-page .pdf-meta {
+    color: var(--print-muted);
+    font-size: var(--fs-small);
+    padding-bottom: var(--sp-3);
+    border-bottom: 2px solid var(--print-border-strong);
+    margin-bottom: var(--sp-4);
+  }
+  .pdf-page h2.pdf-section {
+    color: var(--print-text);
+    font-size: var(--fs-small);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+    margin: var(--sp-4) 0 var(--sp-2);
+  }
+  .pdf-page table.table { width: 100%; border-collapse: collapse; margin-bottom: var(--sp-3); }
+  .pdf-page table.table th {
+    text-align: left;
+    color: var(--print-text);
+    font-size: var(--fs-small);
+    text-transform: uppercase;
+    font-weight: 700;
+    border-bottom: 2px solid var(--print-border-strong);
+    padding: var(--sp-2) var(--sp-2);
+  }
+  .pdf-page table.table td {
+    border-bottom: 1px solid var(--print-border);
+    padding: var(--sp-2) var(--sp-2);
+    color: var(--print-text);
+  }
+  .pdf-page table.table th.num, .pdf-page table.table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pdf-page table.table tfoot td {
+    border-top: 2px solid var(--print-border-strong);
+    border-bottom: none;
+    font-weight: 700;
+  }
+  .pdf-page .kv { width: 100%; border-collapse: collapse; margin-bottom: var(--sp-3); }
+  .pdf-page .kv td { border-bottom: 1px solid var(--print-border); padding: var(--sp-1) var(--sp-2); }
+  .pdf-page .kv td:first-child { color: var(--print-text); }
+  .pdf-page .kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .pdf-page .kv tr:last-child td { border-bottom: none; font-weight: 700; }
+
+  .pdf-credit { color: var(--print-credit); font-weight: 700; }
+  .pdf-debit { color: var(--print-debit); font-weight: 700; }
+  .pdf-muted-row td { color: var(--print-muted); font-style: italic; }
+
+  .pdf-alert {
+    margin-top: var(--sp-3);
+    border: 1px solid var(--print-debit);
+    color: var(--print-debit);
+    font-weight: 700;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
+  }
+
+  .pdf-footer {
+    margin-top: var(--sp-4);
+    padding-top: var(--sp-2);
+    border-top: 1px solid var(--print-border);
+    text-align: right;
+    color: var(--print-muted);
+    font-size: var(--fs-small);
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-label">Mockup 1/4 — PDF Receita (ingredientes/proporções/totais, zero $)</div>
+<div class="pdf-page">
+  <h1>Pão de Fermentação Natural</h1>
+  <div class="pdf-meta">Gerado em 05/07/2026 · Calculadora de Pão</div>
+
+  <h2 class="pdf-section">Farinhas</h2>
+  <table class="table">
+    <thead><tr><th>Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th></tr></thead>
+    <tbody>
+      <tr><td>Farinha de Trigo Tipo 1</td><td class="num">90,00</td><td class="num">900,0</td></tr>
+      <tr><td>Farinha Integral</td><td class="num">10,00</td><td class="num">100,0</td></tr>
+    </tbody>
+    <tfoot><tr><td>Total Farinhas</td><td class="num">100,00</td><td class="num">1000,0</td></tr></tfoot>
+  </table>
+
+  <h2 class="pdf-section">Líquidos</h2>
+  <table class="table">
+    <thead><tr><th>Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th></tr></thead>
+    <tbody><tr><td>Água</td><td class="num">70,00</td><td class="num">700,0</td></tr></tbody>
+  </table>
+
+  <h2 class="pdf-section">Sal e Extras</h2>
+  <table class="table">
+    <thead><tr><th>Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th></tr></thead>
+    <tbody>
+      <tr><td>Sal</td><td class="num">2,00</td><td class="num">20,0</td></tr>
+      <tr><td>Azeite</td><td class="num">4,00</td><td class="num">40,0</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="pdf-section">Fermento Natural</h2>
+  <table class="kv">
+    <tr><td>Peso total</td><td>200,0 g</td></tr>
+    <tr><td>Farinha do fermento</td><td>100,0 g</td></tr>
+    <tr><td>Água do fermento</td><td>100,0 g</td></tr>
+  </table>
+
+  <h2 class="pdf-section">Hidratação</h2>
+  <table class="kv">
+    <tr><td>Nominal</td><td>70,00%</td></tr>
+    <tr><td>Real</td><td>72,73%</td></tr>
+    <tr><td>Farinha Real Consumida</td><td>1100,0 g</td></tr>
+    <tr><td>Total da massa</td><td>1200,0 g</td></tr>
+  </table>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+<div class="mockup-label">Mockup 2/4 — PDF Custos (custo por ingrediente + precificação)</div>
+<div class="pdf-page">
+  <h1>Custos — Pão de Fermentação Natural</h1>
+  <div class="pdf-meta">Gerado em 05/07/2026 · Calculadora de Pão</div>
+
+  <h2 class="pdf-section">Custo por ingrediente</h2>
+  <table class="table">
+    <thead><tr><th>Ingrediente</th><th class="num">Custo/g</th><th class="num">Custo total</th></tr></thead>
+    <tbody>
+      <tr><td>Farinha de Trigo Tipo 1</td><td class="num pdf-debit">0,0040</td><td class="num pdf-debit">R$ 3,60</td></tr>
+      <tr><td>Farinha Integral</td><td class="num pdf-debit">0,0060</td><td class="num pdf-debit">R$ 0,60</td></tr>
+      <tr><td>Água</td><td class="num pdf-debit">0,0000</td><td class="num pdf-debit">R$ 0,00</td></tr>
+      <tr><td>Sal</td><td class="num pdf-debit">0,0080</td><td class="num pdf-debit">R$ 0,16</td></tr>
+      <tr><td>Azeite</td><td class="num pdf-debit">0,0250</td><td class="num pdf-debit">R$ 1,00</td></tr>
+      <tr><td>Fermento Natural</td><td class="num pdf-debit">0,0180</td><td class="num pdf-debit">R$ 3,50</td></tr>
+    </tbody>
+    <tfoot><tr><td>Custo total</td><td class="num"></td><td class="num pdf-debit">R$ 8,86</td></tr></tfoot>
+  </table>
+
+  <h2 class="pdf-section">Precificação</h2>
+  <table class="kv">
+    <tr><td>Custo por unidade</td><td class="pdf-debit">R$ 4,43</td></tr>
+    <tr><td>Preço de venda</td><td class="pdf-credit">R$ 7,38</td></tr>
+    <tr><td>Margem de lucro</td><td>40,00%</td></tr>
+    <tr><td>Lucro total</td><td class="pdf-credit">R$ 2,95</td></tr>
+  </table>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+<div class="mockup-label">Mockup 2b — variante prejuízo (mesma seção Precificação, isLoss = true)</div>
+<div class="pdf-page">
+  <h1>Custos — Pão de Centeio</h1>
+  <div class="pdf-meta">Gerado em 05/07/2026 · Calculadora de Pão</div>
+
+  <h2 class="pdf-section">Precificação</h2>
+  <table class="kv">
+    <tr><td>Custo por unidade</td><td class="pdf-debit">R$ 5,20</td></tr>
+    <tr><td>Preço de venda</td><td class="pdf-credit">R$ 4,80</td></tr>
+    <tr><td>Margem de lucro</td><td>−8,33%</td></tr>
+    <tr><td>Lucro total</td><td class="pdf-debit">−R$ 4,10</td></tr>
+  </table>
+  <div class="pdf-alert">⚠ PREJUÍZO — preço não cobre o custo</div>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+<div class="mockup-label">Mockup 3/4 — PDF Histórico · Fornadas (produção/vendas, zero $)</div>
+<div class="pdf-page">
+  <h1>Histórico de Fornadas</h1>
+  <div class="pdf-meta">Período: 01/06/2026 – 05/07/2026 · Gerado em 05/07/2026</div>
+
+  <h2 class="pdf-section">Resumo do período</h2>
+  <table class="kv">
+    <tr><td>Produzido</td><td>48 un.</td></tr>
+    <tr><td>Vendido</td><td>42 un.</td></tr>
+    <tr><td>Desperdício</td><td>12,50%</td></tr>
+  </table>
+
+  <h2 class="pdf-section">Fornadas</h2>
+  <table class="table">
+    <thead><tr><th>Data</th><th>Receita</th><th class="num">Produzidas</th><th class="num">Vendidas</th></tr></thead>
+    <tbody>
+      <tr><td>04/07/2026</td><td>Pão Francês</td><td class="num">24</td><td class="num">22</td></tr>
+      <tr><td>02/07/2026</td><td>Fermentação Natural</td><td class="num">24</td><td class="num">20</td></tr>
+      <tr class="pdf-muted-row"><td>06/07/2026</td><td>Pão Francês — Planejada</td><td class="num">24</td><td class="num">—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+<div class="mockup-label">Mockup 4/4 — PDF Histórico · Financeiro (custo/faturamento/lucro do período)</div>
+<div class="pdf-page">
+  <h1>Financeiro — Histórico de Fornadas</h1>
+  <div class="pdf-meta">Período: 01/06/2026 – 05/07/2026 · Gerado em 05/07/2026</div>
+
+  <h2 class="pdf-section">Resumo financeiro</h2>
+  <table class="kv">
+    <tr><td>Custo total</td><td class="pdf-debit">R$ 96,00</td></tr>
+    <tr><td>Faturamento</td><td class="pdf-credit">R$ 168,00</td></tr>
+    <tr><td>Lucro</td><td class="pdf-credit">R$ 72,00</td></tr>
+    <tr><td>Margem média</td><td>42,86%</td></tr>
+  </table>
+
+  <h2 class="pdf-section">Fornadas</h2>
+  <table class="table">
+    <thead><tr><th>Data</th><th>Receita</th><th class="num">Custo</th><th class="num">Lucro</th></tr></thead>
+    <tbody>
+      <tr><td>04/07/2026</td><td>Pão Francês</td><td class="num pdf-debit">R$ 48,00</td><td class="num pdf-credit">R$ 36,00</td></tr>
+      <tr><td>02/07/2026</td><td>Fermentação Natural</td><td class="num pdf-debit">R$ 48,00</td><td class="num pdf-credit">R$ 36,00</td></tr>
+      <tr><td>28/06/2026</td><td>Pão Francês</td><td class="num pdf-debit">R$ 48,00</td><td class="num pdf-debit">−R$ 4,00</td></tr>
+    </tbody>
+    <tfoot><tr><td>Total</td><td></td><td class="num pdf-debit">R$ 96,00</td><td class="num pdf-credit">R$ 72,00</td></tr></tfoot>
+  </table>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+</body>
+</html>

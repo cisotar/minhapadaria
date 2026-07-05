@@ -29,3 +29,4 @@
 | 025 | Fix — achados da revisão da issue 017 (tela receitas) | fix | 017 | done | b3f33de |
 | 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | done | 62b3826 |
 | 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | done | f567a9c |
+| 028 | Refactor — estilo dos PDFs (visual tipo tela) + split Receita/Custos | export | 019, 027 | pending | — |
