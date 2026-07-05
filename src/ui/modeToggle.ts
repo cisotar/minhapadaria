@@ -58,7 +58,7 @@ export function renderModeToggle(root: HTMLElement, store: AppStateStore): void 
     );
     const backBtn = h(
       'button',
-      { type: 'button', className: 'btn btn-secondary', style: 'margin-left:auto' },
+      { type: 'button', className: 'btn btn-secondary push-right' }, // `.push-right` (issue 022) — era style inline
       ['Voltar ao modo padrão'],
     ) as HTMLButtonElement;
     on(backBtn, 'click', () => {
@@ -71,7 +71,7 @@ export function renderModeToggle(root: HTMLElement, store: AppStateStore): void 
   function sync(): void {
     const alt = store.getState().recipe.calculationMode === 'weight-to-percentage';
     document.body.classList.toggle('mode-alt', alt); // liga o destaque §1.3 (design-system.css)
-    toggleBtn.style.display = alt ? 'none' : ''; // a saída é só pelo botão do banner
+    toggleBtn.classList.toggle('hidden', alt); // `.hidden` (issue 022) — a saída é só pelo botão do banner
     if (alt && !banner) {
       banner = buildBanner();
       const nav = document.querySelector('.app-nav');

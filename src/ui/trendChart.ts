@@ -115,8 +115,11 @@ function buildSeries(
   const last = points[points.length - 1];
   parent.appendChild(
     svg(
+      // `fill` como atributo de apresentação SVG (não `style`, issue 022) —
+      // aceita `var()` como valor (mesma cascata de CSS, doc oficial
+      // consultada, regra de ouro 4): https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/fill
       'text',
-      { className: 'direct-label', x: last.x + 10, y: last.y + 4, style: 'fill:var(--text-2)' },
+      { className: 'direct-label', x: last.x + 10, y: last.y + 4, fill: 'var(--text-2)' },
       [formatCurrency(valueOf(last.s))],
     ),
   );

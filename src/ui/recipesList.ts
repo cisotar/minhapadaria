@@ -87,13 +87,18 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   let searchTerm = '';
 
   // --- Barra de ações (§2.F: criar + busca; §10: backup) ---
-  const toolbar = h('div', { className: 'row', style: 'margin-bottom:var(--sp-2)' });
+  // `.mb-2`/`.push-right`/`.hidden` (design-system.css, issue 022) — substituem
+  // os `style=` inline achados na revisão da issue 014 (ampliação issue 017).
+  const toolbar = h('div', { className: 'row mb-2' });
   const searchInput = h('input', {
     className: 'input',
     type: 'search',
     placeholder: 'Buscar receita…',
     'aria-label': 'Buscar receita',
-    style: 'width:220px',
+    // `size` é contagem de caracteres (atributo HTML, não CSS) — mesmo padrão
+    // de `pwValInput` em `ingredientsTable.ts`/`sourdoughTable.ts`: largura
+    // intrínseca razoável sem token de largura (não existe em :root).
+    size: 26,
   }) as HTMLInputElement;
   const newBtn = h(
     'button',
@@ -102,7 +107,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   ) as HTMLButtonElement;
   const exportBtn = h(
     'button',
-    { type: 'button', className: 'btn btn-secondary', style: 'margin-left:auto' },
+    { type: 'button', className: 'btn btn-secondary push-right' },
     ['Exportar backup'],
   ) as HTMLButtonElement;
   const restoreBtn = h(
@@ -114,7 +119,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     type: 'file',
     accept: 'application/json',
     'aria-label': 'Selecionar arquivo de backup',
-    style: 'display:none',
+    className: 'hidden',
   }) as HTMLInputElement;
 
   toolbar.appendChild(searchInput);
@@ -124,9 +129,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   toolbar.appendChild(fileInput);
   root.appendChild(toolbar);
 
-  const subtitle = h('p', {
-    style: 'color:var(--text-muted);font-size:var(--fs-small);margin:0 0 var(--sp-3)',
-  });
+  const subtitle = h('p', { className: 'note-muted mb-3' }); // issue 022 — era style inline
   root.appendChild(subtitle);
 
   // Região de status do backup (§5/§10): erro de import nunca perde dados —

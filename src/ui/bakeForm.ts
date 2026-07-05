@@ -124,7 +124,9 @@ export function renderBakeForm(root: HTMLElement, deps: BakeFormDeps): void {
     'aria-label': 'Data',
   }) as HTMLInputElement;
   dateField.appendChild(dateInput);
-  const plannedBadge = h('span', { className: 'badge-planned', style: 'display:none' }, ['◌ Planejada']);
+  // `.hidden` (design-system.css, issue 022) — era style inline; default oculto,
+  // `refreshPlannedBadge` (abaixo) alterna via `classList` conforme a data.
+  const plannedBadge = h('span', { className: 'badge-planned hidden' }, ['◌ Planejada']);
   dateField.appendChild(plannedBadge);
   row.appendChild(dateField);
 
@@ -198,7 +200,7 @@ export function renderBakeForm(root: HTMLElement, deps: BakeFormDeps): void {
   function refreshPlannedBadge(): void {
     const parsed = parseLocalDate(dateInput.value || formatDate(nowFn()));
     const issue = validateBakeDate(parsed, nowFn());
-    plannedBadge.style.display = issue ? 'inline-flex' : 'none';
+    plannedBadge.classList.toggle('hidden', issue === null);
   }
   on(dateInput, 'change', refreshPlannedBadge);
   on(dateInput, 'input', refreshPlannedBadge);

@@ -42,6 +42,10 @@
  * Escape XSS (regra de ouro 3, §11.1): nome de ingrediente e qualquer texto
  * do usuário passam só por `dom.ts` (`h`/`textContent`), nunca `innerHTML`.
  *
+ * Issue 022 (achados baixos da revisão da 014): zero `style=` inline —
+ * `.title-row`/`.toggle-label`/`.push-right`/`.btn-sm`/`.row.row--tight`/
+ * `.table-add-cell` (design-system.css) substituem os 7 encontrados aqui.
+ *
  * Seções implementadas: §1.3, §2.A.2, §4, §5.A, §5.B, §5.C, §7.1, §9.
  */
 import { parseDecimal, formatPercent, formatWeight, formatCurrency, formatCostPerGram } from '../core/format';
@@ -85,16 +89,12 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
   root.appendChild(card);
 
   // Barra de título + toggle "Exibir custos" (§2.A.2: default oculto, persistido via prefs 011).
-  const titleBar = h('div', {
-    style: 'display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)',
-  });
-  titleBar.appendChild(h('h2', { style: 'margin:0;border:none;padding:0' }, ['Ingredientes']));
+  // `.title-row`/`.toggle-label`/`.push-right` (design-system.css, issue 022) —
+  // substituem os `style=` inline achados na revisão da issue 014.
+  const titleBar = h('div', { className: 'title-row' });
+  titleBar.appendChild(h('h2', {}, ['Ingredientes']));
 
-  const toggleLabel = h('label', {
-    style:
-      'margin-left:auto;display:flex;align-items:center;gap:var(--sp-2);' +
-      'font-size:var(--fs-small);font-weight:600;color:var(--text-2);cursor:pointer',
-  });
+  const toggleLabel = h('label', { className: 'toggle-label push-right' });
   const toggleInput = h('input', { type: 'checkbox', checked: store.showCosts() }) as HTMLInputElement;
   toggleLabel.appendChild(toggleInput);
   toggleLabel.appendChild(document.createTextNode('Exibir custos'));
@@ -220,8 +220,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       'button',
       {
         type: 'button',
-        className: 'btn btn-secondary',
-        style: 'font-size:var(--fs-small)',
+        className: 'btn btn-secondary btn-sm', // `.btn-sm` (design-system.css, issue 022) — era style inline
         title: removeIssue ? removeIssue.message : 'Remover ingrediente',
         'aria-label': `Remover ${label}`,
         disabled: Boolean(removeIssue),
@@ -236,9 +235,8 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
         fullRender(); // add/remove é mudança estrutural (§5.B)
       });
     }
-    const nameCell = h('td', {}, [
-      h('div', { style: 'display:flex;align-items:center;gap:var(--sp-2)' }, [nameInput, removeBtn]),
-    ]);
+    // `.row.row--tight` (design-system.css, issue 022) — era style inline.
+    const nameCell = h('td', {}, [h('div', { className: 'row row--tight' }, [nameInput, removeBtn])]);
 
     // Unidade — sólidos "g" fixo; líquidos/gorduras alternador g/mL (§2.A.2).
     const unitCell = h('td');
@@ -559,7 +557,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
     const tr = h('tr') as HTMLTableRowElement;
     const addBtn = h(
       'button',
-      { type: 'button', className: 'btn btn-secondary', style: 'font-size:var(--fs-small)' },
+      { type: 'button', className: 'btn btn-secondary btn-sm' }, // `.btn-sm` (issue 022) — era style inline
       ['+ ingrediente'],
     ) as HTMLButtonElement;
     on(addBtn, 'click', () => {
@@ -575,7 +573,7 @@ export function renderIngredientsTable(root: HTMLElement, store: AppStateStore):
       });
       fullRender(); // add/remove é mudança estrutural
     });
-    tr.appendChild(h('td', { colspan: 8, style: 'padding:var(--sp-2) var(--sp-3)' }, [addBtn]));
+    tr.appendChild(h('td', { colspan: 8, className: 'table-add-cell' }, [addBtn])); // issue 022 — era style inline
     return tr;
   }
 

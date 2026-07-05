@@ -74,6 +74,79 @@ describe('ingredientsTable (jsdom)', () => {
     expect(setShowCostsSpy).toHaveBeenCalledWith(true);
   });
 
+  it('5. ordem fixa das colunas do <thead> (§2.A.2)', () => {
+    const { root } = mount();
+    const headers = Array.from(root.querySelectorAll('thead th')).map((th) => th.textContent);
+    expect(headers).toEqual([
+      'Ingrediente',
+      'Unidade',
+      '%',
+      'Peso (g)',
+      'Preço pago',
+      'Peso do produto',
+      'Custo/g',
+      'Custo',
+    ]);
+  });
+
+  it('6. alternador g/mL da Água: clicar "mL" não muda o Peso (canônico em g, §2.A)', () => {
+    const { root } = mount();
+    const row = root.querySelector('tr[data-ingredient-id="water-1"]') as HTMLTableRowElement;
+    const weightCell = row.querySelector('td.readonly') as HTMLElement;
+    expect(weightCell.textContent).toBe('700,0');
+
+    const mlBtn = row.querySelector('button[aria-label="Usar mililitros para Água"]') as HTMLButtonElement;
+    mlBtn.click(); // troca só o rótulo/inputUnit — densidade 1:1 (§2.A), dispara fullRender()
+
+    // fullRender() recria a linha — precisa reobter os nós após o clique.
+    const rowAfter = root.querySelector('tr[data-ingredient-id="water-1"]') as HTMLTableRowElement;
+    const weightCellAfter = rowAfter.querySelector('td.readonly') as HTMLElement;
+    expect(weightCellAfter.textContent).toBe('700,0'); // peso canônico em g inalterado
+    const mlBtnAfter = rowAfter.querySelector('button[aria-label="Usar mililitros para Água"]') as HTMLButtonElement;
+    expect(mlBtnAfter.classList.contains('active')).toBe(true); // rótulo trocou
+  });
+
+  it('7. blur do Peso do Produto = 0 reverte (§5.C, impede ÷0 no Custo/g)', () => {
+    const { root } = mount();
+    const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    const pwInput = row.querySelector('input[aria-label="Peso do produto de Farinha Branca"]') as HTMLInputElement;
+    expect(pwInput.value).toBe('1,0'); // packageSize=1 (na unidade "kg" do seletor, formatWeight sem milhar)
+
+    pwInput.value = '0';
+    pwInput.dispatchEvent(new Event('input', { bubbles: true }));
+    pwInput.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    expect(pwInput.value).toBe('1,0'); // reverte ao último valor válido
+    expect(pwInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('8. blur do Preço Pago = −1 reverte (§5.C, não-negativo)', () => {
+    const { root } = mount();
+    const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    const priceInput = row.querySelector('input[aria-label="Preço pago de Farinha Branca"]') as HTMLInputElement;
+    expect(priceInput.value).toBe('8,00');
+
+    priceInput.value = '-1';
+    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+    priceInput.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    expect(priceInput.value).toBe('8,00'); // reverte ao último valor válido
+    expect(priceInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('9. mínimo 1 farinha: botão remover desabilitado na última farinha (§5.B)', () => {
+    const { root } = mount(); // golden seed tem uma única farinha (Farinha Branca)
+    const row = root.querySelector('tr[data-ingredient-id="flour-1"]') as HTMLTableRowElement;
+    const removeBtn = row.querySelector('button[aria-label="Remover Farinha Branca"]') as HTMLButtonElement;
+    expect(removeBtn.disabled).toBe(true);
+    expect(removeBtn.title).toMatch(/farinha/i);
+
+    // Outra categoria (não-farinha) permanece removível normalmente.
+    const saltRow = root.querySelector('tr[data-ingredient-id="salt-1"]') as HTMLTableRowElement;
+    const saltRemoveBtn = saltRow.querySelector('button[aria-label="Remover Sal"]') as HTMLButtonElement;
+    expect(saltRemoveBtn.disabled).toBe(false);
+  });
+
   it('4. blur com soma de farinhas ≠ 100% reverte o campo (§5.A)', () => {
     // Cenário com 2 farinhas (60/40) para exercitar a soma — golden seed tem 1 só.
     const prefs = createPrefsStore({ storage: createMemoryStorage() });

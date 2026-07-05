@@ -44,6 +44,11 @@
  * Escape XSS (regra de ouro 3, §11.1): nome de farinha do fermento só entra
  * via `dom.ts` (`h`/valor de `<input>`), nunca `innerHTML`.
  *
+ * Issue 022 (ampliação da revisão da 014): zero `style=` inline — `.mb-3`/
+ * `.mt-3`/`.note-muted`/`.btn-sm`/`.row.row--tight`/`.subrow-indent`/
+ * `.table-add-cell`/`.hidden` (design-system.css) substituem os 8 encontrados
+ * aqui (incl. os dois `el.style.display` do toggle de custos do Resumo).
+ *
  * Seções implementadas: §2.B, §2.B.1, §2.B.2, §2.B.3, §2.B.4, §2.B.5, §4, §5.B,
  * §5.C, §7.1, §9.
  */
@@ -121,7 +126,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
   // Peso total do fermento — derivado (vem da % da linha Fermento em 014,
   // §2.B.1), texto plano SEM box (decisão 24/brandbook §4.1), nunca editado
   // aqui.
-  const totalWeightField = h('div', { className: 'field', style: 'margin-bottom:var(--sp-3)' });
+  const totalWeightField = h('div', { className: 'field mb-3' }); // `.mb-3` (issue 022) — era style inline
   totalWeightField.appendChild(h('label', {}, ['Peso total do fermento (vem da % acima)']));
   const totalWeightValue = h('span', { className: 'readonly num', 'data-metric': 'total-weight' });
   totalWeightField.appendChild(h('div', {}, [totalWeightValue, ' ', h('span', { className: 'unit-suffix' }, ['g'])]));
@@ -131,7 +136,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
   card.appendChild(table);
 
   // Resumo (§2.B.5) — mesma classe `.metric-pair` do painel de Hidratação.
-  const resumo = h('div', { className: 'metric-pair', style: 'margin-top:var(--sp-3)' });
+  const resumo = h('div', { className: 'metric-pair mt-3' }); // `.mt-3` (issue 022) — era style inline
   card.appendChild(resumo);
 
   function metric(label: string, key: string): { wrap: HTMLElement; value: HTMLElement } {
@@ -204,7 +209,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     const tr = h('tr', { 'data-sd-row': 'isca' }) as HTMLTableRowElement;
     const nameCell = h('td', {}, [
       'Isca ',
-      h('small', { style: 'color:var(--text-muted)' }, ['(sobra do fermento anterior — custo zero)']),
+      h('small', { className: 'note-muted' }, ['(sobra do fermento anterior — custo zero)']), // issue 022
     ]);
     const partCell = h('td', { className: 'num' }, [buildPartInput('isca', 'Proporção da Isca', false)]);
     const weightCell = h('td', { className: 'num readonly' });
@@ -281,8 +286,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
       'button',
       {
         type: 'button',
-        className: 'btn btn-secondary',
-        style: 'font-size:var(--fs-small)',
+        className: 'btn btn-secondary btn-sm', // `.btn-sm` (issue 022) — era style inline
         title: removeIssue ? removeIssue.message : 'Remover farinha do fermento',
         'aria-label': `Remover ${label}`,
         disabled: Boolean(removeIssue),
@@ -297,9 +301,9 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
         fullRenderTable(); // add/remove é mudança estrutural (mesmo padrão de 014)
       });
     }
-    // Indentação (token) sinaliza visualmente que é sub-linha de "Farinha" (§2.B.3).
-    const nameCell = h('td', { style: 'padding-left:calc(var(--sp-3) + var(--sp-4))' }, [
-      h('div', { style: 'display:flex;align-items:center;gap:var(--sp-2)' }, [nameInput, removeBtn]),
+    // Indentação (`.subrow-indent`, issue 022) sinaliza visualmente que é sub-linha de "Farinha" (§2.B.3).
+    const nameCell = h('td', { className: 'subrow-indent' }, [
+      h('div', { className: 'row row--tight' }, [nameInput, removeBtn]),
     ]);
 
     // % trava em 100 se única farinha do fermento (mesmo padrão da tabela principal, §2.A).
@@ -573,7 +577,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     const tr = h('tr') as HTMLTableRowElement;
     const addBtn = h(
       'button',
-      { type: 'button', className: 'btn btn-secondary', style: 'font-size:var(--fs-small)' },
+      { type: 'button', className: 'btn btn-secondary btn-sm' }, // `.btn-sm` (issue 022) — era style inline
       ['+ farinha do fermento'],
     ) as HTMLButtonElement;
     on(addBtn, 'click', () => {
@@ -588,7 +592,7 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
       });
       fullRenderTable(); // add/remove é mudança estrutural (§5.B)
     });
-    tr.appendChild(h('td', { colspan: 7, style: 'padding:var(--sp-2) var(--sp-3)' }, [addBtn]));
+    tr.appendChild(h('td', { colspan: 7, className: 'table-add-cell' }, [addBtn])); // issue 022 — era style inline
     return tr;
   }
 
@@ -713,8 +717,9 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     mCustoKg.value.textContent = sd.costPerGram !== undefined ? formatCurrency(sd.costPerGram * 1000) : '—';
 
     // Custo total/por kg sob o mesmo toggle "Exibir custos" (§2.A.2/§2.B.2).
-    mCustoTotal.wrap.style.display = showCosts ? '' : 'none';
-    mCustoKg.wrap.style.display = showCosts ? '' : 'none';
+    // `.hidden` (design-system.css, issue 022) — era `el.style.display = 'none'`.
+    mCustoTotal.wrap.classList.toggle('hidden', !showCosts);
+    mCustoKg.wrap.classList.toggle('hidden', !showCosts);
   }
 
   fullRenderTable();

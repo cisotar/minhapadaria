@@ -106,7 +106,7 @@ describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
     dateInput.dispatchEvent(new Event('change', { bubbles: true }));
 
     const badge = root.querySelector('.badge-planned') as HTMLElement;
-    expect(badge.style.display).not.toBe('none');
+    expect(badge.classList.contains('hidden')).toBe(false); // `.hidden` (design-system.css, issue 022)
 
     const producedInput = root.querySelector('input[aria-label="Quantidade Produzida"]') as HTMLInputElement;
     const soldInput = root.querySelector('input[aria-label="Quantidade Vendida"]') as HTMLInputElement;

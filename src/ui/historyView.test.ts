@@ -185,14 +185,14 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
   it('6. melhor/pior por lucro; 0 fornadas → ocultos', () => {
     const m = mount();
     render(m);
-    expect((m.root.querySelector('.best-worst') as HTMLElement).style.display).toBe('none');
+    expect((m.root.querySelector('.best-worst') as HTMLElement).classList.contains('hidden')).toBe(true); // `.hidden` (issue 022)
 
     const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
     bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 1), quantityProduced: 10, quantitySold: 8, unitCost: 4, unitSalePrice: 10 });
     bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 2, unitCost: 4, unitSalePrice: 5 });
     setDateInput(m.root, 'De', '2026-06-29');
 
-    expect((m.root.querySelector('.best-worst') as HTMLElement).style.display).not.toBe('none');
+    expect((m.root.querySelector('.best-worst') as HTMLElement).classList.contains('hidden')).toBe(false);
     expect(m.root.querySelector('.best-worst .best .value')!.textContent).toMatch(/Lucro/);
     expect(m.root.querySelector('.best-worst .worst .value')!.textContent).toMatch(/Lucro/);
   });

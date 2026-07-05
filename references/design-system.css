@@ -523,3 +523,95 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   #print-root { display: block !important; }
   @page { margin: 1.5cm; }
 }
+
+/* ============ Classes utilitárias (issue 022 — remoção de estilo inline) ============
+   Extraídas dos `style="..."` inline achados na revisão da issue 014
+   (achados diferidos, ampliados pelas reviews 015/016/017/018) em
+   `src/ui/ingredientsTable.ts`/`sourdoughTable.ts`/`modeToggle.ts`/
+   `batchPanel.ts`/`recipesList.ts`/`historyView.ts`/`bakeForm.ts`. Só tokens
+   já existentes em `:root` (imutável) — nenhum valor visual novo. */
+
+/* Espaçamento vertical avulso — mesma família de `.row--mb` (só token, sem
+   valor novo), para elementos que não são um `.row`. */
+.mb-2 { margin-bottom: var(--sp-2); }
+.mb-3 { margin-bottom: var(--sp-3); }
+.mt-3 { margin-top: var(--sp-3); }
+
+/* Empurra o(s) irmão(s) seguinte(s) para a direita num container flex (`.row`
+   ou `.banner-mode-alt`) — substitui `style="margin-left:auto"` (botão
+   "Voltar ao modo padrão" do banner de modo alternativo, botão "Exportar
+   backup", checkbox "Exibir custos" ao lado do título da tabela de insumos). */
+.push-right { margin-left: auto; }
+
+/* Oculta um elemento independente da ordem das regras no arquivo —
+   `!important` é necessário porque o elemento também carrega uma classe de
+   componente que já define `display` (`.badge-planned`, `.btn`, `.best-worst`,
+   `.metric`), mesmo padrão de `!important` já usado no seletor de impressão
+   (`#print-root`, acima). Substitui `style="display:none"` e
+   `el.style.display = 'none'` (badge "Planejada", indicador melhor/pior com
+   0 fornadas, botão de alternar modo quando o modo alternativo já está
+   ativo, Resumo de custos da Sub-receita do Fermento sem o toggle "Exibir
+   custos"). */
+.hidden { display: none !important; }
+
+/* Agrupa um container cujos filhos devem participar do layout do elemento PAI
+   como se o wrapper não existisse — substitui `style="display:contents"`
+   (grupo de campos dinâmicos de Ancoragem/Planejamento da Fornada, recriado
+   inteiro a cada troca de modo, mas cujos `.field` filhos são os itens flex
+   de `.row`). */
+.contents { display: contents; }
+
+/* Texto secundário discreto (notas/legendas) — cor + tamanho de
+   `--text-muted`/`--fs-small`, margem zerada por padrão (combine com
+   `.mb-*`/`.mt-*` quando precisar de espaçamento). Substitui
+   `style="color:var(--text-muted);font-size:..."` (nota da Isca na
+   sub-receita do fermento, subtítulo "N receita(s) cadastrada(s)", nota de
+   comparação de período no dashboard de fornadas). */
+.note-muted { font-size: var(--fs-small); color: var(--text-muted); margin: 0; }
+
+/* Cor de marca do gráfico de tendência aplicada a um `.swatch-dot` da legenda
+   (Histórico de Fornadas) — substitui `style="background:var(--mark-revenue
+   /profit)"`. */
+.swatch-dot--revenue { background: var(--mark-revenue); }
+.swatch-dot--profit { background: var(--mark-profit); }
+
+/* Override de alinhamento para uma célula `.num` cujo conteúdo não é um valor
+   numérico comparável (ex.: coluna Data, no Histórico de Fornadas) — só o
+   alinhamento muda; mantém `tabular-nums` para os dígitos alinharem entre
+   linhas. Combinação de 2 classes (`.num.num--left`) garante precedência
+   sobre `.num` sem depender da ordem das regras no arquivo. */
+.num.num--left { text-align: left; }
+
+/* Rótulo de checkbox inline ao lado do título de um card (ex.: "Exibir
+   custos" na tabela de insumos) — mesmo padrão visual de `.field label`, mas
+   em linha; combine com `.push-right` para empurrá-lo à direita do título. */
+.toggle-label {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-small); font-weight: 600; color: var(--text-2);
+  cursor: pointer;
+}
+
+/* Barra de título de card com um controle inline à direita (ex.: título
+   "Ingredientes" + toggle "Exibir custos") — `> h2` some a margem/borda
+   padrão de `h2` só quando dentro desta barra (mesmo reset visual do título
+   nesse contexto em `mockups/calculadora.html`). */
+.title-row { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.title-row > h2 { margin: 0; border: none; padding: 0; }
+
+/* Variante pequena de `.btn` (fonte no tamanho de rótulo/legenda) — usada nos
+   botões "×" de remover linha e "+ ingrediente"/"+ farinha do fermento". */
+.btn-sm { font-size: var(--fs-small); }
+
+/* Modificador de `.row` com espaçamento mais compacto (`--sp-2` em vez de
+   `--sp-3` do padrão) — usado no par nome+botão remover de uma linha de
+   tabela (ingrediente ou farinha do fermento). */
+.row--tight { gap: var(--sp-2); }
+
+/* Célula que hospeda o botão "+ ingrediente"/"+ farinha do fermento" no fim
+   do `<tbody>` — mesmo padding do exemplo já documentado em
+   `design-system.html` (`.table-add-cell`). */
+.table-add-cell { padding: var(--sp-2) var(--sp-3); }
+
+/* Indentação da sub-linha de farinha do fermento (§2.B.3) sob a linha-cabeçalho
+   "Farinha" — sinaliza a hierarquia visual sem duplicar `.sub-recipe-note`. */
+.subrow-indent { padding-left: calc(var(--sp-3) + var(--sp-4)); }

@@ -145,8 +145,46 @@
         <tr><td><code>.mode-alt .cell-input.pct</code></td><td>Issue 016 §1.3/§4 — mesmo destaque de <code>.mode-alt .input.pct</code> para a célula de % da tabela de insumos (<code>.cell-input</code>) quando o modo peso→% está ativo, mesmo com o campo <code>readonly</code> (% passa a ser derivada nesse modo).</td></tr>
         <tr><td><code>.empty-state</code></td><td>Issue 017 §2.F — bloco centralizado (texto + botão) quando a lista de receitas está vazia (<code>receitas.html</code>): <code>display:flex</code> em coluna, <code>gap</code>/<code>padding</code> só <code>var(--sp-*)</code>, texto em <code>var(--text-muted)</code>.</td></tr>
         <tr><td><code>.form-status</code> / <code>.form-status--error</code> / <code>.form-status--ok</code></td><td>Issue 017 §10 — mensagem de resultado do backup (export/restore) num nó <code>role="status"</code>/<code>aria-live="polite"</code> (wiring da UI, não desta classe); cor de erro/sucesso reusa os tokens de <code>--danger</code>/<code>--status-ok-text</code>, os mesmos de <code>.chip-crit</code>/<code>.chip-ok</code>.</td></tr>
+        <tr><td><code>.mb-2</code> / <code>.mb-3</code> / <code>.mt-3</code></td><td>Issue 022 — espaçamento vertical avulso (<code>margin-bottom</code>/<code>margin-top</code> só <code>var(--sp-2)</code>/<code>var(--sp-3)</code>), para elementos que não são um <code>.row</code>. Substituem <code>style="margin-bottom:..."</code>/<code>style="margin-top:..."</code> espalhados em <code>src/ui</code>.</td></tr>
+        <tr><td><code>.push-right</code></td><td>Issue 022 — <code>margin-left:auto</code> para empurrar o(s) irmão(s) seguinte(s) à direita num container flex (<code>.row</code>/<code>.banner-mode-alt</code>). Substitui <code>style="margin-left:auto"</code> (botão "Voltar ao modo padrão", "Exportar backup", checkbox "Exibir custos").</td></tr>
+        <tr><td><code>.hidden</code></td><td>Issue 022 — <code>display:none !important</code> (o <code>!important</code> é necessário porque o elemento também carrega uma classe de componente que já define <code>display</code>, ex. <code>.badge-planned</code>/<code>.btn</code>/<code>.best-worst</code>/<code>.metric</code>). Substitui <code>style="display:none"</code> e <code>el.style.display = 'none'</code>.</td></tr>
+        <tr><td><code>.contents</code></td><td>Issue 022 — <code>display:contents</code>, agrupa um wrapper cujos filhos devem participar do layout do pai como se ele não existisse (campos dinâmicos de Ancoragem/Planejamento da Fornada). Substitui <code>style="display:contents"</code>.</td></tr>
+        <tr><td><code>.note-muted</code></td><td>Issue 022 — texto secundário discreto: <code>font-size:var(--fs-small);color:var(--text-muted);margin:0</code>. Combine com <code>.mb-*</code>/<code>.mt-*</code> quando precisar de espaçamento. Substitui <code>style="color:var(--text-muted);font-size:..."</code> (nota da Isca, subtítulo de contagem de receitas, nota de comparação de período).</td></tr>
+        <tr><td><code>.swatch-dot--revenue</code> / <code>.swatch-dot--profit</code></td><td>Issue 022 — cor de marca do gráfico de tendência aplicada a um <code>.swatch-dot</code> da legenda (Histórico de Fornadas). Substitui <code>style="background:var(--mark-revenue/profit)"</code>.</td></tr>
+        <tr><td><code>.num--left</code></td><td>Issue 022 — override de alinhamento (<code>.num.num--left { text-align:left }</code>) para uma célula <code>.num</code> cujo conteúdo não é valor numérico comparável (coluna Data no Histórico) — mantém <code>tabular-nums</code>. Substitui <code>style="text-align:left"</code>.</td></tr>
+        <tr><td><code>.toggle-label</code></td><td>Issue 022 — rótulo de checkbox inline ao lado do título de um card (ex.: "Exibir custos"): <code>display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-small);font-weight:600;color:var(--text-2);cursor:pointer</code>. Combine com <code>.push-right</code>.</td></tr>
+        <tr><td><code>.title-row</code></td><td>Issue 022 — barra de título de card com controle inline à direita (título "Ingredientes" + toggle "Exibir custos"): <code>display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)</code>; o filho direto <code>&gt; h2</code> tem margem/borda/padding zeradas.</td></tr>
+        <tr><td><code>.btn-sm</code></td><td>Issue 022 — variante pequena de <code>.btn</code> (<code>font-size:var(--fs-small)</code>), usada nos botões "×" de remover linha e "+ ingrediente"/"+ farinha do fermento".</td></tr>
+        <tr><td><code>.row--tight</code></td><td>Issue 022 — modificador de <code>.row</code> com <code>gap:var(--sp-2)</code> (mais compacto que o padrão <code>var(--sp-3)</code>) — par nome+botão remover de uma linha de tabela.</td></tr>
+        <tr><td><code>.table-add-cell</code></td><td>Issue 022 — célula que hospeda o botão "+ ingrediente"/"+ farinha do fermento" no fim do <code>&lt;tbody&gt;</code>: <code>padding:var(--sp-2) var(--sp-3)</code>.</td></tr>
+        <tr><td><code>.subrow-indent</code></td><td>Issue 022 — indentação da sub-linha de farinha do fermento (§2.B.3) sob a linha-cabeçalho "Farinha": <code>padding-left:calc(var(--sp-3) + var(--sp-4))</code>.</td></tr>
       </tbody>
     </table>
+    <div class="title-row">
+      <h2>Exemplo <code>.title-row</code>/<code>.toggle-label</code>/<code>.push-right</code></h2>
+      <label class="toggle-label push-right">
+        <input type="checkbox">
+        Exibir custos
+      </label>
+    </div>
+    <div class="row row--tight mb-3">
+      <input class="cell-input" value="Farinha Branca">
+      <button class="btn btn-secondary btn-sm">×</button>
+    </div>
+    <p class="note-muted mb-3">Exemplo <code>.note-muted</code> — texto secundário discreto (nota/legenda), sem borda nem destaque.</p>
+    <div class="chart-legend mb-3">
+      <span><span class="swatch-dot swatch-dot--revenue"></span>Faturamento</span>
+      <span><span class="swatch-dot swatch-dot--profit"></span>Lucro</span>
+    </div>
+    <table class="table" style="margin-bottom:var(--sp-3)">
+      <thead><tr><th>Data</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+        <tr><td class="num num--left">2026-07-05</td><td class="num">R$ 61,40</td></tr>
+      </tbody>
+    </table>
+    <p class="mb-2">Exemplo <code>.hidden</code> abaixo — o parágrafo seguinte tem <code>class="hidden"</code> e não aparece nesta página:</p>
+    <p class="hidden">Isto nunca deveria aparecer (oculto por <code>.hidden</code>).</p>
+    <div class="contents"><span class="note-muted">Exemplo <code>.contents</code> — este <code>&lt;span&gt;</code> participa do layout do pai como se o <code>&lt;div&gt;</code> não existisse.</span></div>
     <div class="row row--end">
       <div class="field">
         <label>Peso do produto (exemplo <code>.pw-combo</code>)</label>

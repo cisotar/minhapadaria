@@ -273,9 +273,7 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const marginTile = buildKpiTile('Margem média');
   const wastageTile = buildKpiTile('Desperdício');
 
-  const comparisonNote = h('p', {
-    style: 'font-size:var(--fs-small);color:var(--text-muted);margin-top:var(--sp-3)',
-  });
+  const comparisonNote = h('p', { className: 'note-muted mt-3' }); // issue 022 — era style inline
   kpiCard.appendChild(comparisonNote);
 
   /** Preenche o valor de um tile e, se houver comparação, o `.delta` (§14.5:
@@ -313,13 +311,11 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const chartCard = h('section', { className: 'card' });
   root.appendChild(chartCard);
   chartCard.appendChild(h('h2', {}, ['Faturamento e Lucro no período']));
+  // `.swatch-dot--revenue`/`.swatch-dot--profit` (design-system.css, issue 022) — era style inline.
   chartCard.appendChild(
     h('div', { className: 'chart-legend' }, [
-      h('span', {}, [
-        h('span', { className: 'swatch-dot', style: 'background:var(--mark-revenue)' }),
-        'Faturamento',
-      ]),
-      h('span', {}, [h('span', { className: 'swatch-dot', style: 'background:var(--mark-profit)' }), 'Lucro']),
+      h('span', {}, [h('span', { className: 'swatch-dot swatch-dot--revenue' }), 'Faturamento']),
+      h('span', {}, [h('span', { className: 'swatch-dot swatch-dot--profit' }), 'Lucro']),
     ]),
   );
   const chartHost = h('div');
@@ -354,7 +350,7 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
     const derived = computeBakeDerived(entry);
     const tr = h('tr', planned ? { className: 'planned' } : {});
 
-    const dateCell = h('td', { className: 'num', style: 'text-align:left' }, [formatDate(entry.date)]);
+    const dateCell = h('td', { className: 'num num--left' }, [formatDate(entry.date)]); // issue 022 — era style inline
     const recipeCell = h('td', {}, [entry.recipeName]); // textContent — regra de ouro 3
 
     let producedCell: HTMLElement;
@@ -524,10 +520,9 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
       : '';
 
     // --- Melhor/pior (§14.5) ---
-    if (groups.length === 0) {
-      bestWorstSection.style.display = 'none';
-    } else {
-      bestWorstSection.style.display = '';
+    // `.hidden` (design-system.css, issue 022) — era `el.style.display = 'none'`.
+    bestWorstSection.classList.toggle('hidden', groups.length === 0);
+    if (groups.length > 0) {
       const best = bestPeriod(groups) as BakeHistorySummary;
       const worst = worstPeriod(groups) as BakeHistorySummary;
       bestLabel.textContent = `✓ Melhor ${granularityLabel(granularity)} — ${formatDate(best.periodStart).slice(5)}`;

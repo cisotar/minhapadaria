@@ -58,7 +58,7 @@ export function renderBatchPanel(root: HTMLElement, store: AppStateStore): void 
   // (§2.E.1) — recriados por `fullRenderDynamic()`; `display:contents` não
   // participa do layout flex de `.row` (os `.field` filhos é que são
   // os itens flex), só agrupa o container para poder limpar/reconstruir.
-  const dynamicFields = h('div', { style: 'display:contents' });
+  const dynamicFields = h('div', { className: 'contents' }); // `.contents` (design-system.css, issue 022)
   fieldRow.appendChild(dynamicFields);
 
   let ftotalInput: HTMLInputElement | null = null;
