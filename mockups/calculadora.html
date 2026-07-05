@@ -9,10 +9,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../references/design-system.css">
 <style>
-  .page { max-width: 1080px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
+  .page { max-width: 1200px; margin: 0 auto; padding: var(--sp-5); display: grid; gap: var(--sp-5); }
   .row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
   .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--sp-5); }
   body:not(.mode-alt) .banner-mode-alt { display: none; }
+  .pw-combo { display: flex; gap: 4px; justify-content: flex-end; }
+  .pw-combo .cell-input { width: 64px; }
+  .pw-combo select.cell-input { width: 52px; text-align: left; }
+  .unit-suffix { color: var(--text-muted); font-size: var(--fs-small); margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -31,7 +35,7 @@
 <header class="page-header">
   <div class="inner">
     <h1>🍞 Pão Rústico de Azeite</h1>
-    <p class="subtitle">Editado 2026-07-03 · Modo: % → peso</p>
+    <p class="subtitle">Editado 2026-07-03 · Modo: % → peso · valores recalculam automaticamente, sem enviar formulário</p>
     <div class="actions">
       <button class="btn btn-secondary" onclick="document.body.classList.add('mode-alt')">Alternar p/ peso → %</button>
       <button class="btn btn-secondary">Duplicar</button>
@@ -55,17 +59,20 @@
       </div>
       <div class="field">
         <label>Peso de Farinha Total (F total)</label>
-        <input class="input num" value="1.000,0 g" style="width:140px">
+        <div class="row" style="gap:4px">
+          <input id="ftotal" class="input num" value="1000,0" style="width:110px">
+          <span class="unit-suffix">g</span>
+        </div>
       </div>
       <div class="field">
         <label>Quantidade de Produtos</label>
-        <input class="input num" value="2" style="width:90px">
+        <input id="qty" class="input num" value="2" style="width:90px">
       </div>
       <div class="field">
         <label>Escalonar para peso alvo</label>
         <div class="row" style="gap:4px">
-          <input class="input num" placeholder="ex: 2000" style="width:100px">
-          <button class="btn btn-secondary" style="font-size:var(--fs-small)">Aplicar</button>
+          <input id="target-weight" class="input num" placeholder="ex: 2000" style="width:100px">
+          <button class="btn btn-secondary" style="font-size:var(--fs-small)" onclick="applyScaling()">Aplicar</button>
         </div>
       </div>
     </div>
@@ -95,54 +102,74 @@
       </thead>
       <tbody>
         <tr>
-          <td><input class="cell-input" value="Farinha Branca"></td>
+          <td>Farinha Branca <small style="color:var(--text-muted)">(única farinha — trava 100%)</small></td>
           <td>g</td>
-          <td class="num"><input class="cell-input num" value="100,00"></td>
-          <td class="num readonly"><input class="cell-input num" value="1.000,0" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 8,00"></td>
-          <td class="num cost-col"><input class="cell-input num" value="1 kg"></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0080" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 8,00" readonly></td>
+          <td class="num"><input id="fp-pct" class="cell-input num" value="100,00" readonly></td>
+          <td class="num readonly"><input id="fp-weight" class="cell-input num" value="1.000,0" readonly></td>
+          <td class="num cost-col"><input id="fp-price" class="cell-input num" value="8,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input id="fp-pw-val" class="cell-input num" value="1">
+              <select id="fp-pw-unit" class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num cost-col"><input id="fp-costg" class="cell-input num" value="R$ 0,0080" readonly></td>
+          <td class="num cost-col"><input id="fp-cost" class="cell-input num" value="R$ 8,00" readonly></td>
         </tr>
         <tr>
-          <td><input class="cell-input" value="Água"></td>
+          <td>Água</td>
           <td><span class="unit-toggle"><button class="active">g</button><button>mL</button></span></td>
-          <td class="num"><input class="cell-input num" value="70,00"></td>
-          <td class="num readonly"><input class="cell-input num" value="700,0" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,00"></td>
-          <td class="num cost-col"><input class="cell-input num" value="1 L"></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0000" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,00" readonly></td>
+          <td class="num"><input id="ag-pct" class="cell-input num" value="70,00"></td>
+          <td class="num readonly"><input id="ag-weight" class="cell-input num" value="700,0" readonly></td>
+          <td class="num cost-col"><input id="ag-price" class="cell-input num" value="0,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input id="ag-pw-val" class="cell-input num" value="1">
+              <select id="ag-pw-unit" class="cell-input"><option value="L" selected>L</option><option value="mL">mL</option></select>
+            </div>
+          </td>
+          <td class="num cost-col"><input id="ag-costg" class="cell-input num" value="R$ 0,0000" readonly></td>
+          <td class="num cost-col"><input id="ag-cost" class="cell-input num" value="R$ 0,00" readonly></td>
         </tr>
         <tr>
-          <td><input class="cell-input" value="Azeite"> <small style="color:var(--text-muted)">(gordura — fora da hidratação)</small></td>
+          <td>Azeite <small style="color:var(--text-muted)">(gordura — fora da hidratação)</small></td>
           <td><span class="unit-toggle"><button class="active">g</button><button>mL</button></span></td>
-          <td class="num"><input class="cell-input num" value="4,00"></td>
-          <td class="num readonly"><input class="cell-input num" value="40,0" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 80,00"></td>
-          <td class="num cost-col"><input class="cell-input num" value="1250 g"></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0640" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 2,56" readonly></td>
+          <td class="num"><input id="az-pct" class="cell-input num" value="4,00"></td>
+          <td class="num readonly"><input id="az-weight" class="cell-input num" value="40,0" readonly></td>
+          <td class="num cost-col"><input id="az-price" class="cell-input num" value="80,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input id="az-pw-val" class="cell-input num" value="1250">
+              <select id="az-pw-unit" class="cell-input"><option value="g" selected>g</option><option value="kg">kg</option><option value="mL">mL</option><option value="L">L</option></select>
+            </div>
+          </td>
+          <td class="num cost-col"><input id="az-costg" class="cell-input num" value="R$ 0,0640" readonly></td>
+          <td class="num cost-col"><input id="az-cost" class="cell-input num" value="R$ 2,56" readonly></td>
         </tr>
         <tr class="row-fermento">
           <td>Fermento <button class="expand-link" onclick="document.getElementById('sub-fermento').scrollIntoView({behavior:'smooth'})">▸ ver composição</button></td>
           <td>g</td>
-          <td class="num"><input class="cell-input num" value="20,00"></td>
-          <td class="num readonly"><input class="cell-input num" value="200,0" readonly></td>
+          <td class="num"><input id="fe-pct" class="cell-input num" value="20,00"></td>
+          <td class="num readonly"><input id="fe-weight" class="cell-input num" value="200,0" readonly></td>
           <td class="num cost-col readonly">—</td>
           <td class="num cost-col readonly">—</td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0040" readonly title="Derivado da sub-receita"></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,80" readonly></td>
+          <td class="num cost-col"><input id="fe-costg" class="cell-input num" value="R$ 0,0040" readonly title="Derivado da sub-receita"></td>
+          <td class="num cost-col"><input id="fe-cost" class="cell-input num" value="R$ 0,80" readonly></td>
         </tr>
         <tr>
-          <td><input class="cell-input" value="Sal"></td>
+          <td>Sal</td>
           <td>g</td>
-          <td class="num"><input class="cell-input num" value="2,00"></td>
-          <td class="num readonly"><input class="cell-input num" value="20,0" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 3,00"></td>
-          <td class="num cost-col"><input class="cell-input num" value="1 kg"></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,0030" readonly></td>
-          <td class="num cost-col"><input class="cell-input num" value="R$ 0,06" readonly></td>
+          <td class="num"><input id="sal-pct" class="cell-input num" value="2,00"></td>
+          <td class="num readonly"><input id="sal-weight" class="cell-input num" value="20,0" readonly></td>
+          <td class="num cost-col"><input id="sal-price" class="cell-input num" value="3,00"></td>
+          <td class="num cost-col">
+            <div class="pw-combo">
+              <input id="sal-pw-val" class="cell-input num" value="1">
+              <select id="sal-pw-unit" class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num cost-col"><input id="sal-costg" class="cell-input num" value="R$ 0,0030" readonly></td>
+          <td class="num cost-col"><input id="sal-cost" class="cell-input num" value="R$ 0,06" readonly></td>
         </tr>
         <tr>
           <td colspan="8" style="padding:var(--sp-2) var(--sp-3)">
@@ -153,10 +180,10 @@
       <tfoot>
         <tr>
           <td colspan="2">Total da massa</td>
-          <td class="num">196,00</td>
-          <td class="num">1.960,0</td>
+          <td class="num" id="tot-pct">196,00</td>
+          <td class="num" id="tot-weight">1.960,0</td>
           <td class="cost-col" colspan="3"></td>
-          <td class="num cost-col">R$ 11,42</td>
+          <td class="num cost-col" id="tot-cost">R$ 11,42</td>
         </tr>
       </tfoot>
     </table>
@@ -169,7 +196,7 @@
 
     <div class="field" style="margin-bottom:var(--sp-3)">
       <label>Peso total do fermento (vem da % acima)</label>
-      <input class="input num" value="200,0 g" readonly style="width:140px">
+      <input id="sf-total-weight" class="input num" value="200,0 g" readonly style="width:140px">
     </div>
 
     <table class="table show-costs" style="margin-bottom:var(--sp-3)">
@@ -186,9 +213,9 @@
       </thead>
       <tbody>
         <tr>
-          <td>Isca <small style="color:var(--text-muted)">(sobra do fermento anterior)</small></td>
-          <td class="num"><input class="cell-input num" value="0"></td>
-          <td class="num readonly"><input class="cell-input num" value="0,0" readonly></td>
+          <td>Isca <small style="color:var(--text-muted)">(sobra do fermento anterior — custo zero)</small></td>
+          <td class="num"><input id="sf-isca-part" class="cell-input num" value="0"></td>
+          <td class="num readonly"><input id="sf-isca-weight" class="cell-input num" value="0,0" readonly></td>
           <td class="num readonly">—</td>
           <td class="num readonly">—</td>
           <td class="num readonly">—</td>
@@ -196,36 +223,46 @@
         </tr>
         <tr>
           <td>Farinha <small style="color:var(--text-muted)">(Farinha Branca)</small></td>
-          <td class="num"><input class="cell-input num" value="1"></td>
-          <td class="num readonly"><input class="cell-input num" value="100,0" readonly></td>
-          <td class="num"><input class="cell-input num" value="R$ 8,00"></td>
-          <td class="num"><input class="cell-input num" value="1 kg"></td>
-          <td class="num readonly"><input class="cell-input num" value="R$ 0,0080" readonly></td>
-          <td class="num readonly"><input class="cell-input num" value="R$ 0,80" readonly></td>
+          <td class="num"><input id="sf-farinha-part" class="cell-input num" value="1"></td>
+          <td class="num readonly"><input id="sf-farinha-weight" class="cell-input num" value="100,0" readonly></td>
+          <td class="num"><input id="sf-farinha-price" class="cell-input num" value="8,00" title="Copiado da farinha principal — editável manualmente"></td>
+          <td class="num">
+            <div class="pw-combo">
+              <input id="sf-farinha-pw-val" class="cell-input num" value="1">
+              <select id="sf-farinha-pw-unit" class="cell-input"><option value="kg" selected>kg</option><option value="g">g</option></select>
+            </div>
+          </td>
+          <td class="num readonly"><input id="sf-farinha-costg" class="cell-input num" value="R$ 0,0080" readonly></td>
+          <td class="num readonly"><input id="sf-farinha-cost" class="cell-input num" value="R$ 0,80" readonly></td>
         </tr>
         <tr>
           <td>Água</td>
-          <td class="num"><input class="cell-input num" value="1"></td>
-          <td class="num readonly"><input class="cell-input num" value="100,0" readonly></td>
-          <td class="num"><input class="cell-input num" value="R$ 0,00"></td>
-          <td class="num"><input class="cell-input num" value="1 L"></td>
-          <td class="num readonly"><input class="cell-input num" value="R$ 0,0000" readonly></td>
-          <td class="num readonly"><input class="cell-input num" value="R$ 0,00" readonly></td>
+          <td class="num"><input id="sf-agua-part" class="cell-input num" value="1"></td>
+          <td class="num readonly"><input id="sf-agua-weight" class="cell-input num" value="100,0" readonly></td>
+          <td class="num"><input id="sf-agua-price" class="cell-input num" value="0,00"></td>
+          <td class="num">
+            <div class="pw-combo">
+              <input id="sf-agua-pw-val" class="cell-input num" value="1">
+              <select id="sf-agua-pw-unit" class="cell-input"><option value="L" selected>L</option><option value="mL">mL</option></select>
+            </div>
+          </td>
+          <td class="num readonly"><input id="sf-agua-costg" class="cell-input num" value="R$ 0,0000" readonly></td>
+          <td class="num readonly"><input id="sf-agua-cost" class="cell-input num" value="R$ 0,00" readonly></td>
         </tr>
       </tbody>
       <tfoot>
         <tr>
           <td>Total</td>
-          <td class="num">2</td>
-          <td class="num">200,0</td>
+          <td class="num" id="sf-tot-parts">2</td>
+          <td class="num" id="sf-tot-weight">200,0</td>
           <td colspan="3"></td>
-          <td class="num">R$ 0,80</td>
+          <td class="num" id="sf-tot-cost">R$ 0,80</td>
         </tr>
       </tfoot>
     </table>
 
     <div class="metric-pair">
-      <div class="metric"><div class="label">Hidratação resultante (Água ÷ Farinha)</div><div class="value">100,00%</div></div>
+      <div class="metric"><div class="label">Hidratação resultante (Água ÷ Farinha)</div><div class="value" id="sf-hydration">100,00%</div></div>
     </div>
   </section>
 
@@ -234,9 +271,9 @@
     <section class="card">
       <h2>Hidratação</h2>
       <div class="metric-pair">
-        <div class="metric"><div class="label">Nominal</div><div class="value">70,00%</div></div>
-        <div class="metric"><div class="label">Real</div><div class="value">72,73%</div></div>
-        <div class="metric"><div class="label">Farinha Real Consumida</div><div class="value">1.100,0 g</div></div>
+        <div class="metric"><div class="label">Nominal</div><div class="value" id="hy-nominal">70,00%</div></div>
+        <div class="metric"><div class="label">Real</div><div class="value" id="hy-real">72,73%</div></div>
+        <div class="metric"><div class="label">Farinha Real Consumida</div><div class="value" id="hy-flour">1.100,0 g</div></div>
       </div>
     </section>
 
@@ -244,24 +281,218 @@
     <section class="card">
       <h2>Precificação</h2>
       <div class="row" style="margin-bottom:var(--sp-3)">
-        <span class="chip chip-ok">Margem 40,0%</span>
+        <span class="chip chip-ok" id="price-chip">Margem 40,00%</span>
       </div>
       <div class="row" style="align-items:flex-end">
-        <div class="field"><label>Preço de venda</label><input class="input num" value="9,52" style="width:90px"></div>
-        <div class="field"><label>Margem %</label><input class="input num" value="40,00" style="width:90px"></div>
-        <div class="field"><label>Lucro unitário</label><input class="input num" value="3,81" style="width:90px"></div>
+        <div class="field"><label>Preço de venda</label><input id="pr-price" class="input num" value="9,52" style="width:90px"></div>
+        <div class="field"><label>Margem %</label><input id="pr-margin" class="input num" value="40,00" style="width:90px"></div>
+        <div class="field"><label>Lucro unitário</label><input id="pr-profit" class="input num" value="3,81" style="width:90px"></div>
       </div>
       <table class="table" style="margin-top:var(--sp-3)">
         <tbody>
-          <tr><td>Custo unitário</td><td class="num readonly">R$ 5,71</td></tr>
-          <tr><td>Receita total (2 un.)</td><td class="num readonly">R$ 19,04</td></tr>
-          <tr><td>Lucro total</td><td class="num readonly">R$ 7,62</td></tr>
+          <tr><td>Custo unitário</td><td class="num readonly" id="pr-unitcost">R$ 5,71</td></tr>
+          <tr><td>Receita total (<span id="pr-qty-label">2</span> un.)</td><td class="num readonly" id="pr-totalrevenue">R$ 19,04</td></tr>
+          <tr><td>Lucro total</td><td class="num readonly" id="pr-totalprofit">R$ 7,62</td></tr>
         </tbody>
       </table>
     </section>
   </div>
 
 </div>
+
+<script>
+// Recálculo em lote centralizado (spec Seção 1.6): qualquer input dispara
+// esta única função, que reconstrói tudo a partir do estado puro (%, preços,
+// pesos de produto) — nunca a partir de um resultado intermediário já
+// arredondado. Sem botão de enviar: recalcula a cada tecla digitada.
+
+let lastPricingEdit = 'margin'; // qual dos 3 campos de precificação manda
+
+function parseNum(str) {
+  if (str == null) return 0;
+  let s = String(str).replace(/[^0-9,.\-]/g, '');
+  if (s.indexOf(',') !== -1) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function val(id) { return document.getElementById(id).value; }
+function num(id) { return parseNum(val(id)); }
+function setVal(id, v) { document.getElementById(id).value = v; }
+
+function fmtPct(v) { return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtW(v)   { return v.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}); }
+function fmtMoney(v){ return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtCostG(v){ return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:4, maximumFractionDigits:4}); }
+
+function unitToGrams(v, unit) {
+  if (unit === 'kg' || unit === 'L') return v * 1000; // densidade 1:1 para volume
+  return v; // g ou mL
+}
+function costPerGram(pricePaid, pwVal, pwUnit) {
+  const grams = unitToGrams(pwVal, pwUnit);
+  return grams > 0 ? pricePaid / grams : 0;
+}
+
+function recalcAll() {
+  const ftotal = num('ftotal');
+  const qty = num('qty') || 1;
+
+  // --- Farinha Branca (única farinha, trava 100%) ---
+  const fpPct = 100;
+  const fpWeight = ftotal * fpPct / 100;
+  const fpCostG = costPerGram(num('fp-price'), num('fp-pw-val'), val('fp-pw-unit'));
+  const fpCost = fpWeight * fpCostG;
+  setVal('fp-weight', fmtW(fpWeight));
+  setVal('fp-costg', fmtCostG(fpCostG));
+  setVal('fp-cost', fmtMoney(fpCost));
+
+  // --- Água ---
+  const agPct = num('ag-pct');
+  const agWeight = ftotal * agPct / 100;
+  const agCostG = costPerGram(num('ag-price'), num('ag-pw-val'), val('ag-pw-unit'));
+  const agCost = agWeight * agCostG;
+  setVal('ag-weight', fmtW(agWeight));
+  setVal('ag-costg', fmtCostG(agCostG));
+  setVal('ag-cost', fmtMoney(agCost));
+
+  // --- Azeite (gordura, fora da hidratação) ---
+  const azPct = num('az-pct');
+  const azWeight = ftotal * azPct / 100;
+  const azCostG = costPerGram(num('az-price'), num('az-pw-val'), val('az-pw-unit'));
+  const azCost = azWeight * azCostG;
+  setVal('az-weight', fmtW(azWeight));
+  setVal('az-costg', fmtCostG(azCostG));
+  setVal('az-cost', fmtMoney(azCost));
+
+  // --- Sal ---
+  const salPct = num('sal-pct');
+  const salWeight = ftotal * salPct / 100;
+  const salCostG = costPerGram(num('sal-price'), num('sal-pw-val'), val('sal-pw-unit'));
+  const salCost = salWeight * salCostG;
+  setVal('sal-weight', fmtW(salWeight));
+  setVal('sal-costg', fmtCostG(salCostG));
+  setVal('sal-cost', fmtMoney(salCost));
+
+  // --- Fermento: peso total vem da Proporção % (Seção 3.B) ---
+  const fePct = num('fe-pct');
+  const wFerm = ftotal * fePct / 100;
+  setVal('fe-weight', fmtW(wFerm));
+  setVal('sf-total-weight', fmtW(wFerm) + ' g');
+
+  // --- Sub-receita do fermento: Partes Isca:Farinha:Água ---
+  const iscaPart = num('sf-isca-part');
+  const sfFarinhaPart = num('sf-farinha-part');
+  const sfAguaPart = num('sf-agua-part');
+  const somaPartes = iscaPart + sfFarinhaPart + sfAguaPart;
+
+  let iscaWeight = 0, farinhaFermWeight = 0, aguaFermWeight = 0;
+  if (somaPartes > 0) {
+    iscaWeight = wFerm * iscaPart / somaPartes;
+    farinhaFermWeight = wFerm * sfFarinhaPart / somaPartes;
+    aguaFermWeight = wFerm * sfAguaPart / somaPartes;
+  }
+  setVal('sf-isca-weight', fmtW(iscaWeight));
+  setVal('sf-farinha-weight', fmtW(farinhaFermWeight));
+  setVal('sf-agua-weight', fmtW(aguaFermWeight));
+  document.getElementById('sf-tot-parts').textContent = somaPartes.toLocaleString('pt-BR');
+  document.getElementById('sf-tot-weight').textContent = fmtW(wFerm);
+
+  const sfFarinhaCostG = costPerGram(num('sf-farinha-price'), num('sf-farinha-pw-val'), val('sf-farinha-pw-unit'));
+  const sfFarinhaCost = farinhaFermWeight * sfFarinhaCostG;
+  setVal('sf-farinha-costg', fmtCostG(sfFarinhaCostG));
+  setVal('sf-farinha-cost', fmtMoney(sfFarinhaCost));
+
+  const sfAguaCostG = costPerGram(num('sf-agua-price'), num('sf-agua-pw-val'), val('sf-agua-pw-unit'));
+  const sfAguaCost = aguaFermWeight * sfAguaCostG;
+  setVal('sf-agua-costg', fmtCostG(sfAguaCostG));
+  setVal('sf-agua-cost', fmtMoney(sfAguaCost));
+
+  const custoFermento = sfFarinhaCost + sfAguaCost; // Isca = 0 sempre
+  document.getElementById('sf-tot-cost').textContent = fmtMoney(custoFermento);
+
+  const feCostG = wFerm > 0 ? custoFermento / wFerm : 0;
+  setVal('fe-costg', fmtCostG(feCostG));
+  setVal('fe-cost', fmtMoney(custoFermento));
+
+  const hidratacaoResultante = farinhaFermWeight > 0 ? (aguaFermWeight / farinhaFermWeight * 100) : null;
+  document.getElementById('sf-hydration').textContent = hidratacaoResultante === null ? '—' : fmtPct(hidratacaoResultante) + '%';
+
+  // --- Totais da tabela principal ---
+  const totalPct = fpPct + agPct + azPct + fePct + salPct;
+  const totalWeight = fpWeight + agWeight + azWeight + wFerm + salWeight;
+  const totalCost = fpCost + agCost + azCost + custoFermento + salCost;
+  document.getElementById('tot-pct').textContent = fmtPct(totalPct);
+  document.getElementById('tot-weight').textContent = fmtW(totalWeight);
+  document.getElementById('tot-cost').textContent = fmtMoney(totalCost);
+
+  // --- Hidratação (Seção 2.C): só líquidos reais, gordura fica de fora ---
+  const hidratNominal = ftotal > 0 ? (agWeight / ftotal * 100) : 0;
+  const hidratReal = (ftotal + farinhaFermWeight) > 0 ? ((agWeight + aguaFermWeight) / (ftotal + farinhaFermWeight) * 100) : 0;
+  const farinhaRealConsumida = ftotal + farinhaFermWeight;
+  document.getElementById('hy-nominal').textContent = fmtPct(hidratNominal) + '%';
+  document.getElementById('hy-real').textContent = fmtPct(hidratReal) + '%';
+  document.getElementById('hy-flour').textContent = fmtW(farinhaRealConsumida) + ' g';
+
+  // --- Precificação: 3 modos sincronizados (Seção 3.E) ---
+  const custoUnit = totalCost / qty;
+  let preco = num('pr-price'), margem = num('pr-margin'), lucro = num('pr-profit');
+
+  if (lastPricingEdit === 'price') {
+    lucro = preco - custoUnit;
+    margem = preco > 0 ? (lucro / preco * 100) : 0;
+  } else if (lastPricingEdit === 'margin') {
+    margem = Math.min(margem, 99.9);
+    preco = custoUnit / (1 - margem / 100);
+    lucro = preco - custoUnit;
+  } else { // profit
+    preco = custoUnit + lucro;
+    margem = preco > 0 ? (lucro / preco * 100) : 0;
+  }
+
+  if (lastPricingEdit !== 'price')  setVal('pr-price', preco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+  if (lastPricingEdit !== 'margin') setVal('pr-margin', margem.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+  if (lastPricingEdit !== 'profit') setVal('pr-profit', lucro.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+
+  document.getElementById('pr-unitcost').textContent = fmtMoney(custoUnit);
+  const totalRevenue = preco * qty;
+  const totalProfit = totalRevenue - (custoUnit * qty);
+  document.getElementById('pr-qty-label').textContent = qty.toLocaleString('pt-BR');
+  document.getElementById('pr-totalrevenue').textContent = fmtMoney(totalRevenue);
+  document.getElementById('pr-totalprofit').textContent = fmtMoney(totalProfit);
+
+  const chip = document.getElementById('price-chip');
+  chip.classList.remove('chip-ok', 'chip-warn', 'chip-crit');
+  if (lucro < 0) { chip.classList.add('chip-crit'); chip.textContent = 'Prejuízo ' + fmtMoney(lucro); }
+  else if (margem > 30) { chip.classList.add('chip-ok'); chip.textContent = 'Margem ' + fmtPct(margem) + '%'; }
+  else if (margem >= 15) { chip.classList.add('chip-warn'); chip.textContent = 'Margem ' + fmtPct(margem) + '%'; }
+  else { chip.classList.add('chip-crit'); chip.textContent = 'Margem ' + fmtPct(margem) + '%'; }
+}
+
+function applyScaling() {
+  const target = num('target-weight');
+  if (target <= 0) return;
+  const somaPct = 100 + num('ag-pct') + num('az-pct') + num('fe-pct') + num('sal-pct');
+  const novoFtotal = target / (somaPct / 100);
+  setVal('ftotal', fmtW(novoFtotal));
+  recalcAll();
+}
+
+document.getElementById('pr-price').addEventListener('input', () => { lastPricingEdit = 'price'; recalcAll(); });
+document.getElementById('pr-margin').addEventListener('input', () => { lastPricingEdit = 'margin'; recalcAll(); });
+document.getElementById('pr-profit').addEventListener('input', () => { lastPricingEdit = 'profit'; recalcAll(); });
+
+document.addEventListener('input', (e) => {
+  if (e.target.matches('#pr-price, #pr-margin, #pr-profit')) return; // já tratado acima
+  if (e.target.closest('#tbl-insumos, #sub-fermento') || e.target.id === 'ftotal' || e.target.id === 'qty') {
+    recalcAll();
+  }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.tagName === 'SELECT') recalcAll();
+});
+
+recalcAll();
+</script>
 
 </body>
 </html>

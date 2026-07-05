@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Write",
+      "WebSearch",
+      "WebFetch",
+      "Bash(npm install:*)",
+      "Bash(npm ci:*)",
+      "Bash(npm create:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(date:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git stash:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout -- :*)",
+      "Bash(rm -rf:*)",
+      "Edit(spec/**)",
+      "Write(spec/**)",
+      "Edit(brand/**)",
+      "Write(brand/**)",
+      "Edit(mockups/**)",
+      "Write(mockups/**)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

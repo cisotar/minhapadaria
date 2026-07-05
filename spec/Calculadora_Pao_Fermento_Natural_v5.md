@@ -45,6 +45,8 @@ Ao retornar de "peso → %" para "% → peso", **os pesos editados tornam-se a n
 
 Qualquer alteração de estado dispara **uma única função central de recálculo**, que reconstrói todos os valores derivados a partir do zero (porcentagens e pesos-base declarados) — nunca a partir de um resultado intermediário já arredondado. Isso evita loops de recálculo em cascata e elimina o acúmulo de erro de arredondamento por design.
 
+**Sem botão de enviar/confirmar.** Qualquer dado informado pelo cliente (porcentagem, peso, preço pago, peso do produto, partes do fermento, quantidade de produtos, preço/margem/lucro) dispara o recálculo **imediatamente**, a cada alteração do campo — não existe ação de submissão nem passo intermediário de "aplicar" para os campos normais da receita. A única exceção é o **Escalonamento por peso alvo** (Seção 3.D), que é uma ação explícita e distinta (o usuário decide o momento de re-escalar a receita inteira), não uma edição de campo comum.
+
 ---
 
 ## 2. Estrutura de Interface (UI)
@@ -452,6 +454,21 @@ Sincronização/exportação dos dados (receitas e histórico de fornadas) para 
 
 A v1 não deve conter nenhum vestígio dessa integração (sem stubs de API, sem dependências do Google SDK) — apenas este registro na spec.
 
+### 11.2. Visão Futura Registrada: Evolução para SaaS
+
+Registrado em 2026-07-04 como **visão de longo prazo, deliberadamente não planejada agora** — sem arquitetura de back-end definida, sem prazo, sem compromisso. O produto tem vocação de SaaS (padeiros artesanais que vendem: dor real de custo/precificação/desperdício), e a v1 local serve como validação com usuário real antes de qualquer investimento em infraestrutura.
+
+O que a v1 já garante para essa evolução ser natural quando (e se) chegar a hora:
+
+- **Core de cálculo é lógica pura de front-end** — reaproveitável integralmente.
+- **Modelo de dados com IDs** (Recipe, BakeEntry) — pronto para virar schema de banco.
+- **Backup/restauração em JSON** (Seção 10) — vira o formato de importação/migração para a versão com conta.
+- **Regra de segurança já vigente** (Seção 11.1): nenhum secret no front-end nem no repositório — mesma disciplina que o SaaS exigirá.
+
+O que ficará para o planejamento futuro (intencionalmente não detalhado): back-end/API, autenticação e contas, banco de dados, multi-tenancy, cobrança/planos, hospedagem/monitoramento, LGPD.
+
+**Nada disso entra na v1.** Escopo da v1 permanece 100% client-side, sem stubs nem dependências antecipadas.
+
 ---
 
 ## 12. Exemplo de Uso (validado)
@@ -599,3 +616,5 @@ Lacunas identificadas na revisão da v4 e decisões que as fecharam:
 | 23 | Custo derivado por kg ainda exigia raciocínio de conversão | Substitui decisão 18: derivados agora são **Custo por grama** (4 casas, Seção 9) e **Custo na Receita** (peso usado × custo/g). Entrada segue Preço Pago + Peso do Produto; colunas da tabela viram Preço Pago · Peso do Produto · Custo/g · Custo na Receita (Seções 2.A.1, 2.A.2) |
 | 24 | Zebra + sombreado de readonly viravam xadrez de cores | Tabelas minimalistas: sem zebra, sem fundo em célula derivada. Sinal invertido: **campo editável ganha box (borda visível)**, derivado é texto plano (brandbook §4.1) |
 | 25 | Responsividade mobile limitava a largura das tabelas | **Desktop-first**: cards e tabelas crescem horizontalmente para mostrar todas as colunas; telas menores são secundárias (Seções 2.A.2, 10) |
+| 26 | Cliente não quer "enviar" dado pra ver o cálculo atualizar | Todo campo recalcula em lote imediatamente ao ser alterado, sem botão de confirmar/enviar. Única exceção: Escalonamento por peso alvo, ação explícita e separada (Seção 1.6) |
+| 27 | Produto pode virar SaaS? | Sim, visão registrada — mas deliberadamente sem planejamento de back-end agora. V1 segue 100% client-side e valida o produto; JSON de backup será o formato de migração (Seção 11.2) |
