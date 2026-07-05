@@ -343,6 +343,23 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     const card = h('div', { className: 'recipe-card' });
     const nameRef = { el: h('h3', {}, [recipe.name]) as HTMLHeadingElement }; // textContent — escapa XSS (regra 3)
     card.appendChild(nameRef.el);
+
+    // Excluir vira ícone no canto superior direito do card (fora de `.actions`,
+    // separado das ações primárias) — mesmo glyph "×"/aria-label já usado nos
+    // botões de remover linha (ingredientsTable.ts/sourdoughTable.ts), reuso
+    // total (regra de ouro 2).
+    const deleteBtn = h(
+      'button',
+      {
+        type: 'button',
+        className: 'card-delete-btn',
+        title: 'Excluir receita',
+        'aria-label': `Excluir ${recipe.name}`,
+      },
+      ['×'],
+    ) as HTMLButtonElement;
+    on(deleteBtn, 'click', () => deleteRecipe(recipe.id, recipe.name));
+    card.appendChild(deleteBtn);
     card.appendChild(
       h('div', { className: 'meta' }, [
         `Editado ${formatDate(recipe.updatedAt)} · F total ${formatWeight(recipe.flourTotalWeight)} g`,
@@ -355,6 +372,22 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
         h('span', { className: 'stat-label' }, ['Custo unit.']),
         h('span', { className: 'stat-value' }, [
           summary.costPerUnit !== null ? formatCurrency(summary.costPerUnit) : '—',
+        ]),
+      ]),
+    );
+    stats.appendChild(
+      h('div', {}, [
+        h('span', { className: 'stat-label' }, ['Preço']),
+        h('span', { className: 'stat-value' }, [
+          summary.salePrice !== null ? formatCurrency(summary.salePrice) : '—',
+        ]),
+      ]),
+    );
+    stats.appendChild(
+      h('div', {}, [
+        h('span', { className: 'stat-label' }, ['Lucro']),
+        h('span', { className: 'stat-value' }, [
+          summary.profitPerUnit !== null ? formatCurrency(summary.profitPerUnit) : '—',
         ]),
       ]),
     );
@@ -374,14 +407,11 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     }, ['Abrir']);
     const dupBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Duplicar']) as HTMLButtonElement;
     const renameBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Renomear']) as HTMLButtonElement;
-    const deleteBtn = h('button', { type: 'button', className: 'btn btn-danger' }, ['Excluir']) as HTMLButtonElement;
     on(dupBtn, 'click', () => duplicateRecipe(recipe.id));
     on(renameBtn, 'click', () => startInlineEdit(nameRef, recipe));
-    on(deleteBtn, 'click', () => deleteRecipe(recipe.id, recipe.name));
     actions.appendChild(openLink);
     actions.appendChild(dupBtn);
     actions.appendChild(renameBtn);
-    actions.appendChild(deleteBtn);
     card.appendChild(actions);
     return card;
   }

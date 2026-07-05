@@ -337,9 +337,7 @@ describe('recipesList (jsdom)', () => {
     const confirm = vi.fn().mockReturnValue(true);
     const { root } = mount({ storage, recipeStore, confirm });
 
-    const deleteBtn = Array.from(root.querySelectorAll('.recipe-card button')).find(
-      (b) => b.textContent === 'Excluir',
-    ) as HTMLButtonElement;
+    const deleteBtn = root.querySelector('.recipe-card .card-delete-btn') as HTMLButtonElement;
     deleteBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(recipeStore.list()).toHaveLength(0);
@@ -354,9 +352,7 @@ describe('recipesList (jsdom)', () => {
     const confirm = vi.fn().mockReturnValue(false);
     const { root } = mount({ storage, recipeStore, confirm });
 
-    const deleteBtn = Array.from(root.querySelectorAll('.recipe-card button')).find(
-      (b) => b.textContent === 'Excluir',
-    ) as HTMLButtonElement;
+    const deleteBtn = root.querySelector('.recipe-card .card-delete-btn') as HTMLButtonElement;
     deleteBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(recipeStore.list()).toHaveLength(1);
