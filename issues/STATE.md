@@ -5,7 +5,7 @@
 | 001 | Scaffold Vite + TS strict + Vitest (MPA 3 páginas) | infra | — | done | 7a61979 |
 | 002 | Tipos §6 + parsing/formatação pt-BR | core | 001 | done | a837621 |
 | 003 | Baker's percentage — F_total âncora | core | 002 | done | 17dd16e |
-| 004 | Fermento por Partes + hidratação derivada | core | 003 | todo | |
+| 004 | Fermento por Partes + hidratação derivada | core | 003 | done | 3de585e |
 | 005 | Hidratação nominal/real + Farinha Real | core | 003, 004 | todo | |
 | 006 | Custos — custo/g, receita, fermento (isca zero) | core | 002, 004 | todo | |
 | 007 | Precificação 3 modos + margem ≤99,9% + faixas | core | 006 | todo | |
