@@ -14,6 +14,14 @@
  * Para um fixture matematicamente consistente (Total = soma exata dos três
  * pesos, sem arredondamento escondendo o erro), uso W_ferm=315 — o único valor
  * que reproduz 21,0/147,0/147,0 exatos com Partes 1:7:7 — em vez de 310.
+ *
+ * Casos 10/11a/11b (issue 023 — achados médios da revisão da 015): testes
+ * faltantes de §5.B (botão remover desabilitado com 1 única farinha do
+ * fermento) e §5.C (bloqueio + reversão no blur de Partes — soma zero e parte
+ * negativa). Confirmados red→green manualmente durante a implementação
+ * (guarda de `validateFlourCount`/`validateSourdoughParts` temporariamente
+ * neutralizada reproduziu a falha esperada); nenhuma mudança de produção foi
+ * necessária — a lógica já estava correta, só faltava a cobertura.
  */
 import { describe, it, expect } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
@@ -185,6 +193,47 @@ describe('sourdoughTable (jsdom)', () => {
       draft.ingredients[0].packageCost.pricePaid = 20; // muda de novo — não deve mais sobrescrever
     });
     expect(costGCell.textContent).toBe('R$ 0,0050');
+  });
+
+  it('10. botão remover desabilitado com 1 única farinha do fermento (§5.B/validateFlourCount)', () => {
+    const { root } = mount(); // goldenSeed tem só 1 farinha do fermento (flour-1)
+    const removeBtn = root.querySelector(
+      'tr[data-sd-row="flour"] button[aria-label="Remover Farinha Branca"]',
+    ) as HTMLButtonElement;
+
+    expect(removeBtn.disabled).toBe(true);
+    expect(removeBtn.title).toBe('É necessária ao menos 1 farinha no fermento.');
+  });
+
+  it('11a. blur com Partes 0:0:0 (SomaPartes=0) bloqueia e reverte campo + estado (§5.C/validateSourdoughParts)', () => {
+    const { root, store } = mount(); // golden: Partes 0:1:1
+    const flourInput = root.querySelector(
+      'input[aria-label="Proporção da Farinha do fermento"]',
+    ) as HTMLInputElement;
+    const aguaInput = root.querySelector('input[aria-label="Proporção da Água do fermento"]') as HTMLInputElement;
+
+    flourInput.value = '0';
+    flourInput.dispatchEvent(new Event('input', { bubbles: true })); // Partes 0:0:1 (ainda válido, soma=1)
+    aguaInput.value = '0';
+    aguaInput.dispatchEvent(new Event('input', { bubbles: true })); // Partes 0:0:0 — soma zerada
+    aguaInput.dispatchEvent(new Event('blur', { bubbles: true })); // §5.C: bloqueio no blur
+
+    expect(aguaInput.value).toBe('1'); // reverte o campo ao último valor válido (1)
+    expect(aguaInput.getAttribute('aria-invalid')).toBe('true');
+    expect(store.getState().recipe.sourdough.parts.water).toBe(1); // estado também revertido, não só o campo
+  });
+
+  it('11b. blur com parte negativa (Isca=-1) bloqueia e reverte campo + estado (§5.C/validateSourdoughParts)', () => {
+    const { root, store } = mount(); // golden: Partes 0:1:1
+    const iscaInput = root.querySelector('input[aria-label="Proporção da Isca"]') as HTMLInputElement;
+
+    iscaInput.value = '-1';
+    iscaInput.dispatchEvent(new Event('input', { bubbles: true }));
+    iscaInput.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    expect(iscaInput.value).toBe('0'); // reverte ao último valor válido (0)
+    expect(iscaInput.getAttribute('aria-invalid')).toBe('true');
+    expect(store.getState().recipe.sourdough.parts.isca).toBe(0); // estado também revertido
   });
 
   it('9. toggle "Exibir custos" (011) reflete na tabela do fermento via subscribe (§2.A.2)', () => {

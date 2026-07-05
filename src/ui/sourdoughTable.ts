@@ -19,7 +19,12 @@
  * definidas para essas Partes livres em `format.ts` (só %/peso/R$/custo-g têm,
  * §9); (b) "Custo por kg" = Custo/g (já derivado pelo core) × 1000 — conversão
  * de unidade trivial (mesma família de `packageSizeInGrams`, costs.ts), não uma
- * fórmula de negócio nova; (c) "Custo" de cada sub-linha de farinha/água NÃO
+ * fórmula de negócio nova. Decisão registrada (issue 023, revisão da 015):
+ * mantida na UI — derivar `costPerKg` no core exigiria acrescentar um campo ao
+ * resumo do fermento (§2.B.5) e `SourdoughWeights` é um tipo público
+ * (`types.ts`, congelado/imutável) já consumido pelos testes de `recalc.ts`;
+ * mesmo opcional, é mudança de contrato — fora do escopo de uma conversão
+ * trivial de unidade. (c) "Custo" de cada sub-linha de farinha/água NÃO
  * está pronto (`SourdoughFlour`/`waterPackageCost` não têm campo `recipeCost`
  * no tipo, §6) — reusa `ingredientRecipeCost` (costs.ts, puro) para derivar,
  * em vez de multiplicar peso×custo/g solto na UI.
@@ -713,7 +718,9 @@ export function renderSourdoughTable(root: HTMLElement, store: AppStateStore, ed
     // §5.C: hidratação indefinida (Farinha do Fermento=0) → undefined no state → "—".
     mHydration.value.textContent = sd.hydration !== undefined ? `${formatPercent(sd.hydration)}%` : '—';
     mCustoTotal.value.textContent = sd.totalCost !== undefined ? formatCurrency(sd.totalCost) : '—';
-    // Custo/kg = Custo/g (derivado) × 1000 — conversão de unidade trivial, não fórmula nova.
+    // Custo/kg = Custo/g (derivado) × 1000 — conversão de unidade trivial, não fórmula
+    // nova; mantida na UI (decisão registrada acima, issue 023 — não é mudança aditiva
+    // trivial ao contrato de `SourdoughWeights`, §6).
     mCustoKg.value.textContent = sd.costPerGram !== undefined ? formatCurrency(sd.costPerGram * 1000) : '—';
 
     // Custo total/por kg sob o mesmo toggle "Exibir custos" (§2.A.2/§2.B.2).
