@@ -4,6 +4,18 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 007 — precificação)**
+
+1. **Inconsistência na spec §3.E linha 232 — DESTAQUE PARA REVISOR HUMANO**: redação diz "CustoTotalProdução = CustoTotalReceita × Qtd", que quebraria o golden §12 (daria 8,86 × 2 = 17,72, e lucro total −2,95 em vez de 5,90). Resolvido conforme golden §12 fonte da verdade: totalProductionCost = unitCost × quantity = 4,43 × 2 = 8,86 (coerente com §14.3 BakeEntry.totalCost, custo por unidade vezes quantidade produzida). Motivo: golden §12 é contrato permanente da suíte; a fórmula literal de §3.E parece confundir CustoTotalProdução com CustoTotalReceita. Sugerir ao cliente: revisar redação de §3.E ou clarificar que totalProductionCost ≠ totalRecipeCost × Qtd.
+
+2. **isLoss usa ≤ (break-even inclusivo, §5.C literal) — §4 contradiz sutilmente**: §5.C diz "aviso quando preço não cobre custo", interpretado como salePrice ≤ unitCost. §4 diz "red quando <15% OU prejuízo", implicando prejuízo strict <. Não bloqueio: ambas leituras são defensivas (aviso sem rejeição). isLoss devolveu ≤ por literalidade de §5.C ("não cobre" inclui empate exato).
+
+3. **Faixas de marginStatus 30/15 literais**: >30 verde, 15–30 inclusive amarelo (leitura literal §4, "15–30" com hífen implica intervalo fechado), <15 ou negativa vermelho. Teste: 30→yellow, 15→yellow (exatitude nos limites, sem fuzzy).
+
+4. **Margem negativa clampada a 0 em modo margem**: §5.C proíbe margem negativa ("margem não pode ser negativa"). priceFromMargin recebe entrada, clampeia via clampMargin(margin) a [0, 99.9]. Resultado devolvido é sempre m = clampmargin(entrada), nunca entra NaN. Sem throw. O clamp garante que profitMargin devolvido = margem saneada (auto-consistente: profit/price = m%).
+
+---
+
 **2026-07-05 (issue 006 — custos)**
 
 1. **Soma compensada de Neumaier em totalRecipeCost/sourdoughCost — NÃO é arredondamento decimal**: elimina drift IEEE-754 acumulado na ordem dos termos (golden §12: 8+0,06+0,8 → 8,86 exato, não 8,860000000000001). Algoritmo de Neumaier (1974), variante do Kahan compensation, implementado em core puro (custo é o domínio) sem lib nova. NÃO viola §9 (arredondamento decimal é só exibição): compensatedSum retorna o mesmo `sum + compensation` exato em precisão total IEEE-754 dupla. Consumidor de totalRecipeCost (issue 008/UI) vê number cru; formatCurrency arredonda só na exibição.
@@ -61,6 +73,20 @@
 2. **Google Fonts CDN vs auto-hospedagem**: mockups usam `<link rel="stylesheet" href="https://fonts.googleapis.com/...">` no design-system.css. **Decisão**: app (index.html, receitas.html, historico.html) carrega apenas `design-system.css` via Vite, com fonte fallback `system-ui` até issue de UI decidir auto-hospedagem. Alinhado com spec §10 (app 100% client-side) e §11.1 (zero secrets em front-end). Ação diferida para issue 014+.
 
 3. **Polyfill modulepreload em dist/**: achado do revisor-design (baixa prioridade): Vite injeta `<link rel="modulepreload" as="script" ...>` em dist/index.html que contém `fetch()` same-origin para chunks. Artefato de build sem risco (fetch é same-origin, sem headers de autorização, offline ok). Sem ação necessária.
+
+---
+
+## Iteração 007 — 2026-07-05 ~02:35 (precificação)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 007-pricing |
+| **Timestamp** | 2026-07-05 02:35 |
+| **O que foi feito** | src/core/pricing.ts: 8 funções puras (clampMargin — [0, 99.9], §5.C decisão 4; effectiveQuantity — ≥1 guarda de ÷0; unitCost — CustoTotalReceita/Qtd derivado §3.E; priceFromSalePrice — modo Preço Fixo, null guarda em salePrice≤0; priceFromMargin — modo Margem%, Preço = CustoUnit/(1−m/100), m clampeada, 0 se denominador; priceFromProfit — modo Lucro Fixo, reverte profit-margin; pricingTotals — totais (RESOLUÇÃO §12: totalProductionCost = unitCost×Qtd, NÃO CustoTotalReceita×Qtd — golden fonte da verdade); marginStatus — faixas 30/15 §4 literal (>30 verde, 15–30 amarelo, <15/neg vermelho); isLoss — break-even inclusivo ≤ §5.C). Sem DOM, sem localStorage, precisão total (§3.E/§4/§5.C). src/core/pricing.test.ts: 18 casos TDD (unitCost 2, clampMargin 5, priceFromMargin 2, priceFromSalePrice 2, priceFromProfit 1, sincronização 3 modos 1, pricingTotals 2, marginStatus 6, isLoss 1, pureza 1). Golden §12 validado completo: unitCost=4,43, margin 40→salePrice 7,3833/profit 2,9533, totals 8,86/14,7666/5,9066. |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: pricing.test.ts (18) + costs.test.ts (13) + hydration.test.ts (14) + bakers.test.ts (22) + sourdough.test.ts (12) + format.test.ts (23) + golden-example.test.ts (1 falha intencional) = 103 total. Pass: 102. Fail: 1 intencional. Build Vite: verde. Gates: testes 102 pass ✓, 1 fail esperada ✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados. **ACHADOS DIFERIDOS PARA REVISOR HUMANO** (registrados em "Decisões da noite" acima): (a) inconsistência §3.E linha 232 vs golden §12; (b) isLoss ≤ vs §4 prejudicial <; (c) faixas 30/15 literais; (d) clamp margem negativa. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em pricing.ts (§3.E/§4/§5.C/§12 decisão 4) e pricing.test.ts (§3.E/§4/§5.C/§12 decisão 4, §9). Reuso total: unitCost usa effectiveQuantity (guarda); clampMargin centraliza regra de domínio; pricingTotals base para issue 008 (recalc). Sincronização dos 3 modos (Preço/Margem/Lucro) validada em testes: byMargin, bySalePrice, byProfit convergem. Mapa de módulos será atualizado agora. |
 
 ---
 
