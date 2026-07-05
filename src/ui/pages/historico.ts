@@ -5,10 +5,12 @@
  * O que faz: instancia `createRecipeStore()`/`createBakeStore()` (localStorage
  * real, issues 011/013) sobre `defaultStorage()` (010), preenche o `<h1>`
  * estático do cabeçalho (`#hist-header`, shell de `historico.html`) e chama
- * `renderHistoryView(app, {recipeStore, bakeStore})` — que monta o registro
- * rápido, os filtros, os KPIs, o gráfico de tendência e a listagem
- * cronológica de fornadas (018). Zero fórmula/lógica de negócio aqui: só
- * composição/wiring (regra de ouro 2).
+ * `renderHistoryView(app, {recipeStore, bakeStore, headerRoot: header})` — que
+ * monta o registro rápido, os filtros, os KPIs, o gráfico de tendência, a
+ * listagem cronológica de fornadas (018) e o subtítulo dinâmico do intervalo
+ * De/Até dentro de `#hist-header`, ao lado do `<h1>` (issue 026 item 3, igual
+ * ao mockup). Zero fórmula/lógica de negócio aqui: só composição/wiring
+ * (regra de ouro 2).
  *
  * Seções implementadas: §14 (todas as subseções, via historyView.ts).
  */
@@ -33,5 +35,5 @@ if (header) {
 
 const app = document.getElementById('app');
 if (app) {
-  renderHistoryView(app, { recipeStore, bakeStore, prefs });
+  renderHistoryView(app, { recipeStore, bakeStore, prefs, headerRoot: header ?? undefined });
 }

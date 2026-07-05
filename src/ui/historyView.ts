@@ -93,6 +93,15 @@ export interface HistoryViewDeps {
   confirm?: (message: string) => boolean;
   /** §2.A.2 (issue 019): pref global "Exibir custos" para o XLSX com/sem custos. */
   prefs?: PrefsStore;
+  /**
+   * Nó onde o subtítulo dinâmico (`.subtitle`) do intervalo De/Até é montado —
+   * issue 026 item 3, mesmo padrão de `recipesList.ts`/`headerRoot` (issue
+   * 025 item 3): `historico.ts` passa `#hist-header` (o `<header
+   * class="page-header">` estático do shell, ao lado do `<h1>`), espelhando
+   * `mockups/historico.html` (`.subtitle` = "aaaa-mm-dd – aaaa-mm-dd").
+   * Default: `root` (mantém a suíte isolada/testável sem shell de página).
+   */
+  headerRoot?: HTMLElement;
 }
 
 type Granularity = 'day' | 'week' | 'month';
@@ -125,6 +134,14 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const { recipeStore, bakeStore } = deps;
   const nowFn = deps.now ?? (() => new Date());
   const confirmFn = deps.confirm ?? ((message: string) => window.confirm(message));
+  const headerRoot = deps.headerRoot ?? root; // issue 026 item 3 — default preserva a suíte isolada
+
+  // issue 026 item 3: subtítulo dinâmico do intervalo De/Até (`.subtitle`,
+  // design-system.css) — montado em `headerRoot` (default `root`;
+  // `historico.ts` passa `#hist-header` real), atualizado a cada renderAll
+  // (filtro muda → subtítulo acompanha, fidelidade ao mockup).
+  const subtitle = h('p', { className: 'subtitle' });
+  headerRoot.appendChild(subtitle);
 
   let filterRecipeId = '';
   let granularity: Granularity = 'day';
@@ -469,6 +486,8 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
 
     const dateFrom = parseLocalDate(fromInput.value); // §7.1: dia local, nunca UTC
     const dateTo = parseLocalDate(toInput.value);
+    // issue 026 item 3: subtítulo do header acompanha o intervalo De/Até corrente.
+    subtitle.textContent = `${formatDate(dateFrom)} – ${formatDate(dateTo)}`;
     const periodFiltered = filterByDateRange(recipeFiltered, dateFrom, dateTo); // §14.5 inclusivo
     const periodFilteredReal = periodFiltered.filter((e) => !isPlanned(e)); // §14.4: pré-filtro ANTES de agrupar
 

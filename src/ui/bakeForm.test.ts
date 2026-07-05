@@ -97,6 +97,14 @@ describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
     expect(costInput.validationMessage).toMatch(/não pode ser negativo/);
   });
 
+  it('5b. Preço de venda −1 → bloqueio não-negativo (§14.6, espelha o teste do custo)', () => {
+    const { root } = mount();
+    const priceInput = root.querySelector('input[aria-label="Preço de Venda Unitário"]') as HTMLInputElement;
+    setAndBlur(priceInput, '-1');
+    expect(priceInput.getAttribute('aria-invalid')).toBe('true');
+    expect(priceInput.validationMessage).toMatch(/não pode ser negativo/);
+  });
+
   it('6. Data futura (2026-07-08, hoje 07-05) → badge "Planejada" visível; registro grava planned:true', () => {
     const { root, recipe, bakeStore } = mount();
     selectRecipe(root, recipe.id);

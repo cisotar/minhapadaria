@@ -76,14 +76,14 @@ function bindNumericField(
     const parsed = parseDecimal(input.value);
     if (parsed === null) {
       input.value = lastValid;
-      return parseDecimal(lastValid.replace(',', '.'));
+      return parseDecimal(lastValid);
     }
     const issue = validate(parsed);
     applyValidation(input, issue, () => {
       input.value = lastValid;
     });
     if (issue && issue.level === 'block') {
-      return parseDecimal(lastValid.replace(',', '.'));
+      return parseDecimal(lastValid);
     }
     lastValid = input.value;
     return parsed;
@@ -209,7 +209,7 @@ export function renderBakeForm(root: HTMLElement, deps: BakeFormDeps): void {
   // --- Campos numéricos com bloqueio-reverte (§14.6) ---
   const commitProduced = bindNumericField(producedInput, (v) => validateQuantityProduced(v));
   const commitSold = bindNumericField(soldInput, (v) =>
-    validateQuantitySold(v, parseDecimal(producedInput.value.replace(',', '.')) ?? 0),
+    validateQuantitySold(v, parseDecimal(producedInput.value) ?? 0),
   );
   const commitCost = bindNumericField(costInput, (v) => validateNonNegative(v, 'Custo Unitário'));
   const commitPrice = bindNumericField(priceInput, (v) => validateNonNegative(v, 'Preço de Venda Unitário'));

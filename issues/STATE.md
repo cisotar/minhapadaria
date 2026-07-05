@@ -27,5 +27,5 @@
 | 023 | Fix — achados da revisão da issue 015 (fermento UI) | fix | 015 | done | 15dc19a |
 | 024 | Fix — achados da revisão da issue 016 (escala/preço UI) | fix | 016 | done | 05fba78 |
 | 025 | Fix — achados da revisão da issue 017 (tela receitas) | fix | 017 | done | b3f33de |
-| 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | todo | |
+| 026 | Fix — achados da revisão da issue 018 (histórico UI) | fix | 018 | doing | |
 | 027 | Fix — achados da revisão da issue 019 (export) | fix | 019 | todo | |

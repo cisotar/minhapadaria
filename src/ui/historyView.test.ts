@@ -30,6 +30,7 @@ function fixedNow(iso: string): () => Date {
 interface MountOpts {
   now?: () => Date;
   confirm?: (message: string) => boolean;
+  headerRoot?: HTMLElement;
 }
 
 function mount(opts: MountOpts = {}) {
@@ -46,6 +47,7 @@ function render(m: ReturnType<typeof mount>) {
     bakeStore: m.bakeStore,
     now: m.opts.now ?? fixedNow('2026-07-05T00:00:00'),
     confirm: m.opts.confirm,
+    headerRoot: m.opts.headerRoot,
   });
 }
 
@@ -265,5 +267,21 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     expect(m.root.querySelector('img')).toBeNull();
     const rows = m.root.querySelectorAll('table tbody tr');
     expect(rows[0].textContent).toContain('<script>alert(1)</script>');
+  });
+
+  it('11. subtítulo dinâmico (issue 026 item 3): montado em headerRoot, acompanha o filtro De/Até', () => {
+    const headerRoot = document.createElement('div');
+    const m = mount({ headerRoot });
+    render(m);
+
+    // Padrão default (últimos 7 dias, "hoje" fixo = 2026-07-05).
+    const subtitle = headerRoot.querySelector('.subtitle');
+    expect(subtitle).not.toBeNull();
+    expect(subtitle!.textContent).toBe('2026-06-29 – 2026-07-05');
+    expect(m.root.querySelector('.subtitle')).toBeNull(); // não duplica dentro de root
+
+    setDateInput(m.root, 'De', '2026-06-01');
+    setDateInput(m.root, 'Até', '2026-06-10');
+    expect(subtitle!.textContent).toBe('2026-06-01 – 2026-06-10');
   });
 });
