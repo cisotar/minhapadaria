@@ -15,6 +15,12 @@
  *     persistir (nenhum autosave agendado — `recipeStore` intocado).
  *  3. `visibilitychange` (aba escondida) força o flush imediato, sem esperar
  *     o debounce completar.
+ *  4. gate do botão "Imprimir Custos" pela pref `showCosts` (issue 028/029) —
+ *     paridade com o caso 12 de `historyView.test.ts` ("Imprimir Financeiro"):
+ *     mount com `showCosts=false` → botão oculto (`.hidden`), "Imprimir
+ *     Receita" sempre visível; marcar o checkbox "Exibir custos" (`change`)
+ *     → reatividade via `store.subscribe` liga o botão; desmarcar volta a
+ *     ocultar.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMemoryStorage } from '../../storage/local';
@@ -152,5 +158,41 @@ describe('initCalculadora — integração ?recipe=<id> (jsdom, §2.F)', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     expect(waterPercentage(recipeStore.get(saved.id))).toBe(65); // flush imediato, debounce não completou
+  });
+
+  it('4. gate do botão "Imprimir Custos" pela pref showCosts (issue 028), reatividade via checkbox "Exibir custos"', () => {
+    const findBtn = (label: string) =>
+      Array.from(document.querySelectorAll('button')).find((b) => b.textContent === label) as
+        | HTMLButtonElement
+        | undefined;
+
+    const prefs = createPrefsStore({ storage: createMemoryStorage() });
+    prefs.setShowCosts(false);
+
+    initCalculadora({ recipeStore: makeStore(), prefs, search: '' });
+
+    const printReceita = findBtn('Imprimir Receita');
+    const printCustos = findBtn('Imprimir Custos');
+    expect(printReceita).toBeDefined();
+    expect(printReceita!.classList.contains('hidden')).toBe(false);
+    expect(printCustos).toBeDefined();
+    expect(printCustos!.classList.contains('hidden')).toBe(true);
+
+    // Liga via checkbox real "Exibir custos" (cadeia de produção completa:
+    // checkbox → store.setShowCosts → notify → subscribe → syncCostsBtn).
+    const toggleLabel = Array.from(document.querySelectorAll('label.toggle-label')).find((l) =>
+      l.textContent?.includes('Exibir custos'),
+    ) as HTMLLabelElement;
+    const toggleInput = toggleLabel.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    toggleInput.checked = true;
+    toggleInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(printCustos!.classList.contains('hidden')).toBe(false);
+
+    // Desliga de volta — reatividade nos dois sentidos.
+    toggleInput.checked = false;
+    toggleInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(printCustos!.classList.contains('hidden')).toBe(true);
   });
 });
