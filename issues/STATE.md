@@ -35,3 +35,4 @@
 | 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | todo | — |
 | 032 | Rota inicial do site deve ser receitas.html | ui | 017 | done | 8c67f6c |
 | 033 | Renomear receita vira edição inline (sem prompt/modal) | ui | 017 | done | 72e443a |
+| 034 | Refactor impressão Receita/Custos v2 — cards, fermento, coluna custo | export | 019, 028, 030 | done | — |

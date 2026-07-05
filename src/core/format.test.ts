@@ -14,6 +14,7 @@ import {
   formatWeight,
   formatCurrency,
   formatCostPerGram,
+  formatProportion,
   formatDate,
   parseLocalDate,
 } from './format';
@@ -93,6 +94,33 @@ describe('formatPercent (spec §9 — % 2 casas)', () => {
   });
   it('21. 0.125 → "0,13" (half-up)', () => {
     expect(formatPercent(0.125)).toBe('0,13');
+  });
+});
+
+describe('formatProportion (proporção do fermento — pt-BR, até 2 casas, sem zeros à direita)', () => {
+  it('27. 1 → "1" (inteiro sem casas)', () => {
+    expect(formatProportion(1)).toBe('1');
+  });
+  it('28. 3 → "3" (inteiro sem casas)', () => {
+    expect(formatProportion(3)).toBe('3');
+  });
+  it('29. 20 → "20" (inteiro sem casas)', () => {
+    expect(formatProportion(20)).toBe('20');
+  });
+  it('30. 200 → "200" (inteiro sem casas)', () => {
+    expect(formatProportion(200)).toBe('200');
+  });
+  it('31. 1.5 → "1,5" (fracionário com vírgula)', () => {
+    expect(formatProportion(1.5)).toBe('1,5');
+  });
+  it('32. 0.25 → "0,25" (duas casas com vírgula)', () => {
+    expect(formatProportion(0.25)).toBe('0,25');
+  });
+  it('33. 0 → "0" (zero sem casas)', () => {
+    expect(formatProportion(0)).toBe('0');
+  });
+  it('34. 1.5 não tem zero à direita ("1,50")', () => {
+    expect(formatProportion(1.5)).not.toBe('1,50');
   });
 });
 

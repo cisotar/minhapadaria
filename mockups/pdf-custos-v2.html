@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Refactor impressão de Custos (v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  /* Base = pdf-receita-v2. Diferença: coluna Custo à direita (débito = vermelho,
+     semântica contábil da issue 028: dinheiro que sai). */
+  :root {
+    --print-bg: #FFFFFF;
+    --print-text: #111111;
+    --print-border: #B8B8B8;
+    --print-border-strong: #333333;
+    --print-muted: #5A5A5A;
+    --print-head-bg: #F1EEE7;
+    --print-debit: #B3261E;     /* débito: custo / lucro<0 (dinheiro sai) */
+    --print-credit: #0B2E59;    /* crédito: preço / lucro≥0 (dinheiro entra) */
+  }
+
+  body { background: var(--bg); padding: var(--sp-5) 0 var(--sp-6); }
+
+  .mockup-label {
+    max-width: 760px; margin: 0 auto var(--sp-2); padding: 0 var(--sp-3);
+    font-size: var(--fs-small); font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+
+  .pdf-page {
+    background: var(--print-bg);
+    color: var(--print-text);
+    font-family: var(--font-sans);
+    max-width: 760px;
+    margin: 0 auto var(--sp-6);
+    padding: var(--sp-5);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .pdf-page h1 { color: var(--print-text); font-size: var(--fs-display); font-weight: 700; margin: 0 0 2px; }
+  .pdf-head {
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding-bottom: var(--sp-3);
+    border-bottom: 2px solid var(--print-border-strong);
+    margin-bottom: var(--sp-4);
+  }
+  .pdf-meta { color: var(--print-muted); font-size: var(--fs-small); }
+  .pdf-yield {
+    font-size: var(--fs-small); font-weight: 700; color: var(--print-text);
+    border: 1.5px solid var(--print-border-strong);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-1) var(--sp-3);
+    white-space: nowrap;
+  }
+  .pdf-yield strong { font-size: var(--fs-sub); }
+
+  .sec-card {
+    border: 1px solid var(--print-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: var(--sp-4);
+  }
+  .sec-card > .sec-head {
+    background: var(--print-head-bg);
+    color: var(--print-text);
+    font-size: var(--fs-small);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 700;
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--print-border);
+  }
+  .sec-card > .sec-body { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+
+  /* Mesma grade da receita + coluna Custo à direita. Colgroup idêntico em todas
+     as seções → colunas %/Proporção, Peso e Custo alinhadas verticalmente. */
+  table.rt { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.rt col.c-name { width: auto; }
+  table.rt col.c-pct  { width: 15%; }
+  table.rt col.c-wt   { width: 18%; }
+  table.rt col.c-cost { width: 20%; }
+  table.rt th {
+    text-align: left; color: var(--print-text); font-size: var(--fs-small);
+    text-transform: uppercase; font-weight: 700;
+    border-bottom: 2px solid var(--print-border-strong);
+    padding: var(--sp-1) var(--sp-2);
+  }
+  table.rt td {
+    border-bottom: 1px solid var(--print-border);
+    padding: var(--sp-1) var(--sp-2);
+    color: var(--print-text);
+  }
+  table.rt th.num, table.rt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.rt tfoot td {
+    border-top: 2px solid var(--print-border-strong);
+    border-bottom: none; font-weight: 700;
+  }
+  /* Custo/lucro<0 = débito → vermelho; preço/lucro≥0 = crédito → azul (issue 028) */
+  .pdf-debit { color: var(--print-debit); font-weight: 700; }
+  .pdf-credit { color: var(--print-credit); font-weight: 700; }
+  .pdf-alert {
+    margin-top: var(--sp-3);
+    border: 1px solid var(--print-debit);
+    color: var(--print-debit); font-weight: 700;
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
+  }
+
+  .kv { width: 100%; border-collapse: collapse; }
+  .kv td { border-bottom: 1px solid var(--print-border); padding: var(--sp-1) var(--sp-2); }
+  .kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .kv tr:last-child td { border-bottom: none; font-weight: 700; }
+
+  .pdf-footer {
+    margin-top: var(--sp-4); padding-top: var(--sp-2);
+    border-top: 1px solid var(--print-border);
+    text-align: right; color: var(--print-muted); font-size: var(--fs-small);
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-label">Mockup — PDF Custos v2 (base = receita v2 + coluna Custo à direita, débito vermelho)</div>
+<div class="pdf-page">
+
+  <div class="pdf-head">
+    <div>
+      <h1>Pão de Fermentação Natural</h1>
+      <div class="pdf-meta">Gerado em 05/07/2026 · Calculadora de Pão</div>
+    </div>
+    <div class="pdf-yield">Rende <strong>4</strong> pães</div>
+  </div>
+
+  <!-- FARINHAS -->
+  <div class="sec-card">
+    <div class="sec-head">Farinhas</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"><col class="c-cost"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th><th class="num">Custo</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Farinha de Trigo Tipo 1</td><td class="num">90,00</td><td class="num">900,0</td><td class="num pdf-debit">R$ 3,60</td></tr>
+          <tr><td colspan="2">Farinha Integral</td><td class="num">10,00</td><td class="num">100,0</td><td class="num pdf-debit">R$ 0,60</td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="2">Total Farinhas</td><td class="num">100,00</td><td class="num">1000,0</td><td class="num pdf-debit">R$ 4,20</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- LÍQUIDOS -->
+  <div class="sec-card">
+    <div class="sec-head">Líquidos</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"><col class="c-cost"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th><th class="num">Custo</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Água</td><td class="num">70,00</td><td class="num">700,0</td><td class="num pdf-debit">R$ 0,00</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SAL E EXTRAS -->
+  <div class="sec-card">
+    <div class="sec-head">Sal e Extras</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"><col class="c-cost"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th><th class="num">Custo</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Sal</td><td class="num">2,00</td><td class="num">20,0</td><td class="num pdf-debit">R$ 0,16</td></tr>
+          <tr><td colspan="2">Azeite</td><td class="num">4,00</td><td class="num">40,0</td><td class="num pdf-debit">R$ 1,00</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FERMENTO NATURAL — Isca custo sempre R$0,00 (Seção 2.B.2) -->
+  <div class="sec-card">
+    <div class="sec-head">Fermento Natural</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"><col class="c-cost"></colgroup>
+        <thead><tr>
+          <th colspan="2">Componente</th><th class="num">Proporção</th><th class="num">Peso (g)</th><th class="num">Custo</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Isca</td><td class="num">20</td><td class="num">20,0</td><td class="num pdf-debit">R$ 0,00</td></tr>
+          <tr><td colspan="2">Farinha de Trigo Tipo 1</td><td class="num">80</td><td class="num">80,0</td><td class="num pdf-debit">R$ 0,32</td></tr>
+          <tr><td colspan="2">Farinha Integral</td><td class="num">20</td><td class="num">20,0</td><td class="num pdf-debit">R$ 0,12</td></tr>
+          <tr><td colspan="2">Água</td><td class="num">80</td><td class="num">80,0</td><td class="num pdf-debit">R$ 0,00</td></tr>
+        </tbody>
+        <tfoot><tr>
+          <td colspan="2">Total de fermento</td><td class="num">200</td><td class="num">200,0</td><td class="num pdf-debit">R$ 0,44</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- CUSTO TOTAL — fornada (todos os pães) e por pão -->
+  <div class="sec-card">
+    <div class="sec-head">Custo Total</div>
+    <div class="sec-body">
+      <table class="kv">
+        <tr><td>Custo da fornada (4 pães)</td><td class="pdf-debit">R$ 5,80</td></tr>
+        <tr><td>Custo de um pão</td><td class="pdf-debit">R$ 1,45</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- PRECIFICAÇÃO — mantida após Custo Total (decisão do usuário) -->
+  <div class="sec-card">
+    <div class="sec-head">Precificação</div>
+    <div class="sec-body">
+      <table class="kv">
+        <tr><td>Preço de venda (un.)</td><td class="pdf-credit">R$ 2,42</td></tr>
+        <tr><td>Margem de lucro</td><td>40,00%</td></tr>
+        <tr><td>Lucro por pão</td><td class="pdf-credit">R$ 0,97</td></tr>
+        <tr><td>Lucro da fornada</td><td class="pdf-credit">R$ 3,88</td></tr>
+      </table>
+      <!-- Variante prejuízo (isLoss): valores em vermelho + este alerta.
+      <div class="pdf-alert">⚠ PREJUÍZO — preço não cobre o custo</div> -->
+    </div>
+  </div>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+</body>
+</html>

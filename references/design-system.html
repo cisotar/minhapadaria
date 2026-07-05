@@ -442,26 +442,26 @@
   </section>
 
   <section class="card">
-    <h2>Impressão / Salvar em PDF (issue 019, §8)</h2>
+    <h2>Impressão / Salvar em PDF (issue 019/028, refactor v2 issue 034, §8)</h2>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
-      Relatório imprimível montado por <code>src/export/print.ts</code>
-      (<code>renderPrintView</code> para a receita, <code>renderHistoryPrintView</code>
-      para o Histórico — revisão issue 019, achado ALTO §8 "aplica-se também ao
-      Histórico de Fornadas §14") dentro de <code>#print-root</code> (oculto na
+      Relatório imprimível montado por <code>src/export/print.ts</code> —
+      <code>renderRecipePrintView</code>/<code>renderRecipeCostsPrintView</code>
+      (Receita/Custos v2, mockups <code>pdf-receita-v2.html</code>/
+      <code>pdf-custos-v2.html</code>) e <code>renderHistoryPrintView</code>/
+      <code>renderHistoryCostsPrintView</code> (Fornadas/Financeiro, layout
+      019/028 inalterado) — tudo dentro de <code>#print-root</code> (oculto na
       tela, único bloco visível em <code>@media print</code>). Só classes novas +
       tokens existentes — <code>:root</code> imutável. O seletor de impressão é
-      escopado com <code>body:has(#print-root)</code> (achado CRÍTICO da mesma
-      revisão: a regra global antiga escondia a página inteira em telas sem
-      <code>#print-root</code>, como Histórico/Receitas — Ctrl+P imprimia página
-      em branco lá; com <code>:has()</code> a regra só age onde o nó existe,
-      degradando com segurança nas demais).
+      escopado com <code>body:has(#print-root)</code> (achado CRÍTICO issue 019:
+      a regra global antiga escondia a página inteira em telas sem
+      <code>#print-root</code> — Ctrl+P imprimia página em branco lá; com
+      <code>:has()</code> a regra só age onde o nó existe, degradando com
+      segurança nas demais).
     </p>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
-      A barra de ações reusa <code>.row.row--mb.row--sticky</code> (achado ALTO:
-      <code>.export-bar</code> duplicava <code>.row</code>) e fica fixa no topo
-      (spec §8 literal "botão fixo no topo") nas duas telas — hospeda Exportar
-      XLSX + Imprimir/Salvar em PDF; <code>window.print()</code> dispara apenas
-      no clique (nunca automático, §8).
+      A barra de ações reusa <code>.row.row--mb.row--sticky</code> e fica fixa
+      no topo (spec §8) — hospeda Exportar XLSX + Imprimir/Salvar em PDF;
+      <code>window.print()</code> dispara apenas no clique (nunca automático, §8).
     </p>
     <div class="row row--mb row--sticky" style="position:static">
       <button class="btn btn-secondary">Exportar XLSX</button>
@@ -472,16 +472,43 @@
       do style guide — nas telas reais é <code>position:sticky</code>, herdada
       de <code>.row--sticky</code>.)
     </p>
-    <div class="print-view" style="display:block">
-      <h1 class="print-title">Pão Rústico de Azeite</h1>
-      <h2 class="print-section">Farinhas</h2>
-      <div class="print-line"><span class="print-label">Farinha Branca</span><span class="print-value">1000,0 g · 100,00% · R$ 8,00</span></div>
-      <h2 class="print-section">Hidratação</h2>
-      <div class="print-line"><span class="print-label">Hidratação Nominal</span><span class="print-value">70,00%</span></div>
-      <div class="print-line"><span class="print-label">Hidratação Real</span><span class="print-value">72,73%</span></div>
-      <h2 class="print-section">Precificação</h2>
-      <div class="print-line"><span class="print-label">Custo total</span><span class="print-value">R$ 8,86</span></div>
-      <div class="print-line"><span class="print-label">Preço de venda</span><span class="print-value">R$ 7,38</span></div>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      <strong>Refactor v2 (issue 034)</strong> — Receita/Custos deixam de usar
+      <code>h2.pdf-section</code> + <code>table.table</code> avulsos: cada seção
+      vira um <code>.sec-card</code> (<code>.sec-head</code> + <code>.sec-body</code>)
+      com uma <code>table.rt</code> — <code>table-layout: fixed</code> + colgroup
+      IDÊNTICO (<code>col.c-name</code> span=2, <code>col.c-pct</code>,
+      <code>col.c-wt</code>[, <code>col.c-cost</code> nos Custos]) em toda
+      seção, garantindo as colunas %/Proporção e Peso/Custo alinhadas
+      verticalmente. A coluna <strong>Proporção</strong> existe só no card
+      "Fermento Natural" (mesmo slot onde as demais seções mostram "%" — nunca
+      as duas juntas); o fermento é reconstruído como
+      Isca → farinha(s) → Água → <code>tfoot</code> "Total de fermento"
+      (negrito), suportando múltiplas <code>sourdough.flours[]</code>. O
+      cabeçalho da página ganha <code>.pdf-head</code> (h1 + <code>.pdf-meta</code>
+      + badge <code>.pdf-yield</code> "Rende N pães" = <code>pricing.quantity</code>).
+      Nos Custos, cada <code>table.rt</code> ganha coluna Custo à direita
+      (débito vermelho via <code>.pdf-debit</code>, Isca sempre "R$ 0,00"); a
+      Hidratação vira o card "Custo Total" (fornada + um pão); "Precificação"
+      segue depois com Preço (<code>.pdf-credit</code>), Margem (neutra) e
+      Lucro por pão/da fornada por sinal + <code>.pdf-alert</code> em prejuízo
+      (<code>isLoss</code>). Histórico (Fornadas/Financeiro) não usa nada disso —
+      continua em <code>h2.pdf-section</code>/<code>table.table</code>.
+    </p>
+    <div class="sec-card" style="max-width:520px">
+      <div class="sec-head">Fermento Natural</div>
+      <div class="sec-body">
+        <table class="rt">
+          <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"><col class="c-cost"></colgroup>
+          <thead><tr><th colspan="2">Componente</th><th class="num">Proporção</th><th class="num">Peso (g)</th><th class="num">Custo</th></tr></thead>
+          <tbody>
+            <tr><td colspan="2">Isca</td><td class="num">1</td><td class="num">66,7</td><td class="num pdf-debit">R$ 0,00</td></tr>
+            <tr><td colspan="2">Farinha Branca</td><td class="num">1</td><td class="num">66,7</td><td class="num pdf-debit">R$ 0,53</td></tr>
+            <tr><td colspan="2">Água</td><td class="num">1</td><td class="num">66,7</td><td class="num pdf-debit">R$ 0,00</td></tr>
+          </tbody>
+          <tfoot><tr><td colspan="2">Total de fermento</td><td class="num">3</td><td class="num">200,0</td><td class="num pdf-debit">R$ 0,53</td></tr></tfoot>
+        </table>
+      </div>
     </div>
   </section>
 </div>

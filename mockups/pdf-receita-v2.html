@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Refactor impressão da Receita (v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../references/design-system.css">
+<style>
+  /* Paleta dedicada de impressão (herda da issue 028). Só neste mockup;
+     na implementação real vira @media print escopado em design-system.css. */
+  :root {
+    --print-bg: #FFFFFF;
+    --print-text: #111111;
+    --print-border: #B8B8B8;
+    --print-border-strong: #333333;
+    --print-muted: #5A5A5A;
+    --print-head-bg: #F1EEE7;   /* faixa do card de seção — cinza-creme neutro */
+  }
+
+  body { background: var(--bg); padding: var(--sp-5) 0 var(--sp-6); }
+
+  .mockup-label {
+    max-width: 760px; margin: 0 auto var(--sp-2); padding: 0 var(--sp-3);
+    font-size: var(--fs-small); font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+
+  .pdf-page {
+    background: var(--print-bg);
+    color: var(--print-text);
+    font-family: var(--font-sans);
+    max-width: 760px;
+    margin: 0 auto var(--sp-6);
+    padding: var(--sp-5);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* Cabeçalho da página */
+  .pdf-page h1 { color: var(--print-text); font-size: var(--fs-display); font-weight: 700; margin: 0 0 2px; }
+  .pdf-head {
+    display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding-bottom: var(--sp-3);
+    border-bottom: 2px solid var(--print-border-strong);
+    margin-bottom: var(--sp-4);
+  }
+  .pdf-meta { color: var(--print-muted); font-size: var(--fs-small); }
+  /* Rende N pães (req 5) — destaque à direita do cabeçalho */
+  .pdf-yield {
+    font-size: var(--fs-small); font-weight: 700; color: var(--print-text);
+    border: 1.5px solid var(--print-border-strong);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-1) var(--sp-3);
+    white-space: nowrap;
+  }
+  .pdf-yield strong { font-size: var(--fs-sub); }
+
+  /* Card de seção (req 1) — faixa de título + corpo com tabela */
+  .sec-card {
+    border: 1px solid var(--print-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: var(--sp-4);
+  }
+  .sec-card > .sec-head {
+    background: var(--print-head-bg);
+    color: var(--print-text);
+    font-size: var(--fs-small);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 700;
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--print-border);
+  }
+  .sec-card > .sec-body { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+
+  /* Tabela de ingredientes — layout FIXO e colgroup idêntico em TODAS as
+     seções, garantindo as colunas % e Peso alinhadas (req 4). A coluna
+     Proporção existe SÓ no Fermento (req 3): ali ela ocupa o espaço do nome,
+     sem deslocar % / Peso — que ficam nas mesmas posições das demais tabelas. */
+  table.rt { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.rt col.c-name { width: auto; }
+  table.rt col.c-pct  { width: 18%; }
+  table.rt col.c-wt   { width: 22%; }
+  table.rt th {
+    text-align: left; color: var(--print-text); font-size: var(--fs-small);
+    text-transform: uppercase; font-weight: 700;
+    border-bottom: 2px solid var(--print-border-strong);
+    padding: var(--sp-1) var(--sp-2);
+  }
+  table.rt td {
+    border-bottom: 1px solid var(--print-border);
+    padding: var(--sp-1) var(--sp-2);
+    color: var(--print-text);
+  }
+  table.rt th.num, table.rt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.rt tfoot td {
+    border-top: 2px solid var(--print-border-strong);
+    border-bottom: none; font-weight: 700;
+  }
+
+  /* .kv para blocos chave→valor (Hidratação) */
+  .kv { width: 100%; border-collapse: collapse; }
+  .kv td { border-bottom: 1px solid var(--print-border); padding: var(--sp-1) var(--sp-2); }
+  .kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .kv tr:last-child td { border-bottom: none; font-weight: 700; }
+
+  .pdf-footer {
+    margin-top: var(--sp-4); padding-top: var(--sp-2);
+    border-top: 1px solid var(--print-border);
+    text-align: right; color: var(--print-muted); font-size: var(--fs-small);
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-label">Mockup — PDF Receita v2 (cards por seção · proporções · fermento reconstruído · rende N pães)</div>
+<div class="pdf-page">
+
+  <div class="pdf-head">
+    <div>
+      <h1>Pão de Fermentação Natural</h1>
+      <div class="pdf-meta">Gerado em 05/07/2026 · Calculadora de Pão</div>
+    </div>
+    <div class="pdf-yield">Rende <strong>4</strong> pães</div>
+  </div>
+
+  <!-- FARINHAS -->
+  <div class="sec-card">
+    <div class="sec-head">Farinhas</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Farinha de Trigo Tipo 1</td><td class="num">90,00</td><td class="num">900,0</td></tr>
+          <tr><td colspan="2">Farinha Integral</td><td class="num">10,00</td><td class="num">100,0</td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="2">Total Farinhas</td><td class="num">100,00</td><td class="num">1000,0</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- LÍQUIDOS -->
+  <div class="sec-card">
+    <div class="sec-head">Líquidos</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Água</td><td class="num">70,00</td><td class="num">700,0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SAL E EXTRAS -->
+  <div class="sec-card">
+    <div class="sec-head">Sal e Extras</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"></colgroup>
+        <thead><tr>
+          <th colspan="2">Ingrediente</th><th class="num">%</th><th class="num">Peso (g)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Sal</td><td class="num">2,00</td><td class="num">20,0</td></tr>
+          <tr><td colspan="2">Azeite</td><td class="num">4,00</td><td class="num">40,0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FERMENTO NATURAL (reconstruído: isca → farinha → água → Total) -->
+  <div class="sec-card">
+    <div class="sec-head">Fermento Natural</div>
+    <div class="sec-body">
+      <table class="rt">
+        <colgroup><col class="c-name" span="2"><col class="c-pct"><col class="c-wt"></colgroup>
+        <thead><tr>
+          <th colspan="2">Componente</th><th class="num">Proporção</th><th class="num">Peso (g)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td colspan="2">Isca</td><td class="num">20</td><td class="num">20,0</td></tr>
+          <tr><td colspan="2">Farinha de Trigo Tipo 1</td><td class="num">80</td><td class="num">80,0</td></tr>
+          <tr><td colspan="2">Farinha Integral</td><td class="num">20</td><td class="num">20,0</td></tr>
+          <tr><td colspan="2">Água</td><td class="num">80</td><td class="num">80,0</td></tr>
+        </tbody>
+        <tfoot><tr>
+          <td colspan="2">Total de fermento</td><td class="num">200</td><td class="num">200,0</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- HIDRATAÇÃO -->
+  <div class="sec-card">
+    <div class="sec-head">Hidratação</div>
+    <div class="sec-body">
+      <table class="kv">
+        <tr><td>Nominal</td><td>70,00%</td></tr>
+        <tr><td>Real</td><td>72,73%</td></tr>
+        <tr><td>Farinha Real Consumida</td><td>1100,0 g</td></tr>
+        <tr><td>Total da massa</td><td>1200,0 g</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="pdf-footer">Página 1/1</div>
+</div>
+
+</body>
+</html>

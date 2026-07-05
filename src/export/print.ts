@@ -1,47 +1,55 @@
 /**
  * print.ts — Views de impressão "Salvar em PDF" (issue 019 base, refactor
- * issue 028, spec §8/§9/§14.5).
+ * issue 028, refactor v2 issue 034, spec §8/§9/§14.5).
  *
  * O que faz: monta, dentro de `#print-root`, relatórios imprimíveis que
- * REUSAM o layout de cards/tabelas da tela (`.card` + `.table`/`.kv`), com uma
- * paleta dedicada de impressão (tokens `--print-*`, `@media print` de
- * design-system.css). Refactor 028: **2 PDFs por contexto** em vez de 1 PDF com
- * seção de custo condicional —
- *  - `renderRecipePrintView` — Receita (ingredientes/proporções/totais, ZERO $).
- *  - `renderRecipeCostsPrintView` — Custos (custo/g, custo por ingrediente,
- *    precificação, prejuízo) — semântica contábil: débito vermelho, crédito azul.
- *  - `renderHistoryPrintView` — Fornadas (produção/vendas, ZERO $).
+ * REUSAM o layout de cards/tabelas da tela, com uma paleta dedicada de
+ * impressão (tokens `--print-*`, `@media print` de design-system.css). 4 PDFs
+ * por contexto —
+ *  - `renderRecipePrintView` — Receita v2 (cards por seção, fermento
+ *    reconstruído Isca→farinha(s)→Água→Total, coluna Proporção, badge "Rende N
+ *    pães", ZERO $ — mockups/pdf-receita-v2.html, issue 034).
+ *  - `renderRecipeCostsPrintView` — Custos v2 (base = Receita v2 + coluna
+ *    Custo à direita por seção, "Custo Total" no lugar de Hidratação,
+ *    Precificação mantida depois — mockups/pdf-custos-v2.html, issue 034).
+ *  - `renderHistoryPrintView` — Fornadas (produção/vendas, ZERO $) — INTOCADA.
  *  - `renderHistoryCostsPrintView` — Financeiro do período (custo/faturamento/
- *    lucro, prejuízo por fornada).
+ *    lucro, prejuízo por fornada) — INTOCADA.
  * `mountPrintButton(actionsRoot, onPrint?, label?)` cria o botão que chama
  * `onPrint` (default `window.print()`) SÓ no clique (§8: nunca automático).
  *
- * Semântica de cor (§ "Direção visual" da issue 028): preto (`--print-text`) é
- * o padrão de TUDO (títulos, th, labels, %, peso, data, margem); azul-escuro
- * (`.pdf-credit`) só em CRÉDITO (dinheiro entrando: preço/faturamento/lucro≥0);
- * vermelho (`.pdf-debit`) só em DÉBITO (dinheiro saindo: custo/g, custo por
- * ingrediente, custo total, custo/unidade, lucro<0/prejuízo). Regra de sinal do
- * Lucro reusa `isLoss` de `core/pricing` (sem duplicar predicado, §4/§5.C).
+ * Semântica de cor (§ "Direção visual" da issue 028, mantida na v2): preto
+ * (`--print-text`) é o padrão de TUDO (títulos, th, labels, %/Proporção, peso,
+ * data, margem); azul-escuro (`.pdf-credit`) só em CRÉDITO (dinheiro entrando:
+ * preço/faturamento/lucro≥0); vermelho (`.pdf-debit`) só em DÉBITO (dinheiro
+ * saindo: custo por ingrediente/seção, custo total, custo/unidade,
+ * lucro<0/prejuízo). Regra de sinal do Lucro reusa `isLoss` de `core/pricing`
+ * (sem duplicar predicado, §4/§5.C).
  *
  * Reuso / camadas (regra de ouro 2, §1.6): NÃO recalcula nada — consome
  * `state`+`summary` de `recalculate` (008), `entries` de `computeBakeDerived`
- * e `summary` de `aggregatePeriod` (013). Subtotais de peso ("Total Farinhas",
- * "Total da massa") são soma PRESENTACIONAL de pesos já derivados (precedente
- * sancionado em ingredientsTable.ts §2.A.2 — não é recálculo de negócio).
- * Formatação pt-BR via `core/format.ts` (§9: % 2 casas, peso 1, R$ 2, custo/g
- * 4 — arredondamento só na exibição). Escape STRING→DOM 100% via `dom.ts h()`/
- * `textContent` (regra de ouro 3). Datas em `aaaa-mm-dd` via `formatDate`
- * (§7.1) — mesma convenção da tela (historyView subtitle).
+ * e `summary` de `aggregatePeriod` (013). Custo por linha do fermento reusa
+ * `ingredientRecipeCost` (puro, `core/costs.ts`) — mesma fórmula do core, NÃO
+ * duplicação (Isca sempre fica de fora, §2.B.2, custo fixo R$0,00). Subtotais
+ * de peso/custo ("Total Farinhas", "Total de fermento", "Total da massa") são
+ * soma PRESENTACIONAL de valores já derivados (precedente sancionado em
+ * ingredientsTable.ts §2.A.2 — não é recálculo de negócio); propagam null se
+ * algum termo for impossível (§5.C, null≠0). Formatação pt-BR via
+ * `core/format.ts` (§9: % 2 casas, peso 1, R$ 2, Proporção livre sem zero à
+ * direita — arredondamento só na exibição). Escape STRING→DOM 100% via
+ * `dom.ts h()`/`textContent` (regra de ouro 3). Datas em `aaaa-mm-dd` via
+ * `formatDate` (§7.1) — mesma convenção da tela (historyView subtitle).
  *
  * `window.print()` disparado só em handler de clique — nunca em init (§8).
  * Zero rede, zero secret, sem eval (§11.1). Docs oficiais (regra de ouro 4):
  * - https://developer.mozilla.org/en-US/docs/Web/API/Window/print
  *
  * Seções implementadas: §8 (impressão/PDF), §9 (formatação de exibição),
- * §14.5 (impressão do Histórico).
+ * §2.B (fermento/isca), §3.E (precificação), §14.5 (impressão do Histórico).
  */
-import type { Recipe, RecipeSummary, BakeEntry, BakeHistorySummary } from '../core/types';
-import { formatWeight, formatPercent, formatCurrency, formatCostPerGram, formatDate } from '../core/format';
+import type { Recipe, RecipeSummary, BakeEntry, BakeHistorySummary, Sourdough } from '../core/types';
+import { formatWeight, formatPercent, formatCurrency, formatProportion, formatDate } from '../core/format';
+import { ingredientRecipeCost } from '../core/costs';
 import { isLoss } from '../core/pricing';
 import { h } from '../ui/dom';
 
@@ -62,10 +70,6 @@ const DASH = '—';
 const pct = (n: number | null): string => (n === null ? DASH : `${formatPercent(n)}%`);
 const money = (n: number | null | undefined): string =>
   n === null || n === undefined ? DASH : formatCurrency(n);
-const costPerGram = (n: number | null | undefined): string =>
-  n === null || n === undefined ? DASH : formatCostPerGram(n);
-const weight = (n: number | null | undefined): string =>
-  n === null || n === undefined ? DASH : `${formatWeight(n)} g`;
 
 // Seções do mockup aprovado `mockups/pdf-refactor.html` (§8): só Farinhas,
 // Líquidos e "Sal e Extras" — não há "Gorduras" isolada (Azeite/gorduras entram
@@ -115,163 +119,281 @@ function pageCard(title: string, meta: string, body: HTMLElement[]): HTMLElement
   return card;
 }
 
-/** `<h2 class="pdf-section">` (título em maiúsculas via CSS `text-transform`). */
+/** `<h2 class="pdf-section">` (título em maiúsculas via CSS `text-transform`) — só Histórico (v2 usa `secCard`). */
 function section(title: string): HTMLElement {
   return h('h2', { className: 'pdf-section' }, [title]);
 }
 
 const generatedMeta = (): string => `Gerado em ${formatDate(new Date())} · Calculadora de Pão`;
 
+// ===== Helpers v2 (issue 034 — cards por seção, `table.rt` alinhada) =====
+
 /**
- * PDF Receita (issue 028, §8): ingredientes por categoria (%/peso), fermento,
- * hidratação e total da massa. ZERO coluna/valor financeiro.
+ * `.sec-card` (mockups pdf-receita-v2/pdf-custos-v2, req 1): faixa de título
+ * (`.sec-head`) + corpo (`.sec-body`). `content` aceita 1 ou mais elementos
+ * (ex.: Precificação = `.kv` + alerta opcional).
  */
-export function renderRecipePrintView(root: HTMLElement, opts: RecipePrintViewOptions): void {
-  const { recipe, summary } = opts;
-  const body: HTMLElement[] = [];
-
-  // Ingredientes por categoria — tabela %/peso (Farinhas ganha tfoot "Total").
-  for (const sec of CATEGORY_SECTIONS) {
-    const rows = recipe.ingredients.filter((i) => bucketOf(i.category) === sec.key);
-    if (rows.length === 0) continue;
-    body.push(section(sec.title));
-
-    const table = h('table', { className: 'table' });
-    table.appendChild(
-      h('thead', {}, [
-        h('tr', {}, [
-          h('th', {}, ['Ingrediente']),
-          h('th', { className: 'num' }, ['%']),
-          h('th', { className: 'num' }, ['Peso (g)']),
-        ]),
-      ]),
-    );
-    const tbody = h('tbody');
-    for (const ing of rows) {
-      tbody.appendChild(
-        h('tr', {}, [td(ing.name), td(formatPercent(ing.percentage), { num: true }), td(formatWeight(ing.weight), { num: true })]),
-      );
-    }
-    table.appendChild(tbody);
-
-    // Farinhas: tfoot "Total Farinhas" — soma presentacional de %/peso (§2.A.2).
-    if (sec.key === 'flour') {
-      const sumPct = rows.reduce((a, i) => a + i.percentage, 0);
-      const sumWeight = rows.reduce((a, i) => a + i.weight, 0);
-      table.appendChild(
-        h('tfoot', {}, [
-          h('tr', {}, [td('Total Farinhas'), td(formatPercent(sumPct), { num: true }), td(formatWeight(sumWeight), { num: true })]),
-        ]),
-      );
-    }
-    body.push(table);
-  }
-
-  // Fermento Natural (§2.B).
-  const sd = recipe.sourdough;
-  body.push(section('Fermento Natural'));
-  body.push(
-    kvTable([
-      ['Peso total', td(weight(sd.totalWeight))],
-      ['Farinha do fermento', td(weight(sd.flourWeight))],
-      ['Água do fermento', td(weight(sd.waterWeight))],
-    ]),
-  );
-
-  // Hidratação (§2.C/§2.D) + Total da massa (Σpesos + fermento — §2.A.2).
-  const doughWeight =
-    recipe.ingredients.reduce((a, i) => a + i.weight, 0) + (sd.totalWeight ?? 0);
-  body.push(section('Hidratação'));
-  body.push(
-    kvTable([
-      ['Nominal', td(pct(summary.hydration.nominal))],
-      ['Real', td(pct(summary.hydration.real))],
-      ['Farinha Real Consumida', td(`${formatWeight(summary.realFlourConsumed)} g`)],
-      ['Total da massa', td(`${formatWeight(doughWeight)} g`)],
-    ]),
-  );
-
-  root.appendChild(pageCard(recipe.name, generatedMeta(), body));
+function secCard(title: string, content: HTMLElement | HTMLElement[]): HTMLElement {
+  const bodyEl = h('div', { className: 'sec-body' });
+  for (const el of Array.isArray(content) ? content : [content]) bodyEl.appendChild(el);
+  return h('div', { className: 'sec-card' }, [h('div', { className: 'sec-head' }, [title]), bodyEl]);
 }
 
 /**
- * PDF Custos (issue 028, §3.E/§9): custo por ingrediente (tudo débito), custo
- * total (tfoot débito) e precificação (custo/un débito, preço crédito, margem
- * neutra, lucro por sinal) + alerta de prejuízo (`isLoss`, §4/§5.C).
+ * "Página" do PDF v2: `.pdf-head` (h1 + `.pdf-meta` + badge `.pdf-yield` "Rende
+ * N pães", req 5) seguido das seções e do rodapé — substitui `pageCard` (que
+ * segue servindo o Histórico, inalterado).
+ */
+function recipePageV2(title: string, meta: string, yieldQty: number, sections: HTMLElement[]): HTMLElement {
+  const card = h('section', { className: 'card' });
+  const headText = h('div', {}, [h('h1', {}, [title]), h('div', { className: 'pdf-meta' }, [meta])]);
+  const yieldBadge = h('div', { className: 'pdf-yield' }, ['Rende ', h('strong', {}, [String(yieldQty)]), ' pães']);
+  card.appendChild(h('div', { className: 'pdf-head' }, [headText, yieldBadge]));
+  for (const el of sections) card.appendChild(el);
+  card.appendChild(h('div', { className: 'pdf-footer' }, ['Página 1/1']));
+  return card;
+}
+
+/** Uma linha de `table.rt`: nome (colspan=2) + célula %/Proporção + célula Peso [+ célula Custo]. */
+interface RtRow {
+  name: string;
+  pct: string;
+  weight: string;
+  /** Só quando `withCost`; texto já formatado (`money`/DASH). */
+  cost?: string;
+  /** Classe da célula Custo (`pdf-debit`/`undefined` = neutro, §5.C). */
+  costCls?: string;
+}
+
+/**
+ * `table.rt` (mockups v2, req 3/4): `table-layout: fixed` + colgroup idêntico
+ * (`c-name` span=2, `c-pct`, `c-wt`[, `c-cost`]) em TODA seção — garante as
+ * colunas %/Proporção e Peso (e Custo, nos Custos) alinhadas verticalmente
+ * entre Farinhas/Líquidos/Sal e Extras/Fermento (req 4). `pctLabel` é "%" nas
+ * seções comuns e "Proporção" só no Fermento (req 3, mesmo slot — nunca as
+ * duas colunas juntas).
+ */
+function rtTable(opts: {
+  nameLabel: string;
+  pctLabel: string;
+  rows: RtRow[];
+  foot?: RtRow;
+  withCost: boolean;
+}): HTMLElement {
+  const { nameLabel, pctLabel, rows, foot, withCost } = opts;
+  const table = h('table', { className: 'rt' });
+
+  const cols = [h('col', { className: 'c-name', span: 2 }), h('col', { className: 'c-pct' }), h('col', { className: 'c-wt' })];
+  if (withCost) cols.push(h('col', { className: 'c-cost' }));
+  table.appendChild(h('colgroup', {}, cols));
+
+  const headCells = [h('th', { colspan: 2 }, [nameLabel]), h('th', { className: 'num' }, [pctLabel]), h('th', { className: 'num' }, ['Peso (g)'])];
+  if (withCost) headCells.push(h('th', { className: 'num' }, ['Custo']));
+  table.appendChild(h('thead', {}, [h('tr', {}, headCells)]));
+
+  const rowCells = (r: RtRow): HTMLElement[] => {
+    const cells = [h('td', { colspan: 2 }, [r.name]), td(r.pct, { num: true }), td(r.weight, { num: true })];
+    if (withCost) cells.push(td(r.cost ?? DASH, { num: true, cls: r.costCls }));
+    return cells;
+  };
+
+  table.appendChild(h('tbody', {}, rows.map((r) => h('tr', {}, rowCells(r)))));
+  if (foot) table.appendChild(h('tfoot', {}, [h('tr', {}, rowCells(foot))]));
+  return table;
+}
+
+/**
+ * Fermento Natural reconstruído (req 2): Isca → farinha(s) → Água → Total
+ * (tfoot, negrito). Suporta múltiplas `sourdough.flours[]` (refactor-farinhas).
+ * `withCost=false` (Receita): sem coluna Custo. `withCost=true` (Custos):
+ * Isca sempre `R$ 0,00` (§2.B.2); custo de cada farinha/água via
+ * `ingredientRecipeCost` (puro, `core/costs.ts` — reuso, não recálculo);
+ * `null` (Peso do Produto ≤0) → célula "—" neutra (§5.C). Total do fermento =
+ * `sd.totalCost` (já derivado por `recalculate` — soma exata do core, não
+ * recomputada aqui).
+ */
+function sourdoughTable(sd: Sourdough, withCost: boolean): HTMLElement {
+  const iscaWeight = sd.iscaWeight ?? 0;
+  const waterWeight = sd.waterWeight ?? 0;
+  const flours = sd.flours;
+
+  const rows: RtRow[] = [];
+  rows.push({
+    name: 'Isca',
+    pct: formatProportion(sd.parts.isca),
+    weight: formatWeight(iscaWeight),
+    cost: withCost ? money(0) : undefined, // §2.B.2: Isca nunca tem custo
+    costCls: withCost ? 'pdf-debit' : undefined,
+  });
+  for (const f of flours) {
+    const w = f.weight ?? 0;
+    const flourCost = withCost ? ingredientRecipeCost(w, f.packageCost) : null;
+    rows.push({
+      name: f.name,
+      pct: formatProportion(f.proportion),
+      weight: formatWeight(w),
+      cost: withCost ? money(flourCost) : undefined,
+      costCls: withCost && flourCost !== null ? 'pdf-debit' : undefined,
+    });
+  }
+  const waterCost = withCost ? ingredientRecipeCost(waterWeight, sd.waterPackageCost) : null;
+  rows.push({
+    name: 'Água',
+    pct: formatProportion(sd.parts.water),
+    weight: formatWeight(waterWeight),
+    cost: withCost ? money(waterCost) : undefined,
+    costCls: withCost && waterCost !== null ? 'pdf-debit' : undefined,
+  });
+
+  const totalProportion = sd.parts.isca + flours.reduce((a, f) => a + f.proportion, 0) + sd.parts.water;
+  const foot: RtRow = {
+    name: 'Total de fermento',
+    pct: formatProportion(totalProportion),
+    weight: formatWeight(sd.totalWeight ?? 0),
+    cost: withCost ? money(sd.totalCost) : undefined,
+    costCls: withCost && sd.totalCost !== undefined ? 'pdf-debit' : undefined,
+  };
+
+  return rtTable({ nameLabel: 'Componente', pctLabel: 'Proporção', rows, foot, withCost });
+}
+
+/**
+ * PDF Receita v2 (issue 034, mockups/pdf-receita-v2.html): cards por seção
+ * (Farinhas/Líquidos/Sal e Extras/Fermento Natural/Hidratação), fermento
+ * reconstruído com coluna Proporção, badge "Rende N pães". ZERO $.
+ */
+export function renderRecipePrintView(root: HTMLElement, opts: RecipePrintViewOptions): void {
+  const { recipe, summary } = opts;
+  const sections: HTMLElement[] = [];
+
+  // Ingredientes por categoria — table.rt %/peso (Farinhas ganha tfoot "Total").
+  for (const sec of CATEGORY_SECTIONS) {
+    const rows = recipe.ingredients.filter((i) => bucketOf(i.category) === sec.key);
+    if (rows.length === 0) continue;
+
+    const rtRows: RtRow[] = rows.map((ing) => ({
+      name: ing.name,
+      pct: formatPercent(ing.percentage),
+      weight: formatWeight(ing.weight),
+    }));
+
+    let foot: RtRow | undefined;
+    if (sec.key === 'flour') {
+      const sumPct = rows.reduce((a, i) => a + i.percentage, 0);
+      const sumWeight = rows.reduce((a, i) => a + i.weight, 0);
+      foot = { name: 'Total Farinhas', pct: formatPercent(sumPct), weight: formatWeight(sumWeight) };
+    }
+
+    sections.push(
+      secCard(sec.title, rtTable({ nameLabel: 'Ingrediente', pctLabel: '%', rows: rtRows, foot, withCost: false })),
+    );
+  }
+
+  // Fermento Natural reconstruído (req 2/3).
+  sections.push(secCard('Fermento Natural', sourdoughTable(recipe.sourdough, false)));
+
+  // Hidratação (§2.C/§2.D) + Total da massa (Σpesos + fermento — §2.A.2).
+  const doughWeight = recipe.ingredients.reduce((a, i) => a + i.weight, 0) + (recipe.sourdough.totalWeight ?? 0);
+  sections.push(
+    secCard(
+      'Hidratação',
+      kvTable([
+        ['Nominal', td(pct(summary.hydration.nominal))],
+        ['Real', td(pct(summary.hydration.real))],
+        ['Farinha Real Consumida', td(`${formatWeight(summary.realFlourConsumed)} g`)],
+        ['Total da massa', td(`${formatWeight(doughWeight)} g`)],
+      ]),
+    ),
+  );
+
+  root.appendChild(recipePageV2(recipe.name, generatedMeta(), recipe.pricing.quantity, sections));
+}
+
+/**
+ * PDF Custos v2 (issue 034, mockups/pdf-custos-v2.html): base idêntica à
+ * Receita v2 + coluna Custo à direita por seção (débito), "Custo Total"
+ * (fornada + um pão) no lugar da Hidratação, Precificação mantida depois
+ * (Lucro por pão + Lucro da fornada, alerta de prejuízo via `isLoss`).
  */
 export function renderRecipeCostsPrintView(root: HTMLElement, opts: RecipePrintViewOptions): void {
   const { recipe, summary } = opts;
-  const body: HTMLElement[] = [];
+  const sections: HTMLElement[] = [];
 
-  // Custo por ingrediente — custo/g e custo total, ambos DÉBITO (dinheiro sai).
-  body.push(section('Custo por ingrediente'));
-  const table = h('table', { className: 'table' });
-  table.appendChild(
-    h('thead', {}, [
-      h('tr', {}, [
-        h('th', {}, ['Ingrediente']),
-        h('th', { className: 'num' }, ['Custo/g']),
-        h('th', { className: 'num' }, ['Custo total']),
-      ]),
-    ]),
-  );
-  const tbody = h('tbody');
-  // débito só quando há valor (null≠0 → "—" neutro, §5.C).
-  const debitCell = (text: string, hasValue: boolean): HTMLElement =>
-    td(text, { num: true, cls: hasValue ? 'pdf-debit' : undefined });
-  for (const ing of recipe.ingredients) {
-    tbody.appendChild(
-      h('tr', {}, [
-        td(ing.name),
-        debitCell(costPerGram(ing.costPerGram), ing.costPerGram !== undefined && ing.costPerGram !== null),
-        debitCell(money(ing.recipeCost), ing.recipeCost !== undefined && ing.recipeCost !== null),
-      ]),
+  for (const sec of CATEGORY_SECTIONS) {
+    const rows = recipe.ingredients.filter((i) => bucketOf(i.category) === sec.key);
+    if (rows.length === 0) continue;
+
+    const rtRows: RtRow[] = rows.map((ing) => ({
+      name: ing.name,
+      pct: formatPercent(ing.percentage),
+      weight: formatWeight(ing.weight),
+      cost: money(ing.recipeCost),
+      costCls: ing.recipeCost !== undefined && ing.recipeCost !== null ? 'pdf-debit' : undefined,
+    }));
+
+    let foot: RtRow | undefined;
+    if (sec.key === 'flour') {
+      const sumPct = rows.reduce((a, i) => a + i.percentage, 0);
+      const sumWeight = rows.reduce((a, i) => a + i.weight, 0);
+      // Soma presentacional (§2.A.2) com propagação de null (§5.C, null≠0):
+      // qualquer custo impossível torna o subtotal impossível, nunca 0 forjado.
+      const costs = rows.map((i) => i.recipeCost);
+      const sumCost = costs.some((c) => c === undefined || c === null)
+        ? null
+        : costs.reduce((a: number, c) => a + (c as number), 0);
+      foot = {
+        name: 'Total Farinhas',
+        pct: formatPercent(sumPct),
+        weight: formatWeight(sumWeight),
+        cost: money(sumCost),
+        costCls: sumCost !== null ? 'pdf-debit' : undefined,
+      };
+    }
+
+    sections.push(
+      secCard(sec.title, rtTable({ nameLabel: 'Ingrediente', pctLabel: '%', rows: rtRows, foot, withCost: true })),
     );
   }
-  // Fermento Natural (§2.B): custo/g e custo total agregados da sub-receita.
-  const sd = recipe.sourdough;
-  tbody.appendChild(
-    h('tr', {}, [
-      td('Fermento Natural'),
-      debitCell(costPerGram(sd.costPerGram), sd.costPerGram !== undefined && sd.costPerGram !== null),
-      debitCell(money(sd.totalCost), sd.totalCost !== undefined && sd.totalCost !== null),
-    ]),
-  );
-  table.appendChild(tbody);
-  // tfoot: CUSTO TOTAL = summary.totalCost (débito).
-  table.appendChild(
-    h('tfoot', {}, [
-      h('tr', {}, [
-        td('Custo total'),
-        td('', { num: true }),
-        debitCell(money(summary.totalCost), summary.totalCost !== null),
+
+  // Fermento Natural — Isca custo sempre R$ 0,00 (§2.B.2).
+  sections.push(secCard('Fermento Natural', sourdoughTable(recipe.sourdough, true)));
+
+  // Custo Total (req 7) — no lugar da Hidratação: fornada (N pães) + um pão.
+  sections.push(
+    secCard(
+      'Custo Total',
+      kvTable([
+        [
+          `Custo da fornada (${recipe.pricing.quantity} pães)`,
+          summary.totalCost === null ? td(DASH) : td(money(summary.totalCost), { cls: 'pdf-debit' }),
+        ],
+        [
+          'Custo de um pão',
+          summary.costPerUnit === null ? td(DASH) : td(money(summary.costPerUnit), { cls: 'pdf-debit' }),
+        ],
       ]),
-    ]),
+    ),
   );
-  body.push(table);
 
-  // Precificação (§3.E): custo/un débito, preço crédito, margem neutra, lucro por sinal.
-  body.push(section('Precificação'));
-  body.push(
+  // Precificação (req 8, mantida após Custo Total): preço crédito, margem
+  // neutra, Lucro por pão + Lucro da fornada por sinal (`signedMoneyTd`).
+  const precificacaoBody: HTMLElement[] = [
     kvTable([
-      ['Custo por unidade', summary.costPerUnit === null ? td(DASH) : td(money(summary.costPerUnit), { cls: 'pdf-debit' })],
-      ['Preço de venda', summary.salePrice === null ? td(DASH) : td(money(summary.salePrice), { cls: 'pdf-credit' })],
+      ['Preço de venda (un.)', summary.salePrice === null ? td(DASH) : td(money(summary.salePrice), { cls: 'pdf-credit' })],
       ['Margem de lucro', td(pct(summary.profitMargin))], // % não é fluxo de caixa → neutro
-      ['Lucro total', signedMoneyTd(summary.totalProfit, false)], // crédito ≥0 / débito <0
+      ['Lucro por pão', signedMoneyTd(summary.profitPerUnit)],
+      ['Lucro da fornada', signedMoneyTd(summary.totalProfit)],
     ]),
-  );
+  ];
 
-  // Alerta de prejuízo (variante 2b): reusa `isLoss` (§4/§5.C) — só quando ambos
-  // os operandos existem (custo/un e preço); null≠0 não dispara alerta forjado.
-  if (
-    summary.costPerUnit !== null &&
-    summary.salePrice !== null &&
-    isLoss(summary.costPerUnit, summary.salePrice)
-  ) {
-    body.push(h('div', { className: 'pdf-alert' }, ['⚠ PREJUÍZO — preço não cobre o custo']));
+  // Alerta de prejuízo: reusa `isLoss` (§4/§5.C) — só quando ambos os
+  // operandos existem (custo/un e preço); null≠0 não dispara alerta forjado.
+  if (summary.costPerUnit !== null && summary.salePrice !== null && isLoss(summary.costPerUnit, summary.salePrice)) {
+    precificacaoBody.push(h('div', { className: 'pdf-alert' }, ['⚠ PREJUÍZO — preço não cobre o custo']));
   }
+  sections.push(secCard('Precificação', precificacaoBody));
 
-  root.appendChild(pageCard(`Custos — ${recipe.name}`, generatedMeta(), body));
+  root.appendChild(recipePageV2(recipe.name, generatedMeta(), recipe.pricing.quantity, sections));
 }
 
 const periodMeta = (summary: BakeHistorySummary): string =>

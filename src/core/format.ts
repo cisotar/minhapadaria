@@ -78,6 +78,17 @@ const costPerGramOptions: NumberFormatOptionsWithRounding = {
 };
 const costPerGramFormatter = new Intl.NumberFormat('pt-BR', costPerGramOptions);
 
+// Proporção do fermento: número livre >= 0, até 2 casas, SEM zeros à direita
+// (minimumFractionDigits: 0). Ex: 1 -> "1", 20 -> "20", 1.5 -> "1,5", 0.25 -> "0,25".
+// Sem separador de milhar (proporção é um fator pequeno, não valor monetário).
+const proportionOptions: NumberFormatOptionsWithRounding = {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+  useGrouping: false,
+  roundingMode: 'halfExpand',
+};
+const proportionFormatter = new Intl.NumberFormat('pt-BR', proportionOptions);
+
 /**
  * Normaliza o separador entre "R$" e o número. Intl (dependendo da versão de
  * ICU/Node) usa NBSP (U+00A0) ou narrow-NBSP (U+202F); trocamos por espaço
@@ -125,6 +136,11 @@ export function formatCurrency(n: number): string {
 /** formatCostPerGram — R$ com 4 casas (§9/§2.A.1). Ex: 0.064 -> "R$ 0,0640". */
 export function formatCostPerGram(n: number): string {
   return normalizeSpaces(costPerGramFormatter.format(n));
+}
+
+/** formatProportion — proporção do fermento (>= 0), até 2 casas, vírgula pt-BR e sem zeros à direita. Ex: 1.5 -> "1,5". */
+export function formatProportion(n: number): string {
+  return proportionFormatter.format(n);
 }
 
 /**
