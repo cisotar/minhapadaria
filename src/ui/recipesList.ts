@@ -17,13 +17,14 @@
  * (dom.ts) — nome da receita (dado do usuário) nunca vai a `innerHTML`
  * (regra de ouro 3: escape via `textContent`, XSS inerte).
  *
- * Sem diálogo/modal no design system: usa `window.confirm`/`window.prompt`
- * (API nativa, regra de ouro 1) por padrão, mas SEMPRE injetáveis via `deps`
- * para determinismo em teste jsdom (nenhum `window.confirm` real roda nos
- * testes). Excluir avisa que fornadas ficam órfãs (§14.7 — `remove` já não
- * toca `mp.bakes.v1`, sem cascade). Restaurar backup: falha de import nunca
- * perde dados (validação de `importBackup` ocorre ANTES de qualquer escrita,
- * decisão 012.3) — mensagem pt-BR na região de status + `onError` opcional.
+ * Excluir usa `window.confirm` (API nativa, regra de ouro 1) por padrão, mas
+ * SEMPRE injetável via `deps.confirm` para determinismo em teste jsdom (nenhum
+ * `window.confirm` real roda nos testes) — avisa que fornadas ficam órfãs
+ * (§14.7 — `remove` já não toca `mp.bakes.v1`, sem cascade). Renomear (issue
+ * 033) é edição inline no `<h3>` do card, sem `window.prompt`/modal (ver
+ * `startInlineEdit`). Restaurar backup: falha de import nunca perde dados
+ * (validação de `importBackup` ocorre ANTES de qualquer escrita, decisão
+ * 012.3) — mensagem pt-BR na região de status + `onError` opcional.
  *
  * Diferenças conscientes vs. `mockups/receitas.html` (registradas, regra do
  * cliente — divergência documentada):
@@ -92,8 +93,6 @@ export interface RecipesListDeps {
   headerRoot?: HTMLElement;
   /** Injetável para teste (default `window.confirm`). */
   confirm?: (message: string) => boolean;
-  /** Injetável para teste (default `window.prompt`). */
-  prompt?: (message: string, defaultValue?: string) => string | null;
   /** Injetável para teste (default `location.assign`). */
   navigate?: (url: string) => void;
   /** Injetável para teste (default `readBackupFile`, FileReader real). */
@@ -108,7 +107,6 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   const { recipeStore, storage } = deps;
   const headerRoot = deps.headerRoot ?? root; // issue 025 item 3 — default preserva a suíte isolada
   const confirmFn = deps.confirm ?? ((message: string) => window.confirm(message));
-  const promptFn = deps.prompt ?? ((message: string, def?: string) => window.prompt(message, def));
   const navigateFn = deps.navigate ?? ((url: string) => { window.location.assign(url); });
   const readFileFn = deps.readFile ?? readBackupFile;
   const downloadFn = deps.download ?? ((json: string) => downloadBackupFile(json));
@@ -216,11 +214,61 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     renderList();
   }
 
-  function renameRecipe(id: string, currentName: string): void {
-    const result = promptFn('Novo nome da receita:', currentName);
-    if (result === null || result === '' || result === currentName) return; // cancelado/vazio/sem mudança
-    recipeStore.rename(id, result);
-    renderList();
+  /**
+   * Edição inline do nome (issue 033, refactor II §134): substitui o `<h3>`
+   * do card por um `<input class="cell-input">` (§4.1 "sinal invertido" —
+   * campo editável vira box, molde reusado de `ingredientsTable.ts:237-246`),
+   * sem `window.prompt`/modal. Enter/blur confirmam; Esc cancela. Mesma
+   * tripla guarda do antigo prompt: vazio/igual ao atual → não grava.
+   */
+  function startInlineEdit(nameRef: { el: HTMLHeadingElement }, recipe: Recipe): void {
+    const originalName = recipe.name;
+    let settled = false; // evita blur pós Enter/Esc reprocessar a confirmação
+
+    const input = h('input', {
+      type: 'text',
+      className: 'cell-input',
+      value: originalName,
+      'aria-label': 'Novo nome da receita',
+    }) as HTMLInputElement;
+
+    function toH3(name: string): HTMLHeadingElement {
+      return h('h3', {}, [name]) as HTMLHeadingElement; // textContent — escapa XSS (regra 3)
+    }
+
+    function restore(name: string): void {
+      const h3 = toH3(name);
+      input.replaceWith(h3);
+      nameRef.el = h3; // reatribui a referência para o próximo clique em "Renomear"
+    }
+
+    function confirmEdit(): void {
+      if (settled) return;
+      settled = true;
+      const value = input.value;
+      if (value === '' || value === originalName) {
+        restore(originalName); // vazio/sem mudança — restaura, sem gravar
+        return;
+      }
+      recipeStore.rename(recipe.id, value);
+      restore(value);
+    }
+
+    function cancelEdit(): void {
+      if (settled) return;
+      settled = true;
+      restore(originalName);
+    }
+
+    on(input, 'keydown', (e) => {
+      if (e.key === 'Enter') confirmEdit();
+      else if (e.key === 'Escape') cancelEdit();
+    });
+    on(input, 'blur', () => confirmEdit());
+
+    nameRef.el.replaceWith(input);
+    input.focus();
+    input.select();
   }
 
   function deleteRecipe(id: string, name: string): void {
@@ -293,7 +341,8 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     const { summary } = recalculate(recipe); // §1.6 — única fonte dos derivados do card
 
     const card = h('div', { className: 'recipe-card' });
-    card.appendChild(h('h3', {}, [recipe.name])); // textContent — escapa XSS (regra 3)
+    const nameRef = { el: h('h3', {}, [recipe.name]) as HTMLHeadingElement }; // textContent — escapa XSS (regra 3)
+    card.appendChild(nameRef.el);
     card.appendChild(
       h('div', { className: 'meta' }, [
         `Editado ${formatDate(recipe.updatedAt)} · F total ${formatWeight(recipe.flourTotalWeight)} g`,
@@ -327,7 +376,7 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
     const renameBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Renomear']) as HTMLButtonElement;
     const deleteBtn = h('button', { type: 'button', className: 'btn btn-danger' }, ['Excluir']) as HTMLButtonElement;
     on(dupBtn, 'click', () => duplicateRecipe(recipe.id));
-    on(renameBtn, 'click', () => renameRecipe(recipe.id, recipe.name));
+    on(renameBtn, 'click', () => startInlineEdit(nameRef, recipe));
     on(deleteBtn, 'click', () => deleteRecipe(recipe.id, recipe.name));
     actions.appendChild(openLink);
     actions.appendChild(dupBtn);

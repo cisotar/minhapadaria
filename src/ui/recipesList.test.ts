@@ -52,7 +52,6 @@ interface MountDeps {
   storage?: StorageLike;
   recipeStore?: RecipeStore;
   confirm?: (message: string) => boolean;
-  prompt?: (message: string, defaultValue?: string) => string | null;
   navigate?: (url: string) => void;
   readFile?: (file: File) => Promise<string>;
   download?: (json: string) => void;
@@ -67,7 +66,6 @@ function mount(deps: MountDeps = {}) {
     recipeStore,
     storage,
     confirm: deps.confirm,
-    prompt: deps.prompt,
     navigate: deps.navigate,
     readFile: deps.readFile,
     download: deps.download,
@@ -171,20 +169,153 @@ describe('recipesList (jsdom)', () => {
     expect(recipeStore.get(original.id)!.ingredients[0].weight).not.toBe(999);
   });
 
-  it('7. renomear: prompt stub "Pão Novo" → h3 atualiza e get(id).name === "Pão Novo"', () => {
-    const storage = createMemoryStorage();
-    const recipeStore = makeStore(storage);
-    const original = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
-    const prompt = vi.fn().mockReturnValue('Pão Novo');
-    const { root } = mount({ storage, recipeStore, prompt });
+  // Issue 033 (refactor II): renomear vira edição inline no card, sem
+  // window.prompt/modal — casos 1-8 do Plano Técnico da issue 033.
+  describe('renomear inline (issue 033)', () => {
+    function clickRename(root: HTMLElement): void {
+      const renameBtn = Array.from(root.querySelectorAll('.recipe-card button')).find(
+        (b) => b.textContent === 'Renomear',
+      ) as HTMLButtonElement;
+      renameBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
 
-    const renameBtn = Array.from(root.querySelectorAll('.recipe-card button')).find(
-      (b) => b.textContent === 'Renomear',
-    ) as HTMLButtonElement;
-    renameBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    function getInlineInput(root: HTMLElement): HTMLInputElement {
+      return root.querySelector('.recipe-card input') as HTMLInputElement;
+    }
 
-    expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Novo');
-    expect(recipeStore.get(original.id)!.name).toBe('Pão Novo');
+    it('1. clique "Renomear" → h3 some, input.cell-input com valor atual e foco', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+      document.body.appendChild(root); // document.activeElement exige nó no documento
+
+      clickRename(root);
+
+      expect(root.querySelector('.recipe-card h3')).toBeNull();
+      const input = getInlineInput(root);
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('Pão Rústico');
+      expect(document.activeElement).toBe(input);
+
+      document.body.removeChild(root);
+    });
+
+    it('2. Enter com "Pão Novo" válido → rename chamado, h3 volta com novo nome, sem input', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const original = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = 'Pão Novo';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(recipeStore.get(original.id)!.name).toBe('Pão Novo');
+      expect(getInlineInput(root)).toBeNull();
+      expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Novo');
+    });
+
+    it('3. blur com "Pão Novo" válido → mesmo resultado do Enter', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const original = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = 'Pão Novo';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(recipeStore.get(original.id)!.name).toBe('Pão Novo');
+      expect(getInlineInput(root)).toBeNull();
+      expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Novo');
+    });
+
+    it('4. Esc → rename NÃO chamado, h3 restaurado com nome original', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const original = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+      const renameSpy = vi.spyOn(recipeStore, 'rename');
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = 'Xyz';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(renameSpy).not.toHaveBeenCalled();
+      expect(recipeStore.get(original.id)!.name).toBe('Pão Rústico');
+      expect(getInlineInput(root)).toBeNull();
+      expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Rústico');
+    });
+
+    it('5. confirmar com nome vazio → rename NÃO chamado, h3 restaurado', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+      const renameSpy = vi.spyOn(recipeStore, 'rename');
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = '';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(renameSpy).not.toHaveBeenCalled();
+      expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Rústico');
+    });
+
+    it('6. confirmar com valor === nome atual → rename NÃO chamado', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+      const renameSpy = vi.spyOn(recipeStore, 'rename');
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = 'Pão Rústico';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(renameSpy).not.toHaveBeenCalled();
+      expect(root.querySelector('.recipe-card h3')!.textContent).toBe('Pão Rústico');
+    });
+
+    it('7. window.prompt NÃO é chamado ao clicar "Renomear" nem ao confirmar (issue 033: fim do modal)', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const promptSpy = vi.spyOn(window, 'prompt');
+      const { root } = mount({ storage, recipeStore });
+
+      clickRename(root);
+      expect(promptSpy).not.toHaveBeenCalled();
+      const input = getInlineInput(root);
+      input.value = 'Pão Novo';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(promptSpy).not.toHaveBeenCalled();
+      promptSpy.mockRestore();
+    });
+
+    it('8. XSS: renomear para <img src=x onerror> → sem nó <img>, h3.textContent literal', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+      const evil = '<img src=x onerror="x">';
+
+      clickRename(root);
+      const input = getInlineInput(root);
+      input.value = evil;
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      const card = root.querySelector('.recipe-card')!;
+      expect(card.querySelector('img')).toBeNull();
+      expect(card.querySelector('h3')!.textContent).toBe(evil);
+    });
   });
 
   it('8. excluir confirmado + órfãs: fornada preservada; mensagem do confirm contém "órfã"', () => {
