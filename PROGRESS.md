@@ -4,6 +4,18 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 012 — backup/restauração)**
+
+1. **RESTAURAÇÃO = SUBSTITUIÇÃO TOTAL**: leitura literal de "restaurar" (§10) — o backup é o novo estado, receitas/histórico anteriores são descartados (sem merge). applyBackupData → replaceAll em recipes.ts + escrita direta de BAKES_STORAGE_KEY. Sem UX de "manter dados atuais" — nesse momento não existe. Revisor humano confirmar.
+
+2. **Seam temporário BAKES_STORAGE_KEY exportado**: backup.ts define `export const BAKES_STORAGE_KEY = 'mp.bakes.v1'` (fonte única). Issue 013 importa daqui e pluga o store real de fornadas. Até lá, backup lê/escreve direto no storage keyed (readBakeHistory defensiva, sem crash).
+
+3. **Validação ANTES de qualquer escrita**: importBackup valida envelope completo (app id, schemaVersion, arrays presentes) ANTES de mexer em nada. Só applyBackupData toca storage/store — e só se importBackup retornar. Por construção: falha de import nunca corrompe estado (testado caso 11).
+
+4. **showCosts (pref) fora do backup**: backup.ts não persiste prefs.showCosts — backup é dados do usuário (receitas + histórico de fornadas §10, §11.2), não preferência de UI. Issue 017 (UI) carrega prefs via prefs.ts após restauração (sem reset acidental ao ligar o app).
+
+---
+
 **2026-07-05 (issue 011 — storage receitas)**
 
 1. **Interface StorageLike própria + stub em memória em vez de happy-dom/jsdom**: Vitest roda em `node` (default), zero dependência nova. createMemoryStorage() cobre testes sem jsdom (regra de ouro 1/2/4: deps consolidadas + reuso + zero deps extras). localStorage acessado uma única vez (local.ts); recipes.ts/prefs.ts recebem StorageLike injetado.
@@ -25,6 +37,20 @@
 3. **Validação sobre valor CRUS, nunca sobre arredondado de exibição**: validatePercentageSum recebe `percentages: number[]` (pesos reais em precisão total, nunca formatCurrency/formatPercent de §9), compara com SUM_EPSILON 1e-9 (dono em bakers.percentagesSumTo100). Motivo: divergência de epsilon — se UI arredondar para 2 casas (60,00+40,00=100,00 exato) mas core calcular 60,0001+39,9999=100,0000, validação cai diferente. Bloqueio: validar ANTES de arredondar; exibição de % nunca sinaliza se soma válida ou não (é contrato da entrada).
 
 4. **Partes 0:0:1 passa validateSourdoughParts mas warn em validateSourdoughFlourPart**: `isValidSourdoughParts({isca:0, flour:0, water:1})` retorna true (SomaPartes=1>0, todas≥0 § §5.B literal). Mas `validateSourdoughFlourPart(0, 'fermento')` retorna warn (mínimo 1 farinha recomendado §5.B, literal "pelo menos 1 farinha em cada grupo"). UI chama AS DUAS — primeira passa guarda, segunda avisa sobre composição sem farinha (edge case defensivo: fermento só com água é inviável biologicamente, mas não bloqueado por §5.C; issue 011 em histórico pode avisar ao gravar "fornada com fermento 0% farinha").
+
+---
+
+## Iteração 012 — 2026-07-05 ~03:50 (backup/restauração)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 012-backup-restore |
+| **Timestamp** | 2026-07-05 03:50 |
+| **O que foi feito** | src/storage/backup.ts: 2 funções puras (exportBackup — monta envelope {app 'minhapadaria', schemaVersion 1, exportedAt ISO §7.1, recipes, bakeHistory} e serializa JSON nativo; importBackup — valida ANTES de qualquer escrita, revive datas dirigidas, throw pt-BR em erro); 2 orquestradores (collectBackupData — reúne recipes via recipeStore.list() + bakeHistory de seam mp.bakes.v1; applyBackupData — SUBSTITUIÇÃO TOTAL via replaceAll + setItem). 2 helpers DOM browser-only sem wiring node: downloadBackupFile (Blob→objectURL→<a download>→revoke §7.1 aaaa-mm-dd); readBackupFile (FileReader Promise). Reviver dirigido (só createdAt/updatedAt de Recipe/BakeEntry, nunca eval §11.1, decisão 11). src/storage/recipes.ts: **+replaceAll** (preserva id/datas, delega writeAll — mínima extensão). src/storage/backup.test.ts: 12 testes TDD (exportBackup 3: vazio+clock+pureza, import 3: round-trip+JSON ruim+sem envelope+versão, applyBackupData 2: substituição+coleta, estado intacto 2: falha não corrompe+bakeHistory ausente→[]). Zero rede, zero secret, validação antes de escrita (por construção, testado), sem DOM em node. |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: backup.test.ts (12) + recipes.test.ts (10) + prefs.test.ts (3) + validation.test.ts (15) + recalc.test.ts (9, +1 per-unit) + scaling.test.ts (11) + pricing.test.ts (18) + costs.test.ts (13) + hydration.test.ts (14) + sourdough.test.ts (12) + bakers.test.ts (22) + format.test.ts (23) + golden-example.test.ts (5 asserts) = **166 total**. **Pass: 166. Fail: 0.** 🟢 Build Vite: verde. Gates: testes 166/166 ✓✓✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado sem achados. **ZERO ACHADOS** (primeira issues 012 100% verde desde o início). |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec presentes em backup.ts (§10/§11.2/decisão 11/§7.1) e backup.test.ts. Reuso total: collectBackupData delega recipeStore.list() (não reimplementa); applyBackupData delega replaceAll (extensão mínima recipes.ts); readBakeHistory defensiva como prefs.ts. Seam BAKES_STORAGE_KEY exportado de backup.ts — issue 013 importa e pluga store real. Mapa de módulos será atualizado agora. |
 
 ---
 

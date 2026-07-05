@@ -37,6 +37,9 @@ export interface RecipeStore {
   rename(id: string, name: string): Recipe | undefined;
   duplicate(id: string): Recipe | undefined;
   remove(id: string): void;
+  // Substituição total do conjunto (usado pela restauração de backup, issue 012).
+  // Preserva id/datas originais das receitas (nunca regenera como create()).
+  replaceAll(recipes: Recipe[]): void;
 }
 
 // Default válido e mínimo para create(): merge da semente por cima disto.
@@ -162,5 +165,11 @@ export function createRecipeStore(opts: RecipeStoreOptions = {}): RecipeStore {
     writeAll(readAll().filter((r) => r.id !== id));
   }
 
-  return { list, get, create, update, rename, duplicate, remove };
+  // Extensão mínima para a restauração de backup (issue 012): delega ao mesmo
+  // writeAll (Date→ISO nativo), preservando id/datas do arquivo importado.
+  function replaceAll(recipes: Recipe[]): void {
+    writeAll(recipes);
+  }
+
+  return { list, get, create, update, rename, duplicate, remove, replaceAll };
 }
