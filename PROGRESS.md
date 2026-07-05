@@ -4,6 +4,16 @@
 
 ## Decisões da noite
 
+**2026-07-05 (issue 005 — hidratação + farinha real)**
+
+1. **Hidratações (nominal, real) retornam number|null (não throw)**: null apenas quando denominador=0 (F_total=0 em nominal; F_total+FarinhaFerm=0 em real). Semelhante a issue 004 (computeSourdoughWeights null em partes inválidas) — interface limpa para recalc engine (issue 008). UI e issue 010 (validações) decidem sinalizar ao usuário. Motivo: bloqueio de ÷0 é tarefa do valor tácito (null), não da assinatura (number), mantém contrato puro.
+
+2. **sourdough=null (sem fermento OU partes inválidas) → ÁguaFerm=FarinhaFerm=0 → Real=Nominal**: tratamento defensivo alinhado a issue 004 (computeSourdoughWeights retorna null em partes inválidas). Aqui, realHydration recebe `sourdough | null` e usa `?? 0` para desdobrá-lo em componentes. UI bloqueia via isValidSourdoughParts antes de tocar em hidratação real; backend nunca força valor, apenas entrega null em denominador 0. Motivo: simplicidade — sem branching em UI, lógica pura.
+
+3. **Borda assimétrica: F_total=0 com fermento>0 → Nominal null, Real numérico**: edge case onde só há fermento (F_total=0 declarado, FarinhaFerm>0 da sub-receita). nominalHydration retorna null (÷0 literal), realHydration retorna número (denominador=FarinhaFerm>0, numerador=ÁguaFerm≥0). Exibição da UI (issue 008/014) decide como sinalizar — possível indicar "hidratação do fermento puro" ou bloquear estado. Motivo: princípio de pureza — sem check `if fermento exists`, função entrega o que as fórmulas mandam.
+
+---
+
 **2026-07-05 (issue 004 — fermento por Partes)**
 
 1. **computeSourdoughWeights retorna null (não throw) em partes inválidas**: guarda defensiva (§5.C). Semelhante a percentageFromWeight (issue 003, F_total ≤ 0 → 0), mantém contrato limpo para recalc em lote issue 008. UI bloqueia via isValidSourdoughParts; backend nunca toca em partes inválidas.
@@ -41,6 +51,20 @@
 2. **Google Fonts CDN vs auto-hospedagem**: mockups usam `<link rel="stylesheet" href="https://fonts.googleapis.com/...">` no design-system.css. **Decisão**: app (index.html, receitas.html, historico.html) carrega apenas `design-system.css` via Vite, com fonte fallback `system-ui` até issue de UI decidir auto-hospedagem. Alinhado com spec §10 (app 100% client-side) e §11.1 (zero secrets em front-end). Ação diferida para issue 014+.
 
 3. **Polyfill modulepreload em dist/**: achado do revisor-design (baixa prioridade): Vite injeta `<link rel="modulepreload" as="script" ...>` em dist/index.html que contém `fetch()` same-origin para chunks. Artefato de build sem risco (fetch é same-origin, sem headers de autorização, offline ok). Sem ação necessária.
+
+---
+
+## Iteração 005 — 2026-07-05 ~02:05 (hidratação + farinha real)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 005-hydration-real-flour |
+| **Timestamp** | 2026-07-05 02:05 |
+| **O que foi feito** | src/core/hydration.ts: 4 funções puras (declaredLiquidsWeight — Σ pesos category 'liquid' sem 'fat', decisão 15; nominalHydration — ΣLíquidos/F_total×100, null se F_total=0; realHydration — (ΣLíquidos+ÁguaFerm)/(F_total+FarinhaFerm)×100, null se denominador=0; realFlourConsumed — F_total+FarinhaFerm, derivado somente-leitura). Sem DOM, sem localStorage, precisão total (§2.C/§2.D, decisão 15, §5.C). src/core/hydration.test.ts: 14 testes TDD (declaredLiquidsWeight 4, nominalHydration 3, realHydration 4, realFlourConsumed 3). Golden §12 validado (70% nominal, 72,7272…% real, 1100g farinha real). |
+| **Hash do commit** | _(pendente de commit)_ |
+| **Testes** | Vitest: hydration.test.ts (14) + bakers.test.ts (22) + sourdough.test.ts (12) + format.test.ts (23) + golden-example.test.ts (1 falha intencional) = 72 total. Pass: 71. Fail: 1 intencional (golden). Build Vite: verde. Gates: testes 71 pass ✓, 1 fail esperada ✓, build ✓. |
+| **Reviews** | revisor-spec: aprovado (§2.C/§2.D/§12 implementado fielmente; fat excluído de hidratação; null defensivo em ÷0; reuso bakers.ts correto; prefixo spec em cabeçalhos). Achado baixa prioridade: faltaram 2 linhas no Mapa de módulos (hydration.ts/hydration.test.ts) — cobrir agora. |
+| **Observações** | Decisões de spec registradas na seção "Decisões da noite" acima. Cabeçalhos de spec adicionados aos 2 arquivos novos. Reuso total: declaredLiquidsWeight filtra só liquid (categoria bakers.ts); nominalHydration/realHydration/realFlourConsumed reusam flourTotal (bakers.ts); sourdough=null trata-se defensivamente com `?? 0` (segue padrão issue 004). Mapa de módulos será atualizado agora pelo escriba. |
 
 ---
 
