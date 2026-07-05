@@ -13,10 +13,16 @@
  * para resolver os caminhos das entradas, mas isso exigiria @types/node — dependência
  * fora do plano. Caminhos relativos são resolvidos por Vite a partir da raiz do
  * projeto (project root), então dispensam node:path e mantêm zero dependência extra.
+ *
+ * `base` (deploy 2026-07-06): o site é publicado em GitHub Pages como project site
+ * (https://cisotar.github.io/minhapadaria/, subpasta — não domain root), então os
+ * assets/scripts com caminho absoluto precisam do prefixo `/minhapadaria/` para não
+ * resolverem para a raiz errada do domínio (404). Docs: https://vite.dev/config/shared-options.html#base
  */
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  base: '/minhapadaria/',
   build: {
     rollupOptions: {
       // MPA: cada entrada vira uma página emitida em dist/ (Vite MPA docs).
