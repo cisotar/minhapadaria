@@ -432,6 +432,29 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   align-items: flex-end;
 }
 
+/* Modificador de espaçamento vertical para `.row` usado como barra de ações
+   isolada (Exportar XLSX / Imprimir, issue 019 revisão — achado ALTO:
+   `.export-bar` duplicava `.row`, violando a regra de ouro 1). Só token de
+   espaçamento, nenhuma propriedade nova. */
+.row--mb {
+  margin-bottom: var(--sp-4);
+}
+
+/* Barra de ações fixa no topo (spec §8 literal: "botão fixo no topo") —
+   mesmo padrão de `.banner-mode-alt` (`position:sticky;top:0`), um z-index
+   acima (11 > 10) para ficar por cima do banner de modo alternativo quando
+   os dois coexistem na tela. `background:var(--bg)` (cor de fundo de página,
+   não um valor novo) evita que o conteúdo role por trás da barra durante o
+   scroll. Usado nas barras de export/print da Calculadora e do Histórico
+   (issue 019 revisão, achado ALTO). */
+.row--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  background: var(--bg);
+  padding: var(--sp-2) 0;
+}
+
 /* Par valor + seletor de unidade da célula "Peso do produto" (§2.A.1). Dois
    campos lado a lado — sem largura fixa em px (só var(--sp-1) no
    espaçamento entre eles); o valor usa o atributo HTML `size` (contagem de
@@ -456,3 +479,47 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .best-worst .best .label  { color: var(--status-ok-text); }
 .best-worst .worst .label { color: var(--status-crit-text); }
 .best-worst .card-mini .value { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ============ Impressão / Salvar em PDF (issue 019, spec §8) ============
+   Relatório imprimível montado por src/export/print.ts. Apenas classes novas e
+   TOKENS existentes — :root imutável (regra da issue). `#print-root` fica oculto
+   na tela e é o ÚNICO bloco visível na impressão; toda a moldura (nav, header,
+   #app, barra de ações) some via `@media print`. A barra de ações reusa
+   `.row.row--mb.row--sticky` (revisão da issue 019: `.export-bar` removida
+   por duplicar `.row`) para hospedar os botões Exportar XLSX / Imprimir;
+   `window.print()` dispara apenas no clique (nunca automático, §8). */
+#print-root { display: none; }
+
+.print-view { color: var(--text); font-size: var(--fs-body); }
+.print-view .print-title {
+  color: var(--primary); font-size: var(--fs-display); font-weight: 700;
+  margin: 0 0 var(--sp-4); padding-bottom: var(--sp-2);
+  border-bottom: 2px solid var(--border-strong);
+}
+.print-view .print-section {
+  color: var(--text-2); font-size: var(--fs-title); font-weight: 650;
+  margin: var(--sp-4) 0 var(--sp-2); break-after: avoid;
+}
+.print-view .print-line {
+  display: flex; justify-content: space-between; gap: var(--sp-4);
+  padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); break-inside: avoid;
+}
+.print-view .print-label { color: var(--text-muted); }
+.print-view .print-value { font-variant-numeric: tabular-nums; }
+
+@media print {
+  /* Só o relatório imprime; nav/header/#app/barra de ações somem. Seletor
+     escopado a `body:has(#print-root)` (revisão da issue 019, achado
+     CRÍTICO): a regra antiga era global (`body > *:not(#print-root)`) e
+     escondia TUDO em qualquer página, mesmo nas que não criam `#print-root`
+     (Histórico/Receitas antes do item 2 desta correção) — Ctrl+P imprimia
+     página em branco lá. Com `:has()` a regra só age quando o nó existe;
+     nas páginas sem `#print-root` o seletor simplesmente não casa e a
+     impressão degrada para o conteúdo normal da página (degrade seguro).
+     Suporte: Chrome/Edge 105+, Safari 15.4+, Firefox 121+ (todos os
+     navegadores-alvo do app, 2026) — doc oficial MDN `:has()`:
+     https://developer.mozilla.org/en-US/docs/Web/CSS/:has */
+  body:has(#print-root) > *:not(#print-root) { display: none !important; }
+  #print-root { display: block !important; }
+  @page { margin: 1.5cm; }
+}

@@ -16,10 +16,10 @@
  * regra de ouro 3): dado do usuário nunca é executado; a UI (017) faz o escape.
  *
  * I/O de arquivo é trivial via plataforma — nenhuma lib nova (regra de ouro 1).
+ * O disparo do download (Blob→object URL→<a>) foi extraído para o dono único
+ * `export/download.ts` (`downloadBlob`, issue 019, regra de ouro 2): este módulo
+ * apenas monta o nome do arquivo e delega — sem duplicar o padrão de Blob.
  * Docs MDN consultadas (regra de ouro 4):
- * - https://developer.mozilla.org/en-US/docs/Web/API/Blob
- * - https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static
- * - https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static
  * - https://developer.mozilla.org/en-US/docs/Web/API/FileReader
  *
  * Seções implementadas: §10 (backup/restaurar local), §11.2 (formato de
@@ -28,6 +28,7 @@
 import type { Recipe, BakeEntry } from '../core/types';
 import { type StorageLike, defaultStorage } from './local';
 import type { RecipeStore } from './recipes';
+import { downloadBlob } from '../export/download';
 
 // --- Constantes (fonte única; issue 013 importa BAKES_STORAGE_KEY daqui) ---
 export const BACKUP_APP_ID = 'minhapadaria';
@@ -179,9 +180,9 @@ function readBakeHistory(storage: StorageLike): BakeEntry[] {
 // --- Helpers de DOM (browser-only; wiring é da issue 017, sem unit test node) ---
 
 /**
- * Dispara o download do JSON como arquivo. Blob → object URL → <a download> →
- * click → revoke (libera a referência, MDN). Nome deriva da data (§7.1
- * aaaa-mm-dd). Sem rede: object URL é puramente local.
+ * Dispara o download do JSON como arquivo. Nome deriva da data (§7.1
+ * aaaa-mm-dd); o padrão Blob→object URL→<a>→click→revoke vive no dono único
+ * `downloadBlob` (export/download.ts, issue 019 — regra de ouro 2, sem duplicar).
  */
 export function downloadBackupFile(
   json: string,
@@ -190,12 +191,7 @@ export function downloadBackupFile(
   const now = opts.now ?? (() => new Date());
   const stamp = now().toISOString().slice(0, 10); // aaaa-mm-dd (§7.1)
   const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `minha-padaria-backup-${stamp}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `minha-padaria-backup-${stamp}.json`);
 }
 
 /**

@@ -16,6 +16,7 @@
 import '../../../references/design-system.css';
 import { createRecipeStore } from '../../storage/recipes';
 import { createBakeStore } from '../../storage/bakes';
+import { createPrefsStore } from '../../storage/prefs';
 import { defaultStorage } from '../../storage/local';
 import { renderHistoryView } from '../historyView';
 import { h } from '../dom';
@@ -23,6 +24,7 @@ import { h } from '../dom';
 const storage = defaultStorage();
 const recipeStore = createRecipeStore({ storage });
 const bakeStore = createBakeStore({ storage });
+const prefs = createPrefsStore({ storage }); // §2.A.2: XLSX com/sem custos (issue 019)
 
 const header = document.getElementById('hist-header');
 if (header) {
@@ -31,5 +33,5 @@ if (header) {
 
 const app = document.getElementById('app');
 if (app) {
-  renderHistoryView(app, { recipeStore, bakeStore });
+  renderHistoryView(app, { recipeStore, bakeStore, prefs });
 }

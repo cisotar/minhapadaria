@@ -140,6 +140,8 @@
         <tr><td><code>.grid-2</code></td><td>Issue 016 — grade de 2 colunas lado a lado (Hidratação + Precificação): <code>repeat(auto-fit, minmax(300px, 1fr))</code>, gap <code>var(--sp-5)</code>. Desktop-first (§10): cresce em colunas, nunca esconde conteúdo.</td></tr>
         <tr><td><code>.row</code></td><td>Agrupamento horizontal genérico (chips de status, botões de ação, campos lado a lado): <code>display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3)</code>. Já era o padrão inline de todos os mockups (<code>mockups/*.html</code>); promovido para <code>design-system.css</code> na revisão da issue 016 (achado ALTO: <code>.field-row</code> duplicava este componente e foi removida).</td></tr>
         <tr><td><code>.row--end</code></td><td>Modificador de <code>.row</code> só para <code>align-items:flex-end</code> — agrupamento de <code>.field</code> (label + input) alinhados pela base em vez do centro (Ancoragem, Precificação). Nenhum token novo.</td></tr>
+        <tr><td><code>.row--mb</code></td><td>Revisão issue 019 (achado ALTO) — modificador de <code>.row</code> só para <code>margin-bottom:var(--sp-4)</code>, usado na barra de ações Exportar XLSX/Imprimir (Calculadora e Histórico). Substitui <code>.export-bar</code>, que duplicava <code>.row</code> (regra de ouro 1).</td></tr>
+        <tr><td><code>.row--sticky</code></td><td>Revisão issue 019 (achado ALTO, spec §8 literal "botão fixo no topo") — modificador de <code>.row</code> com <code>position:sticky;top:0;z-index:11</code> (1 acima de <code>.banner-mode-alt</code>, <code>z-index:10</code>) e <code>background:var(--bg)</code> para não deixar o conteúdo rolar por trás. Mesmo padrão de <code>.banner-mode-alt</code>, aplicado à barra de ações das duas telas.</td></tr>
         <tr><td><code>.mode-alt .cell-input.pct</code></td><td>Issue 016 §1.3/§4 — mesmo destaque de <code>.mode-alt .input.pct</code> para a célula de % da tabela de insumos (<code>.cell-input</code>) quando o modo peso→% está ativo, mesmo com o campo <code>readonly</code> (% passa a ser derivada nesse modo).</td></tr>
         <tr><td><code>.empty-state</code></td><td>Issue 017 §2.F — bloco centralizado (texto + botão) quando a lista de receitas está vazia (<code>receitas.html</code>): <code>display:flex</code> em coluna, <code>gap</code>/<code>padding</code> só <code>var(--sp-*)</code>, texto em <code>var(--text-muted)</code>.</td></tr>
         <tr><td><code>.form-status</code> / <code>.form-status--error</code> / <code>.form-status--ok</code></td><td>Issue 017 §10 — mensagem de resultado do backup (export/restore) num nó <code>role="status"</code>/<code>aria-live="polite"</code> (wiring da UI, não desta classe); cor de erro/sucesso reusa os tokens de <code>--danger</code>/<code>--status-ok-text</code>, os mesmos de <code>.chip-crit</code>/<code>.chip-ok</code>.</td></tr>
@@ -387,6 +389,50 @@
         </tr>
       </tbody>
     </table>
+  </section>
+
+  <section class="card">
+    <h2>Impressão / Salvar em PDF (issue 019, §8)</h2>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      Relatório imprimível montado por <code>src/export/print.ts</code>
+      (<code>renderPrintView</code> para a receita, <code>renderHistoryPrintView</code>
+      para o Histórico — revisão issue 019, achado ALTO §8 "aplica-se também ao
+      Histórico de Fornadas §14") dentro de <code>#print-root</code> (oculto na
+      tela, único bloco visível em <code>@media print</code>). Só classes novas +
+      tokens existentes — <code>:root</code> imutável. O seletor de impressão é
+      escopado com <code>body:has(#print-root)</code> (achado CRÍTICO da mesma
+      revisão: a regra global antiga escondia a página inteira em telas sem
+      <code>#print-root</code>, como Histórico/Receitas — Ctrl+P imprimia página
+      em branco lá; com <code>:has()</code> a regra só age onde o nó existe,
+      degradando com segurança nas demais).
+    </p>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      A barra de ações reusa <code>.row.row--mb.row--sticky</code> (achado ALTO:
+      <code>.export-bar</code> duplicava <code>.row</code>) e fica fixa no topo
+      (spec §8 literal "botão fixo no topo") nas duas telas — hospeda Exportar
+      XLSX + Imprimir/Salvar em PDF; <code>window.print()</code> dispara apenas
+      no clique (nunca automático, §8).
+    </p>
+    <div class="row row--mb row--sticky" style="position:static">
+      <button class="btn btn-secondary">Exportar XLSX</button>
+      <button class="btn btn-secondary">Imprimir / Salvar em PDF</button>
+    </div>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      (exemplo acima com <code>position:static</code> só para não fixar dentro
+      do style guide — nas telas reais é <code>position:sticky</code>, herdada
+      de <code>.row--sticky</code>.)
+    </p>
+    <div class="print-view" style="display:block">
+      <h1 class="print-title">Pão Rústico de Azeite</h1>
+      <h2 class="print-section">Farinhas</h2>
+      <div class="print-line"><span class="print-label">Farinha Branca</span><span class="print-value">1000,0 g · 100,00% · R$ 8,00</span></div>
+      <h2 class="print-section">Hidratação</h2>
+      <div class="print-line"><span class="print-label">Hidratação Nominal</span><span class="print-value">70,00%</span></div>
+      <div class="print-line"><span class="print-label">Hidratação Real</span><span class="print-value">72,73%</span></div>
+      <h2 class="print-section">Precificação</h2>
+      <div class="print-line"><span class="print-label">Custo total</span><span class="print-value">R$ 8,86</span></div>
+      <div class="print-line"><span class="print-label">Preço de venda</span><span class="print-value">R$ 7,38</span></div>
+    </div>
   </section>
 </div>
 

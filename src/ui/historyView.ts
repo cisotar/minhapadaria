@@ -2,12 +2,15 @@
  * historyView.ts — Dashboard de Fornadas (spec §14.4/§14.5/§14.6/§14.7) · issue 018.
  *
  * O que faz: `renderHistoryView(root, deps)` monta, dentro de `root`, TODA a
- * tela "Histórico de Fornadas" (mockup `mockups/historico.html`): hospeda o
- * registro rápido (`bakeForm.ts`), a barra de filtros (receita/intervalo/
- * granularidade, `.filter-bar`/`.period-toggle`), os KPIs do período
- * (`.kpi-row`) com comparação vs. período anterior, o indicador melhor/pior
- * (`.best-worst`), o gráfico de tendência (`trendChart.ts`) e a listagem
- * cronológica com editar/excluir/confirmar planejada.
+ * tela "Histórico de Fornadas" (mockup `mockups/historico.html`): a barra de
+ * ações fixa no topo (`.row.row--mb.row--sticky`, §8, revisão issue 019 —
+ * Exportar XLSX + Imprimir/Salvar em PDF via `export/print.ts`
+ * `renderHistoryPrintView`/`mountPrintButton`), o registro rápido
+ * (`bakeForm.ts`), a barra de filtros (receita/intervalo/granularidade,
+ * `.filter-bar`/`.period-toggle`), os KPIs do período (`.kpi-row`) com
+ * comparação vs. período anterior, o indicador melhor/pior (`.best-worst`), o
+ * gráfico de tendência (`trendChart.ts`) e a listagem cronológica com editar/
+ * excluir/confirmar planejada.
  *
  * Reuso total (regra de ouro 2, ZERO fórmula nova aqui):
  *  - `core/bakes.ts` (013): `filterByRecipe`/`filterByDateRange` (§14.5),
@@ -48,8 +51,8 @@
  * Segurança (regra de ouro 3): `entry.recipeName`/`notes` do usuário nunca
  * passam por `innerHTML` — só via `h`/`textContent` (dom.ts).
  *
- * Seções implementadas: §14.2 (hospeda bakeForm), §14.3, §14.4, §14.5, §14.6,
- * §14.7.
+ * Seções implementadas: §8 (export/print, revisão issue 019), §14.2 (hospeda
+ * bakeForm), §14.3, §14.4, §14.5, §14.6, §14.7.
  */
 import {
   computeBakeDerived,
@@ -72,6 +75,10 @@ import { formatCurrency, formatPercent, formatDate, parseLocalDate, parseDecimal
 import type { BakeEntry, BakeHistorySummary } from '../core/types';
 import type { RecipeStore } from '../storage/recipes';
 import type { BakeStore } from '../storage/bakes';
+import type { PrefsStore } from '../storage/prefs';
+import { buildHistoryWorkbook } from '../export/xlsx';
+import { workbookToBlob, downloadBlob } from '../export/download';
+import { mountPrintButton, renderHistoryPrintView } from '../export/print';
 import { h, clear, on } from './dom';
 import { applyValidation, marginChipClass } from './cellHelpers';
 import { renderBakeForm } from './bakeForm';
@@ -84,6 +91,8 @@ export interface HistoryViewDeps {
   now?: () => Date;
   /** Injetável para teste (default `window.confirm`). §14.5: excluir com confirmação. */
   confirm?: (message: string) => boolean;
+  /** §2.A.2 (issue 019): pref global "Exibir custos" para o XLSX com/sem custos. */
+  prefs?: PrefsStore;
 }
 
 type Granularity = 'day' | 'week' | 'month';
@@ -120,10 +129,29 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   let filterRecipeId = '';
   let granularity: Granularity = 'day';
   let editingId: string | null = null;
+  // §8/§14.5 (issue 019): última fatia filtrada (fornadas derivadas + resumo do
+  // período), capturada a cada renderAll para o Exportar XLSX consumir sem
+  // recalcular (§1.6). Fornadas incluem planejadas (marca de status); o resumo
+  // vem de aggregatePeriod (planejadas fora).
+  let lastExport: { entries: BakeEntry[]; summary: BakeHistorySummary } | null = null;
 
   const today = nowFn();
   const dateFromStr0 = formatDate(addDays(today, -6)); // padrão: últimos 7 dias (§14.4)
   const dateToStr0 = formatDate(today);
+
+  // --- Barra de ações (§8, revisão issue 019 — achados ALTO) ---
+  // Exportar XLSX + Imprimir/Salvar em PDF do período filtrado, ANTES de
+  // qualquer outro card (spec §8 literal "botão fixo no topo"). Reusa
+  // `.row.row--mb.row--sticky` (`.export-bar` duplicava `.row`, removida) —
+  // sticky fixa a barra no topo do scroll. `#print-root` fica no <body>
+  // (único bloco visível em `@media print`, design-system.css); a impressão
+  // do Histórico usava só o XLSX antes desta correção — agora tem o mesmo
+  // botão "Imprimir / Salvar em PDF" da Calculadora, consumindo a MESMA fatia
+  // filtrada (`lastExport`) sem recalcular (§1.6).
+  const printRoot = h('div', { id: 'print-root' });
+  document.body.appendChild(printRoot);
+  const actionBar = h('div', { className: 'row row--mb row--sticky' });
+  root.appendChild(actionBar);
 
   // --- Registro rápido (§14.2) — hospeda bakeForm.ts ---
   const formHost = h('div');
@@ -183,6 +211,28 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   periodToggle.appendChild(monthBtn);
   periodField.appendChild(periodToggle);
   filterBar.appendChild(periodField);
+
+  // §8 (issue 019, revisão): Exportar XLSX + Imprimir/Salvar em PDF do período
+  // filtrado (com/sem custos via pref §2.A.2) — na barra fixa `actionBar` no
+  // topo da tela (spec §8 literal), não mais dentro do `.filter-bar`.
+  const exportXlsxBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Exportar XLSX']);
+  on(exportXlsxBtn, 'click', () => {
+    if (lastExport === null) return;
+    const includeCosts = deps.prefs?.getShowCosts() ?? false; // §2.A.2
+    const wb = buildHistoryWorkbook(lastExport.entries, lastExport.summary, { includeCosts });
+    const stamp = formatDate(nowFn()); // aaaa-mm-dd (§7.1)
+    void workbookToBlob(wb).then((blob) => downloadBlob(blob, `minha-padaria-historico-${stamp}.xlsx`));
+  });
+  actionBar.appendChild(exportXlsxBtn);
+  mountPrintButton(actionBar, () => {
+    // §8: renderiza o relatório do período filtrado atual e imprime — SÓ no
+    // clique, nunca no init (achado ALTO da revisão: faltava no Histórico).
+    if (lastExport === null) return;
+    clear(printRoot);
+    const includeCosts = deps.prefs?.getShowCosts() ?? false; // §2.A.2
+    renderHistoryPrintView(printRoot, { entries: lastExport.entries, summary: lastExport.summary, includeCosts });
+    window.print();
+  });
 
   function setGranularity(g: Granularity, btn: HTMLButtonElement): void {
     granularity = g;
@@ -499,6 +549,10 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
       return ka < kb ? 1 : ka > kb ? -1 : 0;
     });
     for (const entry of sorted) tbody.appendChild(buildRow(entry, recipeIds));
+
+    // §8 (issue 019): fatia para o XLSX — fornadas do período (derivadas §14.3,
+    // incl. planejadas com marca) + resumo já agregado (planejadas fora).
+    lastExport = { entries: periodFiltered.map(computeBakeDerived), summary: currentSummary };
   }
 
   renderAll();

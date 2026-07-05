@@ -45,7 +45,11 @@ import { renderIngredientsTable } from '../ingredientsTable';
 import { renderSourdoughTable, inheritSourdoughFlourCosts } from '../sourdoughTable';
 import { renderHydrationPanel } from '../hydrationPanel';
 import { renderPricingPanel } from '../pricingPanel';
-import { h } from '../dom';
+import { h, clear, on } from '../dom';
+import { formatDate } from '../../core/format';
+import { buildRecipeWorkbook } from '../../export/xlsx';
+import { workbookToBlob, downloadBlob } from '../../export/download';
+import { renderPrintView, mountPrintButton } from '../../export/print';
 
 const prefs = createPrefsStore();
 const storage = defaultStorage();
@@ -86,6 +90,35 @@ if (app) {
       ]),
     );
   }
+  // §8 (issue 019, spec literal "botão fixo no topo" — revisão: barra sticky):
+  // barra fixa no topo — Exportar XLSX + Imprimir/Salvar em PDF. Consome o
+  // estado JÁ recalculado (store.getState()), sem recalcular (§1.6);
+  // `includeCosts` segue a pref global "Exibir custos" (§2.A.2). O #print-root
+  // fica no <body> (único bloco visível em @media print, design-system.css).
+  const printRoot = h('div', { id: 'print-root' });
+  document.body.appendChild(printRoot);
+
+  // `.row.row--mb.row--sticky` (revisão issue 019, achado ALTO): reusa `.row`
+  // em vez do extinto `.export-bar` duplicado; `--sticky` fixa a barra no
+  // topo (spec §8 literal), `--mb` mantém o respiro para o card seguinte.
+  const exportBar = h('div', { className: 'row row--mb row--sticky' });
+  const xlsxBtn = h('button', { type: 'button', className: 'btn btn-secondary' }, ['Exportar XLSX']);
+  on(xlsxBtn, 'click', () => {
+    const { recipe, summary } = store.getState();
+    const wb = buildRecipeWorkbook(recipe, summary, { includeCosts: prefs.getShowCosts() });
+    const stamp = formatDate(new Date()); // aaaa-mm-dd (§7.1)
+    void workbookToBlob(wb).then((blob) => downloadBlob(blob, `minha-padaria-receita-${stamp}.xlsx`));
+  });
+  exportBar.appendChild(xlsxBtn);
+  mountPrintButton(exportBar, () => {
+    // §8: renderiza o relatório atual e imprime — SÓ no clique, nunca no init.
+    clear(printRoot);
+    const { recipe, summary } = store.getState();
+    renderPrintView(printRoot, { recipe, summary, includeCosts: prefs.getShowCosts() });
+    window.print();
+  });
+  app.appendChild(exportBar);
+
   renderBatchPanel(app, store); // §2.E/§2.E.1 — hospeda modeToggle (§1.3/§1.5) e scalePanel (§3.D)
   renderIngredientsTable(app, store);
   renderSourdoughTable(app, store, editedCostIds);
