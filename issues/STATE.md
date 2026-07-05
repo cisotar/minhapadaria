@@ -9,7 +9,7 @@
 | 005 | Hidratação nominal/real + Farinha Real | core | 003, 004 | done | 5e2bca9 |
 | 006 | Custos — custo/g, receita, fermento (isca zero) | core | 002, 004 | done | 22cd6a7 |
 | 007 | Precificação 3 modos + margem ≤99,9% + faixas | core | 006 | done | 396a442 |
-| 008 | Recálculo central + modos + transição | core | 005, 006, 007 | todo | |
+| 008 | Recálculo central + modos + transição | core | 005, 006, 007 | done | 9068c1a |
 | 009 | Escalonamento por alvo + fornada por unidade | core | 008 | todo | |
 | 010 | Validações §5 consolidadas | core | 008 | todo | |
 | 011 | Storage receitas CRUD + toggle custos | storage | 002 | todo | |
