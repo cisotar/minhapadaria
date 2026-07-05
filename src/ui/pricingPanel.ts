@@ -51,7 +51,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
   root.appendChild(card);
 
   // Chip de status (§4).
-  const chipRow = h('div', { className: 'row', style: 'margin-bottom:var(--sp-3)' });
+  const chipRow = h('div', { className: 'row mb-3' }); // `.mb-3` (design-system.css, issue 022) — era style inline
   const chip = h('span', { className: 'chip' });
   chipRow.appendChild(chip);
   card.appendChild(chipRow);
@@ -136,7 +136,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
   trioRow.appendChild(profitField.field);
 
   // Totais de produção (§3.E) — sempre derivados, texto plano (brandbook §4.1).
-  const table = h('table', { className: 'table', style: 'margin-top:var(--sp-3)' });
+  const table = h('table', { className: 'table mt-3' }); // `.mt-3` (design-system.css, issue 022) — era style inline
   const unitCostCell = h('td', { className: 'num readonly' });
   const qtyLabel = h('span', {});
   const totalRevenueCell = h('td', { className: 'num readonly' });

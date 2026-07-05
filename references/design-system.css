@@ -402,8 +402,8 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 
 /* Grade de 2 colunas lado a lado (Hidratação + Precificação, mockup
    calculadora.html) — issue 016. Só tokens (`var(--sp-5)`); largura mínima de
-   coluna (300px) é a mesma constante já usada nos mockups (`grid-2`/
-   `recipe-grid`/`kpi-row`), não um valor novo inventado. Desktop-first
+   coluna (300px) é a mesma constante já usada no `.grid-2` do mockup
+   calculadora.html, não um valor novo inventado. Desktop-first
    (§10): cresce em colunas, nunca esconde conteúdo. */
 .grid-2 {
   display: grid;

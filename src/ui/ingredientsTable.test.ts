@@ -147,6 +147,26 @@ describe('ingredientsTable (jsdom)', () => {
     expect(saltRemoveBtn.disabled).toBe(false);
   });
 
+  it('10. peso→%: editar Peso da Água atualiza a % derivada instantaneamente (§1.3, issue 024)', () => {
+    const prefs = createPrefsStore({ storage: createMemoryStorage() });
+    const recipe = goldenSeed();
+    recipe.calculationMode = 'weight-to-percentage';
+    const store = createAppState(recipe, prefs);
+    const root = document.createElement('div');
+    renderIngredientsTable(root, store);
+
+    const row = root.querySelector('tr[data-ingredient-id="water-1"]') as HTMLTableRowElement;
+    const weightInput = row.querySelector('input[aria-label="Peso de Água"]') as HTMLInputElement;
+    const pctInput = row.querySelector('input[aria-label="Porcentagem de Água"]') as HTMLInputElement;
+    const pctBefore = pctInput.value;
+
+    weightInput.value = '1400';
+    weightInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(pctInput.value).not.toBe(pctBefore); // §1.3: peso é a verdade; % passa a ser derivada
+    expect(pctInput.readOnly).toBe(true);
+  });
+
   it('4. blur com soma de farinhas ≠ 100% reverte o campo (§5.A)', () => {
     // Cenário com 2 farinhas (60/40) para exercitar a soma — golden seed tem 1 só.
     const prefs = createPrefsStore({ storage: createMemoryStorage() });

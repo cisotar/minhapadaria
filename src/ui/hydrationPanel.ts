@@ -51,8 +51,9 @@ export function renderHydrationPanel(root: HTMLElement, store: AppStateStore): v
     flourValue.textContent = `${formatWeight(summary.realFlourConsumed)} g`;
 
     // §2.D: "sempre visível quando há fermento configurado" — W_ferm > 0.
+    // `.hidden` (design-system.css, issue 022) — era style inline.
     const hasSourdough = (recipe.sourdough.totalWeight ?? 0) > 0;
-    flourMetric.style.display = hasSourdough ? '' : 'none';
+    flourMetric.classList.toggle('hidden', !hasSourdough);
   }
 
   repaint();

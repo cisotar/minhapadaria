@@ -59,6 +59,37 @@ describe('batchPanel (jsdom)', () => {
     expect(ftotalInput.value).toBe('1000,0'); // F_total é a âncora em 'total' — não muda com N
   });
 
+  it('7. peso→%: F_total somente-leitura e repinta ao editar peso de farinha (§1.3/§3.A, issue 024)', () => {
+    const { root, store } = mount((r) => {
+      r.calculationMode = 'weight-to-percentage';
+    });
+    const ftotalInput = root.querySelector(
+      'input[aria-label="Peso de Farinha Total"]',
+    ) as HTMLInputElement;
+    expect(ftotalInput.readOnly).toBe(true); // §3.A: derivado (Σ pesos das farinhas), nunca editável
+
+    store.update((draft) => {
+      draft.ingredients[0].weight = 1234; // flour-1 (Farinha Branca)
+    });
+
+    expect(ftotalInput.value).toBe('1234,0'); // patchDynamic repinta o valor derivado
+  });
+
+  it('8. quantidade <1 reverte no blur (§5.C)', () => {
+    const { root } = mount();
+    const qtyInput = root.querySelector(
+      'input[aria-label="Quantidade de Produtos"]',
+    ) as HTMLInputElement;
+    expect(qtyInput.value).toBe('2'); // golden seed: pricing.quantity = 2
+
+    qtyInput.value = '0';
+    qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+    qtyInput.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    expect(qtyInput.value).toBe('2'); // reverte ao último valor válido
+    expect(qtyInput.getAttribute('aria-invalid')).toBe('true');
+  });
+
   it('6. modo peso→% → botão "Por unidade" desabilitado (§2.E.1)', () => {
     const { root, store } = mount();
     const buttons = Array.from(root.querySelectorAll('.period-toggle button')) as HTMLButtonElement[];

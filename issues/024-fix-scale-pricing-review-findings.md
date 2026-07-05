@@ -12,7 +12,8 @@ Achados médio/baixo remanescentes das revisões da issue 016. O achado alto do 
 ## O que fazer
 1. **[médio, revisor-spec] F_total defasado em peso→%** — `src/ui/batchPanel.ts` (~linhas 119/258): no modo peso→% o core deriva `flourTotalWeight = Σ pesos das farinhas`, mas o campo "Peso de Farinha Total" continua editável (edição inerte — recalc sobrescreve) e `patchDynamic()` não o repinta nesse modo → valor exibido fica defasado ao editar pesos na tabela. Corrigir: campo readonly quando `calculationMode==='weight-to-percentage'` + incluir no repaint. Teste jsdom: editar peso de farinha em peso→% → F_total exibido acompanha.
 2. **[baixo, revisor-spec] Testes de UI faltantes**: (a) editar Peso em peso→% → % derivada atualiza (ingredientsTable); (b) quantidade <1 reverte no blur do batchPanel (§5.C).
-3. **[baixo, guardiao-design] Comentário impreciso** em `references/design-system.css` (~389–393): `.grid-2` cita recipe-grid/kpi-row como precedente de 300px, mas usam 260/140px — ajustar comentário para citar só o `.grid-2` do mockup.
+3. **[residual da 022]** 3 estilos inline restantes fora do escopo da 022: `pricingPanel.ts` (2) e `hydrationPanel.ts` (1) — substituir pelas classes utilitárias já criadas (`.mb-3`/`.mt-3`/`.hidden` etc.).
+4. **[baixo, guardiao-design] Comentário impreciso** em `references/design-system.css` (~389–393): `.grid-2` cita recipe-grid/kpi-row como precedente de 300px, mas usam 260/140px — ajustar comentário para citar só o `.grid-2` do mockup.
 
 ## Testes exigidos (TDD)
 - Casos jsdom dos itens 1 e 2; suíte existente permanece verde.

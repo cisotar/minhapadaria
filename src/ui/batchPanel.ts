@@ -5,9 +5,12 @@
  * O que faz: `renderBatchPanel(root, store)` monta o card "Ancoragem e
  * Planejamento da Fornada" (mockup `mockups/calculadora.html`) com o toggle
  * `.period-toggle` Fornada inteira/Por unidade (`batchPlanningMode`), o campo
- * Peso de Farinha Total (editável em `total`; derivado somente-leitura em
- * `per-unit`, §2.E.1 — F_total = F_unit × N já vem pronto de `recalculate`,
- * 008), o campo Farinha por Unidade (só em `per-unit`) e a Quantidade de
+ * Peso de Farinha Total (editável em `percentage-to-weight`+`total`; derivado
+ * somente-leitura em `per-unit`, §2.E.1 — F_total = F_unit × N — E também em
+ * `weight-to-percentage`, §1.3/§3.A — F_total = Σ pesos das farinhas — ambos já
+ * vêm prontos de `recalculate`, 008; issue 024 corrigiu o segundo caso, que
+ * ficava editável-inerte e defasado), o campo Farinha por Unidade (só em
+ * `per-unit`) e a Quantidade de
  * Produtos (`pricing.quantity`, sempre visível — é o N do per-unit E o
  * divisor de custo do painel de Precificação, §3.E). Hospeda também o botão
  * de modo (`renderModeToggle`, §1.3/§1.5) e o escalonamento por peso alvo
@@ -19,10 +22,11 @@
  * na hora; `blur`→`validation.ts` (010, reuso) bloqueia/avisa via
  * `applyValidation` (cellHelpers.ts, 015). Mudança ESTRUTURAL — alternar
  * `batchPlanningMode` (mostra/esconde Farinha por Unidade, muda a
- * editabilidade de F_total) ou `calculationMode` (desabilita "Por unidade",
- * §2.E.1) — dispara `fullRenderDynamic()`; qualquer outra mutação só repinta
- * F_total quando ele é derivado (`patchDynamic`), nunca recria um input em
- * foco (mesmo padrão de `ingredientsTable.ts`, 014).
+ * editabilidade de F_total) ou `calculationMode` (desabilita "Por unidade" e
+ * também muda a editabilidade de F_total, §2.E.1/§1.3) — dispara
+ * `fullRenderDynamic()`; qualquer outra mutação só repinta F_total quando ele
+ * é derivado nos dois casos (per-unit OU peso→%, `patchDynamic`), nunca
+ * recria um input em foco (mesmo padrão de `ingredientsTable.ts`, 014).
  *
  * Zero lógica de negócio nova: F_total/F_unit/Quantidade só formatam/validam
  * valores já derivados por `recalculate`; a única conta local é a
@@ -109,6 +113,12 @@ export function renderBatchPanel(root: HTMLElement, store: AppStateStore): void 
   function buildFTotalField(): HTMLElement {
     const { recipe } = store.getState();
     const isPerUnit = recipe.batchPlanningMode === 'per-unit';
+    // §1.3/§3.A: em peso→% o core sempre deriva F_total (Σ pesos das
+    // farinhas), independente do planejamento (que fica forçado a 'total',
+    // §2.E.1) — o campo também vira somente-leitura nesse modo (issue 024,
+    // achado médio: editável-inerte + defasado antes desta correção).
+    const isWeightToPct = recipe.calculationMode === 'weight-to-percentage';
+    const isDerived = isPerUnit || isWeightToPct;
 
     const field = h('div', { className: 'field' });
     field.appendChild(h('label', {}, ['Peso de Farinha Total (F total)']));
@@ -116,12 +126,12 @@ export function renderBatchPanel(root: HTMLElement, store: AppStateStore): void 
     ftotalInput = h('input', {
       className: 'input num',
       value: formatWeight(recipe.flourTotalWeight),
-      readonly: isPerUnit, // §2.E.1: F_total é derivado (F_unit × N) em per-unit
+      readonly: isDerived, // §2.E.1/§1.3: F_total é derivado (F_unit × N, ou Σ farinhas em peso→%)
       'aria-label': 'Peso de Farinha Total',
     }) as HTMLInputElement;
     const input = ftotalInput;
     let lastValid = input.value;
-    if (!isPerUnit) {
+    if (!isDerived) {
       on(input, 'input', () => {
         const parsed = parseDecimal(input.value);
         if (parsed === null) return;
@@ -254,10 +264,11 @@ export function renderBatchPanel(root: HTMLElement, store: AppStateStore): void 
     dynamicFields.appendChild(buildQtyField());
   }
 
-  /** Repinta F_total quando ele é o campo derivado (per-unit) — nunca recria um input em foco. */
+  /** Repinta F_total quando ele é o campo derivado (per-unit OU peso→%, §1.3/§3.A/issue 024) — nunca recria um input em foco. */
   function patchDynamic(): void {
     const { recipe } = store.getState();
-    if (recipe.batchPlanningMode === 'per-unit' && ftotalInput) {
+    const isDerived = recipe.batchPlanningMode === 'per-unit' || recipe.calculationMode === 'weight-to-percentage';
+    if (isDerived && ftotalInput) {
       ftotalInput.value = formatWeight(recipe.flourTotalWeight);
     }
   }
