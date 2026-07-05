@@ -15,7 +15,7 @@
 | 011 | Storage receitas CRUD + toggle custos | storage | 002 | done | b2fbaf4 |
 | 012 | Backup/restauração JSON | storage | 011 | done | f0f9bba |
 | 013 | Fornadas — cálculos, agregações, persistência | core | 002, 011 | done | 9c6b58a |
-| 014 | UI calculadora — tabela de insumos | ui | 008, 010, 011 | doing | |
+| 014 | UI calculadora — tabela de insumos | ui | 008, 010, 011 | done | df3e956 |
 | 015 | UI calculadora — fermento + hidratação | ui | 014 | todo | |
 | 016 | UI calculadora — escala, precificação, banner | ui | 009, 015 | todo | |
 | 017 | UI receitas + backup | ui | 011, 012, 014 | todo | |
