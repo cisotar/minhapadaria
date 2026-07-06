@@ -32,7 +32,7 @@
 | 028 | Refactor — estilo dos PDFs (visual tipo tela) + split Receita/Custos | export | 019, 027 | done | 708372c |
 | 029 | Fix — achados da revisão da issue 028 (refactor PDF) | fix | 028 | done | 69ee142 |
 | 030 | Eliminar unidades de volume (mL/L) — todo ingrediente em peso (g/kg) | mista | 002, 006, 010, 011, 014, 015 | done | 979d639 |
-| 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | done | PENDING |
+| 031 | Fix — achados da revisão da issue 030 (eliminação de volume) | fix | 030 | done | 07d8992 |
 | 032 | Rota inicial do site deve ser receitas.html | ui | 017 | done | 8c67f6c |
 | 033 | Renomear receita vira edição inline (sem prompt/modal) | ui | 017 | done | 72e443a |
 | 034 | Refactor impressão Receita/Custos v2 — cards, fermento, coluna custo | export | 019, 028, 030 | done | 6486296 |
