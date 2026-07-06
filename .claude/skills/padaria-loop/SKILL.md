@@ -1,11 +1,11 @@
 ---
 name: padaria-loop
-description: Uma iteração do ciclo autônomo de implementação da Calculadora de Pão (spec v5) — seleciona a próxima issue, delega aos agentes do projeto (arquiteto, dev-core, dev-ui, revisor-spec, guardiao-design, escriba), roda os gates de teste, commita e atualiza o progresso. Rodar via /loop para trabalhar a noite inteira.
+description: Uma iteração do ciclo autônomo de implementação da Calculadora de Pão — seleciona a próxima issue, delega aos agentes do projeto (arquiteto, especificador, dev-core, dev-ui, revisor-spec, guardiao-design, escriba), roda os gates de teste, commita e atualiza o progresso. Rodar via /loop para trabalhar a noite inteira.
 ---
 
 # /padaria-loop — uma iteração do ciclo de implementação
 
-Cada invocação processa **uma issue** do início ao fim. Fonte da verdade do produto: `spec/Calculadora_Pao_Fermento_Natural_v5.md`. Regras visuais: `brand/brandbook.md` + `references/design-system.css`. Convenções técnicas: `references/architecture.md`.
+Cada invocação processa **uma issue** do início ao fim. Especificação do produto: `specs/` (pode ter vários documentos — `Calculadora_Pao_Fermento_Natural_v5.md` é a origem histórica, não a única canônica; doc mais novo com cabeçalho `Supera:` manda sobre o que ela cobre). Regras visuais: `brand/brandbook.md` + `references/design-system.css`. Convenções técnicas: `references/architecture.md`.
 
 ## 0. Bootstrap (só quando `issues/STATE.md` não existe)
 
@@ -22,7 +22,9 @@ Cada invocação processa **uma issue** do início ao fim. Fonte da verdade do p
 
 ## 2. Planejar — agente `arquiteto`
 
-Delegue (Agent tool, `subagent_type: arquiteto`, síncrono): "Planeje a issue `issues/NNN-slug.md`". Ele grava `## Plano Técnico` na própria issue. Se a issue já tem plano (retomada), pule.
+Delegue (Agent tool, `subagent_type: arquiteto`, síncrono): "Planeje a issue `issues/NNN-slug.md`". Ele grava `## Plano Técnico` na própria issue e pode enriquecer/esclarecer um doc de `specs/` já existente se achar lacuna. Se a issue já tem plano (retomada), pule.
+
+Se o `arquiteto` reportar que o caso exige um documento de spec inteiramente novo (feature grande, mudança de regra que não cabe como esclarecimento pontual): delegue ao agente `especificador` primeiro ("Escreva a spec para: <resumo>"), depois rode o `arquiteto` de novo para planejar já em cima do doc novo.
 
 ## 3. Implementar
 
@@ -75,10 +77,12 @@ Delegue: atualizar `PROGRESS.md` (entrada da iteração + "Decisões da noite"),
 ## Ferramentas opcionais
 
 - Comandos `/design` (e ferramenta DesignSync, se disponível) **podem ser usados quando o orquestrador julgar necessário** em issues de UI — autorização dada pelo cliente em 2026-07-05. Pré-requisito: consentimento já concedido na máquina (`/design consent`); se indisponível/sem consentimento, siga sem ele (mockups + design system bastam) e registre em PROGRESS.md.
+- **`gh` liberado** (decisão do cliente 2026-07-06): pode ser usado quando útil (ex.: consultar/abrir issue ou PR real no GitHub). O backlog operacional do loop continua em `issues/` locais — `gh` é complementar, não substitui o fluxo local.
 
 ## Regras invioláveis (repasse a quem precisar)
 
-- **Nunca** editar `spec/`, `brand/`, `mockups/` — são o contrato / fonte da verdade (humano-dono): o `revisor-spec` valida a implementação CONTRA eles, então editá-los anularia a validação. Regra de disciplina do loop, **não** trava técnica: o `settings.json` só bloqueia `.env`, não estes diretórios. Divergência deliberada (ex.: decisão do cliente que contraria a spec) NÃO é resolvida reescrevendo o contrato — registre em `PROGRESS.md` → "Decisões da noite" + `references/architecture.md` para revisão humana.
+- **`specs/` não é mais somente-leitura.** Só `arquiteto` (enriquece/esclarece doc existente) e `especificador` (cria doc novo) editam ali, sempre com o cabeçalho de convenção (Status/Data/Supera/Relaciona, ver `specs/refactor-farinhas-multiplas.md`) ou uma linha de changelog. `dev-core`, `dev-ui`, `escriba`, `revisor-spec`, `guardiao-design` continuam SEM editar `specs/`.
+- **`brand/` e `mockups/` continuam contrato imutável do loop** — são a fonte da verdade visual (humano-dono); o `guardiao-design`/`dev-ui` validam CONTRA eles, editá-los anularia a validação. Regra de disciplina do loop, **não** trava técnica: o `settings.json` só bloqueia `.env`, não estes diretórios. Divergência deliberada (ex.: decisão do cliente que contraria o brandbook) NÃO é resolvida reescrevendo o contrato — registre em `PROGRESS.md` → "Decisões da noite" + `references/architecture.md` para revisão humana.
 - **Tokens do design system são imutáveis**; classes novas em `references/design-system.css` são permitidas se usarem só tokens e forem documentadas em `references/design-system.html`.
 - **Regras de ouro do cliente** (ver `references/architecture.md`): 1) libs consolidadas antes de implementação manual; 2) reusar tudo que já existe — nunca recriar código ou componente existente; 3) segurança e privacidade mandatórios (escape de dado do usuário, sem telemetria, dados 100% locais); 4) documentação oficial consultada na internet antes de implementar lib/API não-trivial.
 - **Nenhum secret** em código ou commit; nenhuma chamada de rede em runtime do app (spec §11.1). v1 é 100% client-side.

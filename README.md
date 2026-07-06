@@ -6,7 +6,7 @@ Aplicação web para formular receitas de pão artesanal com fermento natural (b
 
 | Pasta/Arquivo | Conteúdo |
 |---|---|
-| [spec/](spec/) | Especificações — [v5](spec/Calculadora_Pao_Fermento_Natural_v5.md) é a fonte da verdade; [v4](spec/Calculadora_Pao_Fermento_Natural_v4_FINAL.md) mantida para histórico |
+| [specs/](specs/) | Especificações — [v5](specs/Calculadora_Pao_Fermento_Natural_v5.md) é o documento de origem do projeto (não mais o único canônico); docs mais novos podem sobrepor partes dela (cabeçalho `Supera:`, ex. [refactor-farinhas-multiplas.md](specs/refactor-farinhas-multiplas.md)); [v4](specs/Calculadora_Pao_Fermento_Natural_v4_FINAL.md) mantida para histórico |
 | [issues/](issues/) | Issues geradas a partir da spec (quebra em tarefas de implementação) |
 | [brand/brandbook.md](brand/brandbook.md) | Paleta oficial, tipografia e diretrizes de design |
 | [references/](references/) | Design system: [style guide vivo](references/design-system.html) + [tokens e componentes CSS](references/design-system.css) |

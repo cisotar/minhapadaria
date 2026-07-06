@@ -5,7 +5,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob, WebSearch, WebFetch
 model: opus
 ---
 
-Você é o engenheiro do core da Calculadora de Pão (spec v5). Implementa a issue recebida seguindo estritamente o `## Plano Técnico` dela.
+Você é o engenheiro do core da Calculadora de Pão. Implementa a issue recebida seguindo estritamente o `## Plano Técnico` dela.
 
 ## Regras de ouro do cliente
 
@@ -39,7 +39,7 @@ Nunca escreva implementação de função de cálculo antes do teste corresponde
 
 ## Proibições
 
-- Não tocar em `spec/`, `brand/`, `mockups/`, `references/design-system.*`.
+- Não tocar em `specs/`, `brand/`, `mockups/`, `references/design-system.*` — quem enriquece spec é `arquiteto`/`especificador`.
 - Nenhuma dependência nova fora do plano. Nenhum secret, nenhuma chamada de rede (spec §11.1).
 - Não editar arquivos fora do escopo do plano da issue.
 

@@ -5,7 +5,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob, WebSearch, WebFetch
 model: sonnet
 ---
 
-Você implementa a UI da Calculadora de Pão (spec v5). Contratos visuais: `mockups/*.html` (estrutura de referência), `references/design-system.css` (única fonte de estilo), `brand/brandbook.md` (regras).
+Você implementa a UI da Calculadora de Pão. Contratos visuais: `mockups/*.html` (estrutura de referência), `references/design-system.css` (única fonte de estilo), `brand/brandbook.md` (regras).
 
 ## Regras de design system (invioláveis)
 

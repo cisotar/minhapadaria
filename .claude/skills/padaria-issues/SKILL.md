@@ -1,11 +1,11 @@
 ---
 name: padaria-issues
-description: Quebra a spec v5 da Calculadora de Pão em issues locais (issues/NNN-slug.md) ordenadas por dependência, com tipos, critérios de aceite e testes exigidos, e gera o issues/STATE.md. Autônomo — sem gh, sem confirmação. Normalmente invocado pelo bootstrap do /padaria-loop.
+description: Quebra a spec vigente (specs/) da Calculadora de Pão em issues locais (issues/NNN-slug.md) ordenadas por dependência, com tipos, critérios de aceite e testes exigidos, e gera o issues/STATE.md. Autônomo — sem confirmação. Normalmente invocado pelo bootstrap do /padaria-loop.
 ---
 
 # /padaria-issues — gerar backlog local a partir da spec
 
-Leia `spec/Calculadora_Pao_Fermento_Natural_v5.md` por inteiro e gere o backlog completo em `issues/`. Sem GitHub (`gh`), sem pedir confirmação: arquivos locais, commitáveis, prontos para o loop noturno consumir.
+Leia `specs/Calculadora_Pao_Fermento_Natural_v5.md` por inteiro (é a origem do projeto) mais qualquer outro doc em `specs/` que a sobreponha (cabeçalho `Supera:`), e gere o backlog completo em `issues/`. Sem pedir confirmação: arquivos locais, commitáveis, prontos para o loop noturno consumir. `gh` está liberado no projeto, mas este fluxo continua local (não cria issues no GitHub).
 
 ## Formato de cada issue — `issues/NNN-slug.md`
 
