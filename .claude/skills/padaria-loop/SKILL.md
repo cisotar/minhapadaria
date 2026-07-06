@@ -78,7 +78,7 @@ Delegue: atualizar `PROGRESS.md` (entrada da iteração + "Decisões da noite"),
 
 ## Regras invioláveis (repasse a quem precisar)
 
-- **Nunca** editar `spec/`, `brand/`, `mockups/` — contratos somente-leitura (o settings.json também bloqueia).
+- **Nunca** editar `spec/`, `brand/`, `mockups/` — são o contrato / fonte da verdade (humano-dono): o `revisor-spec` valida a implementação CONTRA eles, então editá-los anularia a validação. Regra de disciplina do loop, **não** trava técnica: o `settings.json` só bloqueia `.env`, não estes diretórios. Divergência deliberada (ex.: decisão do cliente que contraria a spec) NÃO é resolvida reescrevendo o contrato — registre em `PROGRESS.md` → "Decisões da noite" + `references/architecture.md` para revisão humana.
 - **Tokens do design system são imutáveis**; classes novas em `references/design-system.css` são permitidas se usarem só tokens e forem documentadas em `references/design-system.html`.
 - **Regras de ouro do cliente** (ver `references/architecture.md`): 1) libs consolidadas antes de implementação manual; 2) reusar tudo que já existe — nunca recriar código ou componente existente; 3) segurança e privacidade mandatórios (escape de dado do usuário, sem telemetria, dados 100% locais); 4) documentação oficial consultada na internet antes de implementar lib/API não-trivial.
 - **Nenhum secret** em código ou commit; nenhuma chamada de rede em runtime do app (spec §11.1). v1 é 100% client-side.
