@@ -41,4 +41,4 @@
 | 037 | Fix — achado da revisão da issue 029 (nota de reatividade do PDF Financeiro) | fix | 029 | done | bbccfac |
 | 038 | Fix — resíduo de doc da issue 031/030 (Água "1 L" → "1 kg" no guia vivo) | fix | 031 | done | c186e1c |
 | 039 | Fix — achado da revisão da issue 035 (aria-label redundante no modal) | fix | 035 | done | 0155c36 |
-| 040 | Nome da receita como campo fixo (card entre export e Ancoragem) na Calculadora (+ criar-ao-nomear) | ui | 036, 035 | done | PENDING |
+| 040 | Nome da receita como campo fixo (card entre export e Ancoragem) na Calculadora (+ criar-ao-nomear) | ui | 036, 035 | done | 12e72e0 |
