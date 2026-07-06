@@ -499,6 +499,16 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   align-items: flex-end;
 }
 
+/* Empilhamento vertical genérico de `.field`s (issue 042) — contraparte de
+   `.row` para quando os campos precisam ficar um abaixo do outro em vez de
+   lado a lado (card Precificação: Custo unitário → Lucro unitário → % de
+   lucro → Preço de venda). Só tokens (`var(--sp-3)`), sem valor bruto novo. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
 /* Modificador de espaçamento vertical para `.row` usado como barra de ações
    isolada (Exportar XLSX / Imprimir, issue 019 revisão — achado ALTO:
    `.export-bar` duplicava `.row`, violando a regra de ouro 1). Só token de

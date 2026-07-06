@@ -42,7 +42,7 @@ function mount(mutate?: (r: ReturnType<typeof goldenSeedNoFat>) => void) {
 describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
   it('7. editar % de lucro 40 → Preço 6,02 e Lucro 1,72 (seed com Isca=1, 2026-07-06); campo em foco não é sobrescrito', () => {
     const { root } = mount();
-    const marginInput = root.querySelector('input[aria-label="Margem %"]') as HTMLInputElement;
+    const marginInput = root.querySelector('input[aria-label="% de lucro"]') as HTMLInputElement;
     const priceInput = root.querySelector('input[aria-label="Preço de venda"]') as HTMLInputElement;
     const profitInput = root.querySelector('input[aria-label="Lucro unitário"]') as HTMLInputElement;
 
@@ -58,7 +58,7 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
     const { root, store } = mount();
     const chip = root.querySelector('.chip') as HTMLElement;
     expect(chip.classList.contains('chip-ok')).toBe(true);
-    expect(chip.textContent).toBe('Margem 40,00%');
+    expect(chip.textContent).toBe('Lucro 40,00%');
 
     store.update((draft) => {
       draft.pricing.priceInputMode = 'sale-price';
@@ -72,7 +72,7 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
 
   it('9. editar % de lucro 150 → aceito (sem teto, markup); negativo bloqueia e reverte (issue 041)', () => {
     const { root } = mount();
-    const marginInput = root.querySelector('input[aria-label="Margem %"]') as HTMLInputElement;
+    const marginInput = root.querySelector('input[aria-label="% de lucro"]') as HTMLInputElement;
     expect(marginInput.value).toBe('40,00');
 
     // 150% de lucro é válido agora (markup não tem teto de 99,9%).
@@ -88,5 +88,45 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
     marginInput.dispatchEvent(new Event('blur', { bubbles: true }));
     expect(marginInput.getAttribute('aria-invalid')).toBe('true');
     expect(marginInput.value).toBe('150,00'); // reverte ao último válido
+  });
+
+  it('10. rótulo/aria-label do percentual é "% de lucro"; não existe mais "Margem %" (issue 042)', () => {
+    const { root } = mount();
+    expect(root.querySelector('input[aria-label="% de lucro"]')).not.toBeNull();
+    expect(root.querySelector('input[aria-label="Margem %"]')).toBeNull();
+  });
+
+  it('11. Custo unitário é o 1º campo, read-only, e não altera pricing ao receber foco/digitação (issue 042, AC40)', () => {
+    const { root, store } = mount();
+    const costInput = root.querySelector('.stack .field:first-child input') as HTMLInputElement;
+    expect(costInput.readOnly).toBe(true);
+    expect(costInput.getAttribute('aria-label')).toBe('Custo unitário');
+
+    const before = JSON.stringify(store.getState().recipe.pricing);
+    costInput.dispatchEvent(new Event('focus', { bubbles: true }));
+    costInput.value = '999';
+    costInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(JSON.stringify(store.getState().recipe.pricing)).toBe(before);
+  });
+
+  it('12. Custo unitário exibe "R$ 4,30" (seed atual, issue 042)', () => {
+    const { root } = mount();
+    const costInput = root.querySelector('.stack .field:first-child input') as HTMLInputElement;
+    expect(costInput.value).toBe('R$ 4,30');
+  });
+
+  it('13. Custo unitário indeterminado (Peso do Produto ≤ 0, §5.C) → exibe "—" (issue 042, AC40)', () => {
+    const { root } = mount((r) => {
+      // Peso do Produto 0 → custo por grama impossível → costPerUnit null (mesmo padrão de recalc.test.ts caso 6).
+      r.ingredients.find((i) => i.id === 'flour-1')!.packageCost = { pricePaid: 8, packageSize: 0, packageUnit: 'kg' };
+    });
+    const costInput = root.querySelector('.stack .field:first-child input') as HTMLInputElement;
+    expect(costInput.value).toBe('—');
+  });
+
+  it('14. ordem vertical dos campos: Custo → Lucro unitário → % de lucro → Preço de venda (issue 042, AC45)', () => {
+    const { root } = mount();
+    const labels = [...root.querySelectorAll('.stack .field label')].map((l) => l.textContent);
+    expect(labels).toEqual(['Custo unitário', 'Lucro unitário', '% de lucro', 'Preço de venda']);
   });
 });

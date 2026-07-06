@@ -140,6 +140,20 @@ Resumo entregue:
 
 ---
 
+## Iteração 042 — 2026-07-06 07:58 (UI card Precificação: custo empilhado + rótulo "% de lucro")
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 042-fix-card-precificacao-custo-empilhado-rotulo |
+| **Timestamp** | 2026-07-06 07:58 |
+| **O que foi feito** | **Zero lógica nova — consumo do core markup-sobre-custo da issue 041 (números já corretos).** Três ajustes UI no card de Precificação (`src/ui/pricingPanel.ts`, issue 016): (1) **Rótulo/aria-label renomeado**: campo de percentual muda de "Margem %" para "% de lucro" (interno `priceInputMode='margin'`/`profitMargin` mantido por compat localStorage). (2) **Custo unitário como 1º item empilhado**: novo campo read-only (não é `<input>` editável), derivado de `summary.costPerUnit`, exibe valor via `setDerivedDisplay`/`formatCurrency` (reuso padrão cellHelpers.ts, regra de ouro 2; exibe "—" se null). Removido da tabela de totais (não duplicar dado). (3) **Layout empilhado vertical**: trio sincronizado + custo agora em coluna (`.stack` — classe documentada em design-system.css) em ordem: Custo unitário → Lucro unitário → % de lucro → Preço de venda. Cabeçalho `pricingPanel.ts` atualizado (L1–42): cita issue 042, novo rótulo, layout empilhado, .stack reuso. Nenhum hex/valor bruto novo — só tokens design-system existentes. Sincronização trio, proteção `activeField`, blur/validação intactos (010). Chip rótulo → "Lucro X%" (coerente com "% de lucro" sem duplo "%"). Totais de produção (Receita total, Lucro total) seguem na tabela, intactos. |
+| **Hash do commit** | (aguardando commit — implementação pronta, testes verdes) |
+| **Testes** | Vitest: **413 passed** (suíte completa, incluindo 5 casos novos `pricingPanel.test.ts`): (1) rótulo "% de lucro" + `aria-label` correto, "Margem %" não existe mais; (2) custo unitário é 1º campo, read-only (`readOnly === true`), não dispara `store.update` ao receber foco/input; (3) exibição custo seed → "R$ 4,30" (novo gabarito 041); (4) custo null → "—"; (5) ordem vertical dos campos validada ([...querySelectorAll('.stack .field label')].map(l => l.textContent) === ['Custo unitário', 'Lucro unitário', '% de lucro', 'Preço de venda']). Sincronia, prejuízo, validação mantidos (testes 7–9 ajustados para novo rótulo "Lucro"). `npm run build` verde; `tsc --noEmit` limpo. |
+| **Reviews** | N/A (issue 042 é fix tipo UI — TDD cobre ACs, sem re-review no loop conforme memória "Fixes sem re-review"). |
+| **Observações** | Zero divergência spec (rótulo "% de lucro" é interpretação UI, interno mantém compat `profitMargin`). Classe `.stack` já documentada em design-system.css (L502–510, issue 042 fase anterior) — só tokens `var(--sp-3)`, nenhum valor bruto novo. Escopo confinado: só pricingPanel.ts + testes; recipesList.ts/historyView.ts/export/* ainda usam "Margem" (alinhamento futuro, fora do escopo 042). Cabeçalho cita seções spec: §1.6, §3.E, §4, §5.C, §9. |
+
+---
+
 ## Iteração 041 — 2026-07-06 07:43 (mudança precificação: markup-sobre-custo em vez margem-sobre-preço)
 
 | Campo | Valor |

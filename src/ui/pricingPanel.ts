@@ -2,22 +2,29 @@
  * pricingPanel.ts — Painel de Precificação (spec §3.E/§4) · issue 016.
  *
  * O que faz: `renderPricingPanel(root, store)` monta o card "Precificação"
- * (mockup `mockups/calculadora.html`) com o chip de status da margem
- * (`marginStatus`/`isLoss`, pricing.ts — reuso, regra de ouro 2), o trio
- * sincronizado Preço de venda/Margem %/Lucro unitário (§3.E: editar um grava
- * `pricing.priceInputMode` + o valor cru via `store.update`; `recalculate`,
- * 008, já reconstrói os outros dois) e os totais de produção (Custo
- * unitário, Receita total, Lucro total) de `summary`.
+ * (mockup `mockups/calculadora.html`) com o chip de status ("Lucro …%",
+ * `marginStatus`/`isLoss`, pricing.ts — reuso, regra de ouro 2) e um bloco
+ * `.stack` (empilhado verticalmente, issue 042) com 4 campos, nesta ordem:
+ * Custo unitário (1º, somente leitura, derivado de `summary.costPerUnit`) →
+ * Lucro unitário → % de lucro → Preço de venda (trio sincronizado, §3.E:
+ * editar um grava `pricing.priceInputMode` + o valor cru via `store.update`;
+ * `recalculate`, 008, já reconstrói os outros dois). Os totais de produção
+ * (Receita total, Lucro total) seguem numa tabela — a linha "Custo unitário"
+ * saiu de lá (issue 042: não exibir o mesmo dado duas vezes, agora é o 1º
+ * item do `.stack`).
  *
  * Sincronização do trio (§1.6, "recalcula imediatamente"): o campo em edição
  * NUNCA é sobrescrito por `store.subscribe` — `activeField` (análogo ao
  * `lastPricingEdit` do mockup) marca qual dos três está sendo digitado; os
  * outros dois são repintados a cada notificação. `blur` formata o próprio
  * campo (§9) e limpa `activeField`, liberando-o para repintura normal.
- * Validação (010, reuso): Margem bloqueia fora de [0, 99,9] (`validateMargin`
- * — o core já clampa internamente, mas o bloqueio no blur também sinaliza
- * `aria-invalid`, §5.C); Preço só AVISA se não cobrir o custo unitário
- * (`validatePriceVsUnitCost`, aviso não bloqueante).
+ * Validação (010, reuso): "% de lucro" bloqueia negativo (`validateMargin` —
+ * markup sem teto desde a issue 041, só piso 0 — o core clampa internamente,
+ * mas o bloqueio no blur também sinaliza `aria-invalid`, §5.C); Preço só
+ * AVISA se não cobrir o custo unitário (`validatePriceVsUnitCost`, aviso não
+ * bloqueante). O identificador interno `mode='margin'`/`profitMargin`
+ * (`pricing.ts`) é mantido por compat de dados — só o rótulo visível mudou
+ * (issue 042, decisão registrada no plano técnico).
  *
  * Indicadores (§4): margem colorida via `marginStatus` (verde >30%, amarelo
  * 15–30%, vermelho <15% ou negativa) mapeada para `.chip-ok/.chip-warn/
@@ -27,7 +34,9 @@
  *
  * Zero lógica de negócio nova: todo número vem de `summary`/`recipe.pricing`
  * (`recalculate`, 008); a única conta local é o rótulo pt-BR de Quantidade
- * ("N un.") na linha de Receita Total, texto puro sem fórmula.
+ * ("N un.") na linha de Receita Total, texto puro sem fórmula. Custo unitário
+ * é pintado via `setDerivedDisplay` (cellHelpers.ts, regra de ouro 2), mesmo
+ * padrão de `ingredientsTable.ts`/`batchPanel.ts`.
  *
  * Seções implementadas: §1.6, §3.E, §4, §5.C, §9.
  */
@@ -36,7 +45,7 @@ import { marginStatus, isLoss } from '../core/pricing';
 import { validateMargin, validatePriceVsUnitCost, type ValidationResult } from '../core/validation';
 import { h, on } from './dom';
 import type { AppStateStore } from './state';
-import { moneyPlain, applyValidation, marginChipClass } from './cellHelpers';
+import { moneyPlain, applyValidation, marginChipClass, setDerivedDisplay } from './cellHelpers';
 
 type ActiveField = 'price' | 'margin' | 'profit' | null;
 
@@ -56,9 +65,10 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
   chipRow.appendChild(chip);
   card.appendChild(chipRow);
 
-  // Trio sincronizado (§3.E).
-  const trioRow = h('div', { className: 'row row--end' });
-  card.appendChild(trioRow);
+  // Bloco empilhado (§3.E, issue 042): Custo unitário (read-only) → Lucro
+  // unitário → % de lucro → Preço de venda, um abaixo do outro (`.stack`).
+  const stack = h('div', { className: 'stack' });
+  card.appendChild(stack);
 
   let activeField: ActiveField = null;
 
@@ -129,21 +139,37 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
       return summary.costPerUnit !== null ? validatePriceVsUnitCost(parsed, summary.costPerUnit) : null; // §5.C: aviso, não bloqueio
     },
   );
-  const marginField = buildTrioField('Margem %', 'Margem %', 'margin', 'margin', (parsed) => validateMargin(parsed)); // §5.C
+  const marginField = buildTrioField('% de lucro', '% de lucro', 'margin', 'margin', (parsed) => validateMargin(parsed)); // §5.C
   const profitField = buildTrioField('Lucro unitário', 'Lucro unitário', 'profit', 'profit', null);
-  trioRow.appendChild(priceField.field);
-  trioRow.appendChild(marginField.field);
-  trioRow.appendChild(profitField.field);
+
+  // Custo unitário (issue 042, AC40): 1º item do `.stack`, somente leitura —
+  // derivado de `summary.costPerUnit`, sem entrada manual (nunca dispara
+  // `store.update`). Reusa `.field`/`.readonly` (design-system.css) e
+  // `setDerivedDisplay` (cellHelpers.ts, regra de ouro 2), mesmo padrão de
+  // `ingredientsTable.ts`/`batchPanel.ts`.
+  const costField = h('div', { className: 'field' });
+  costField.appendChild(h('label', {}, ['Custo unitário']));
+  const costInput = h('input', {
+    className: 'input num readonly',
+    'aria-label': 'Custo unitário',
+    readonly: true,
+  }) as HTMLInputElement;
+  costField.appendChild(costInput);
+
+  stack.appendChild(costField);
+  stack.appendChild(profitField.field);
+  stack.appendChild(marginField.field);
+  stack.appendChild(priceField.field);
 
   // Totais de produção (§3.E) — sempre derivados, texto plano (brandbook §4.1).
+  // Custo unitário saiu daqui (issue 042): já é o 1º item do `.stack` acima,
+  // não exibir o mesmo dado duas vezes.
   const table = h('table', { className: 'table mt-3' }); // `.mt-3` (design-system.css, issue 022) — era style inline
-  const unitCostCell = h('td', { className: 'num readonly' });
   const qtyLabel = h('span', {});
   const totalRevenueCell = h('td', { className: 'num readonly' });
   const totalProfitCell = h('td', { className: 'num readonly' });
   table.appendChild(
     h('tbody', {}, [
-      h('tr', {}, [h('td', {}, ['Custo unitário']), unitCostCell]),
       h('tr', {}, [h('td', {}, ['Receita total (', qtyLabel, ' un.)']), totalRevenueCell]),
       h('tr', {}, [h('td', {}, ['Lucro total']), totalProfitCell]),
     ]),
@@ -165,7 +191,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
       chip.textContent = `Prejuízo ${formatCurrency(profit)}`;
     } else if (margin !== null) {
       chip.classList.add(marginChipClass(marginStatus(margin)));
-      chip.textContent = `Margem ${formatPercent(margin)}%`;
+      chip.textContent = `Lucro ${formatPercent(margin)}%`; // issue 042: rótulo "% de lucro", sem duplo "%"
     } else {
       chip.textContent = '—';
     }
@@ -175,7 +201,9 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
     profitField.sync(profit !== null ? moneyPlain(profit) : '');
     profitField.input.classList.toggle('loss', loss); // §4: destaque de prejuízo no próprio valor
 
-    unitCostCell.textContent = uc !== null ? formatCurrency(uc) : '—';
+    // Custo unitário (issue 042): 1º item do `.stack`, read-only — mesmo
+    // padrão de `setDerivedDisplay` usado em `ingredientsTable.ts`/`batchPanel.ts`.
+    setDerivedDisplay(costInput, uc !== null ? formatCurrency(uc) : '—');
     qtyLabel.textContent = quantityPlain(recipe.pricing.quantity);
     totalRevenueCell.textContent = summary.totalRevenue !== null ? formatCurrency(summary.totalRevenue) : '—';
     totalProfitCell.textContent = summary.totalProfit !== null ? formatCurrency(summary.totalProfit) : '—';
