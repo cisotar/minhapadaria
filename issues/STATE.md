@@ -40,4 +40,4 @@
 | 036 | Calculadora exibe e permite editar o nome da receita carregada | ui | 014, 033 | done | 3de722c |
 | 037 | Fix — achado da revisão da issue 029 (nota de reatividade do PDF Financeiro) | fix | 029 | done | bbccfac |
 | 038 | Fix — resíduo de doc da issue 031/030 (Água "1 L" → "1 kg" no guia vivo) | fix | 031 | done | c186e1c |
-| 039 | Fix — achado da revisão da issue 035 (aria-label redundante no modal) | fix | 035 | todo | — |
+| 039 | Fix — achado da revisão da issue 035 (aria-label redundante no modal) | fix | 035 | done | PENDING |

@@ -54,6 +54,20 @@
 
 ---
 
+## Iteração 039 — 2026-07-05 22:18 (fix a11y: aria-label redundante no input do modal)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 039-fix-review-findings-035 |
+| **Timestamp** | 2026-07-05 22:18 |
+| **O que foi feito** | Fix a11y (achado baixo da revisão da issue 035). `src/ui/modal.ts`: o `<input>` do modal tinha `aria-label={label}` E um `<label for>` associado com o mesmo texto — nome acessível duplicado (o `aria-label` sobrepõe o `<label>` para leitores de tela, WAI-ARIA recomenda não duplicar). Removido o `aria-label`; o nome acessível vem só do `<label for>`. Comentário explicando registrado. |
+| **Hash do commit** | (pendente) |
+| **Testes** | Novo caso 3b em `modal.test.ts`: input sem `aria-label`, `<label for>` = `input.id`, textContent do label = "Nome da receita". Suíte completa **409/409 pass**; `npm run build` verde. |
+| **Reviews** | Fix a11y trivial coberto por teste — sem re-review (memória "Fixes sem re-review no loop"). |
+| **Observações** | Só `src/ui/modal.ts` + `src/ui/modal.test.ts`. Nenhum outro código/teste tocado. |
+
+---
+
 ## Iteração 038 — 2026-07-05 22:14 (fix doc: Água "1 L" → "1 kg" no guia vivo)
 
 | Campo | Valor |

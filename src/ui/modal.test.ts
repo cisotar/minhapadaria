@@ -55,6 +55,15 @@ describe('openPromptModal (issue 035)', () => {
     expect(document.activeElement).toBe(input());
   });
 
+  it('3b. nome acessível do input vem do <label for> (sem aria-label redundante) — issue 039', () => {
+    open();
+    const inp = input();
+    expect(inp.hasAttribute('aria-label')).toBe(false);
+    const lbl = dialog().querySelector('label') as HTMLLabelElement;
+    expect(lbl.getAttribute('for')).toBe(inp.id);
+    expect(lbl.textContent).toBe('Nome da receita');
+  });
+
   it('4. "Criar" com nome válido → onConfirm chamado 1× com o nome; modal removido do DOM', () => {
     const { onConfirm } = open();
     input().value = 'Pão de Forma';

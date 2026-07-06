@@ -62,11 +62,13 @@ export function openPromptModal(options: PromptModalOptions): void {
   const titleId = `modal-title-${seq}`;
   const inputId = `modal-input-${seq}`;
 
+  // O nome acessível vem do `<label for>` associado (abaixo) — sem `aria-label`
+  // redundante, que sobreporia o `<label>` para leitores de tela (WAI-ARIA:
+  // evitar nome acessível duplicado). Achado baixo da revisão da issue 035.
   const input = h('input', {
     type: 'text',
     className: 'input',
     id: inputId,
-    'aria-label': label,
   }) as HTMLInputElement;
 
   const fieldLabel = h('label', { for: inputId }, [label]);
