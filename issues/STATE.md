@@ -48,4 +48,4 @@
 | 044 | Polir densidade da listagem do Histórico (paridade table.rt) + remover CSS órfã pdf-section | fix | 043 | done | 4fa2ab2 |
 | 045 | Aba BALANÇO — visão financeira por fornada (seção só-leitura no Histórico) | mista | 013, 018, 044 | done | 99b3f7c |
 | 046 | Card Balanço — pills de visualização (Completa/Unidades/Fornadas), totais sempre visíveis | ui | 045 | done | b190c22 |
-| 047 | Fix — achados baixos da revisão da issue 046 (pills de visualização do Balanço) | fix | 046 | todo | — |
+| 047 | Fix — achados baixos da revisão da issue 046 (pills de visualização do Balanço) | fix | 046 | done | d487614 |
