@@ -56,10 +56,13 @@ function waterPercentage(recipe: ReturnType<RecipeStore['get']>): number {
 }
 
 beforeEach(() => {
-  // Shell real de `receitas.html` (issue 036: header estático com o `<h1>`
-  // trocado em runtime pelo nome editável quando há receita carregada) +
-  // `#app`, único ponto de montagem dos cards (§2.F). Inócuo aos testes 1-4
-  // pré-existentes (nenhum deles inspeciona o header).
+  // Shell real de `receitas.html` (issue 040: `<h1>`/`.subtitle` SEMPRE
+  // estáticos — a substituição em runtime da issue 036 foi revertida; o nome
+  // da receita, refino de posicionamento, agora é um `<section class="card">`
+  // próprio dentro de `#app`, entre a barra de exportação e o card de
+  // Ancoragem — NUNCA dentro de `.page-header .inner`) + `#app`, único ponto
+  // de montagem dos cards (§2.F). Inócuo aos testes 1-4 pré-existentes
+  // (nenhum deles inspeciona o header).
   document.body.innerHTML =
     '<header class="page-header"><div class="inner">' +
     '<h1>🍞 Calculadora de Pão com Fermento Natural</h1>' +
@@ -204,169 +207,193 @@ describe('initCalculadora — integração ?recipe=<id> (jsdom, §2.F)', () => {
   });
 });
 
-describe('initCalculadora — nome da receita editável no header (issue 036, §2.F)', () => {
+describe('initCalculadora — nome da receita como campo fixo (issue 040, §2.F)', () => {
   const STATIC_H1 = '🍞 Calculadora de Pão com Fermento Natural';
 
   function pageH1(): HTMLHeadingElement {
     return document.querySelector('.page-header h1') as HTMLHeadingElement;
   }
 
-  it('1. ?recipe=<id> válido → h1 do header mostra o nome da receita; h1 estático some', () => {
+  // Refino de posicionamento (issue 040): o campo NÃO mora mais em
+  // `.page-header .inner` — vive num `<section class="card">` próprio dentro
+  // de `#app`, entre a barra de exportação e o card de Ancoragem.
+  function nameInput(): HTMLInputElement {
+    return document.getElementById('recipe-name-input') as HTMLInputElement;
+  }
+
+  it('1. ?recipe=<id> válido → h1 estático intacto; campo de nome no card dedicado com value = nome da receita', () => {
     const recipeStore = makeStore();
     const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
 
     initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
 
-    expect(pageH1().textContent).toBe('Pão Salvo');
-    expect(document.body.textContent).not.toContain(STATIC_H1);
+    expect(pageH1().textContent).toBe(STATIC_H1);
+    expect(nameInput()).not.toBeNull();
+    expect(nameInput().value).toBe('Pão Salvo');
   });
 
-  it('2. sem ?recipe (golden seed) → h1 estático permanece; sem input no header', () => {
+  it('1b. campo de nome NÃO está em `.page-header .inner`; o card de nome fica entre a barra de exportação e o card de Ancoragem', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    // Header 100% estático — nenhum input de nome injetado ali.
+    expect(document.querySelector('.page-header .inner input')).toBeNull();
+
+    // Ordem no DOM de `#app`: barra de exportação (`.row--sticky`) → card do
+    // nome (contém `#recipe-name-input`) → 1º card renderizado (Ancoragem).
+    const app = document.getElementById('app') as HTMLElement;
+    const children = Array.from(app.children);
+    const exportBarEl = app.querySelector('.row--sticky') as HTMLElement;
+    const nameCardEl = nameInput().closest('.card') as HTMLElement;
+    expect(nameCardEl).not.toBeNull();
+    expect(nameCardEl.tagName).toBe('SECTION');
+
+    const exportBarIndex = children.indexOf(exportBarEl);
+    const nameCardIndex = children.indexOf(nameCardEl);
+    const firstOtherCardIndex = children.findIndex(
+      (el) => el.tagName === 'SECTION' && el.classList.contains('card') && el !== nameCardEl,
+    );
+
+    expect(exportBarIndex).toBeGreaterThanOrEqual(0);
+    expect(nameCardIndex).toBeGreaterThan(exportBarIndex);
+    expect(firstOtherCardIndex).toBeGreaterThan(nameCardIndex);
+  });
+
+  it('2. sem ?recipe (golden seed) → h1 estático intacto; campo de nome presente e VAZIO (nunca goldenSeed().name)', () => {
     initCalculadora({ recipeStore: makeStore(), prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '' });
 
     expect(pageH1().textContent).toBe(STATIC_H1);
-    expect(document.querySelector('.page-header input')).toBeNull();
+    expect(nameInput()).not.toBeNull();
+    expect(nameInput().value).toBe('');
+    expect(goldenSeed().name).not.toBe(''); // golden seed TEM nome — confirma que não veio dele
   });
 
-  it('3. ?recipe=<id> inexistente → banner de aviso + h1 estático permanece; sem input', () => {
+  it('3. ?recipe=<id> inexistente → banner de aviso + h1 estático intacto; campo presente e vazio (efêmera)', () => {
     initCalculadora({ recipeStore: makeStore(), prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '?recipe=inexistente' });
 
     expect(document.querySelector('.chip-warn')).not.toBeNull();
     expect(pageH1().textContent).toBe(STATIC_H1);
-    expect(document.querySelector('.page-header input')).toBeNull();
+    expect(nameInput()).not.toBeNull();
+    expect(nameInput().value).toBe('');
   });
 
-  it('4. clique no h1 → vira input com valor atual, focado', () => {
-    const recipeStore = makeStore();
-    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
-    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
-
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    expect(input.value).toBe('Pão Salvo');
-    expect(document.activeElement).toBe(input);
-  });
-
-  it('5. Enter com nome novo válido → h1 atualizado de imediato; recipeStore reflete só após o debounce', () => {
+  it('4. carregado, Enter "Pão Editado" → store imediato; recipeStore reflete só após o debounce', () => {
     vi.useFakeTimers();
     const recipeStore = makeStore();
     const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
     initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
 
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    input.value = 'Pão Editado';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-
-    expect(pageH1().textContent).toBe('Pão Editado');
-    expect(document.querySelector('.page-header input')).toBeNull();
+    nameInput().value = 'Pão Editado';
+    nameInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
     vi.advanceTimersByTime(399);
-    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo'); // ainda não gravou
     vi.advanceTimersByTime(1);
     expect(recipeStore.get(saved.id)!.name).toBe('Pão Editado');
   });
 
-  it('6. blur com nome novo válido → mesmo resultado do Enter', () => {
+  it('5. carregado, blur "Pão Blur" → após 400ms recipeStore reflete o novo nome', () => {
     vi.useFakeTimers();
     const recipeStore = makeStore();
     const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
     initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
 
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    input.value = 'Pão Blur';
-    input.dispatchEvent(new Event('blur', { bubbles: true }));
+    nameInput().value = 'Pão Blur';
+    nameInput().dispatchEvent(new Event('blur', { bubbles: true }));
 
-    expect(pageH1().textContent).toBe('Pão Blur');
     vi.advanceTimersByTime(400);
     expect(recipeStore.get(saved.id)!.name).toBe('Pão Blur');
   });
 
-  it('7. Esc → nome restaurado ao original; nada gravado mesmo após avançar os timers', () => {
+  it('6. guarda (carregado): vazio ou igual ao atual ao confirmar → não altera recipe.name', () => {
     vi.useFakeTimers();
     const recipeStore = makeStore();
     const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
     initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
 
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    input.value = 'Xyz';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    nameInput().value = '';
+    nameInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    vi.advanceTimersByTime(400);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
 
-    expect(pageH1().textContent).toBe('Pão Salvo');
+    nameInput().value = 'Pão Salvo'; // igual ao atual
+    nameInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    vi.advanceTimersByTime(400);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+  });
+
+  it('7. caminho novo (sem ?recipe): confirmar nome não-vazio → create 1×, list +1, replaceUrl chamado; autosave passa a persistir', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const createSpy = vi.spyOn(recipeStore, 'create');
+    const replaceUrl = vi.fn();
+    const before = recipeStore.list();
+
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '', replaceUrl });
+
+    nameInput().value = 'Minha Receita';
+    nameInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    const list = recipeStore.list();
+    expect(list.length).toBe(before.length + 1);
+    const created = list.find((r) => r.name === 'Minha Receita');
+    expect(created).toBeDefined();
+    expect(replaceUrl).toHaveBeenCalledWith(`receitas.html?recipe=${created!.id}`);
+
+    // Edições seguintes de ingrediente passam a persistir (autosave ligado).
+    const pctInput = document.querySelector('input[aria-label="Porcentagem de Água"]') as HTMLInputElement;
+    pctInput.value = '90,00';
+    pctInput.dispatchEvent(new Event('input', { bubbles: true }));
+    vi.advanceTimersByTime(400);
+    expect(waterPercentage(recipeStore.get(created!.id))).toBe(90);
+  });
+
+  it('8. caminho novo com nome vazio → create NÃO chamado; nada criado na lista; replaceUrl não chamado', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const createSpy = vi.spyOn(recipeStore, 'create');
+    const replaceUrl = vi.fn();
+    const before = recipeStore.list();
+
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '', replaceUrl });
+
+    nameInput().value = '';
+    nameInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(recipeStore.list()).toEqual(before);
+    expect(replaceUrl).not.toHaveBeenCalled();
+  });
+
+  it('9. junk-prevention: efêmera, editar % Água sem nomear → recipeStore.list() inalterado; replaceUrl não chamado', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const replaceUrl = vi.fn();
+    const before = recipeStore.list();
+
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '', replaceUrl });
+
+    const pctInput = document.querySelector('input[aria-label="Porcentagem de Água"]') as HTMLInputElement;
+    pctInput.value = '90,00';
+    pctInput.dispatchEvent(new Event('input', { bubbles: true }));
     vi.advanceTimersByTime(5000);
-    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+
+    expect(recipeStore.list()).toEqual(before);
+    expect(replaceUrl).not.toHaveBeenCalled();
   });
 
-  it('8. nome vazio ou igual ao atual ao confirmar → não altera recipe.name', () => {
-    vi.useFakeTimers();
-    const recipeStore = makeStore();
-    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
-    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
-
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    let input = document.querySelector('.page-header input') as HTMLInputElement;
-    input.value = '';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(pageH1().textContent).toBe('Pão Salvo');
-    vi.advanceTimersByTime(400);
-    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
-
-    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    input = document.querySelector('.page-header input') as HTMLInputElement;
-    input.value = 'Pão Salvo';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(pageH1().textContent).toBe('Pão Salvo');
-    vi.advanceTimersByTime(400);
-    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
-  });
-
-  it('9. XSS: nome <img src=x onerror> renderizado como texto literal, sem nó <img>', () => {
+  it('10. XSS: nome <img src=x onerror> carregado → sem nó <img>; input.value é o texto literal', () => {
     const recipeStore = makeStore();
     const evil = '<img src=x onerror=alert(1)>';
     const saved = recipeStore.create({ ...goldenSeed(), name: evil });
     initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
 
-    expect(document.querySelector('.page-header h1 img')).toBeNull();
-    expect(pageH1().textContent).toBe(evil);
-  });
-
-  it('10. h1 renomeável é acessível por teclado: tabindex, role e aria-label', () => {
-    const recipeStore = makeStore();
-    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
-    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
-
-    const h1 = pageH1();
-    expect(h1.getAttribute('tabindex')).toBe('0');
-    expect(h1.getAttribute('role')).toBe('button');
-    expect(h1.getAttribute('aria-label')).toBeTruthy();
-  });
-
-  it('11. keydown Enter no h1 (foco por teclado) abre o input de edição, igual ao clique', () => {
-    const recipeStore = makeStore();
-    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
-    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
-
-    pageH1().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    expect(input.value).toBe('Pão Salvo');
-    expect(document.activeElement).toBe(input);
-  });
-
-  it('12. keydown Espaço no h1 abre o input de edição, igual ao clique', () => {
-    const recipeStore = makeStore();
-    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
-    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
-
-    pageH1().dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
-
-    const input = document.querySelector('.page-header input') as HTMLInputElement;
-    expect(input).not.toBeNull();
-    expect(input.value).toBe('Pão Salvo');
+    expect(document.querySelector('.page-header img')).toBeNull();
+    expect(nameInput().closest('.card')!.querySelector('img')).toBeNull();
+    expect(nameInput().value).toBe(evil);
+    expect(pageH1().textContent).toBe(STATIC_H1);
   });
 });

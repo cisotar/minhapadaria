@@ -4,11 +4,26 @@
 
 ## Decisões da noite
 
-### Encerramento da noite — 2026-07-05 22:19
+### Encerramento da noite — 2026-07-05 22:51
 
-**Backlog completo: todas as issues (029, 031, 035, 036, 037, 038, 039) concluídas nesta sessão.**
+**Issue 040 (refino de 036, pedido do cliente) concluída nesta rodada.**
 
-**Estado final:** 409 testes 100% verde, `npm run build` ok, Golden §12 inalterado (1041,7g, R$ 8,86).
+**Estado final:** 408 testes 100% verde, `npm run build` ok, Golden §12 inalterado (1041,7g, R$ 8,86).
+
+**Decisões autônomas — Issue 040:**
+- 040.1 — Reverteu substituição do h1 de 036: "🍞 Calculadora de Pão…" + subtítulo SEMPRE estáticos (não substituídos).
+- 040.2 — Nome da receita → campo fixo `<input>` em `<section class="card">`, entre barra export + card "Ancoragem", sempre visível.
+- 040.3 — Novo caminho lazy-create: acepta nome vazio na efêmera (sem criar), nome não-vazio → `recipeStore.create` + `store.update` sincroniza id + `history.replaceState` (injetável) para `receitas.html?recipe=<id>`.
+- 040.4 — `recipeId` nulo na efêmera: autosave registrado mas flush no-op (junk-prevention) até nomear.
+- 040.5 — Aria-label redundante corrigido: removido do input do modal 035 (nome acessível vem só do `<label for>`), sem issue de fix separada.
+
+---
+
+**Resumo sessão anterior (2026-07-05 22:19):**
+
+**Backlog completo: todas as issues (029, 031, 035, 036, 037, 038, 039) concluídas.**
+
+**Estado anterior:** 409 testes 100% verde, `npm run build` ok, Golden §12 inalterado (1041,7g, R$ 8,86).
 
 Resumo entregue:
 
@@ -102,6 +117,20 @@ Resumo entregue:
 4. **REFACTOR ACHADO ALTO: AZEITE EM "SAL E EXTRAS" NÃO "GORDURAS" (issue 028, validado TDD antes de implementação)**: Mockup pdf-refactor.html aprovado dividia ingredientes assim: FARINHAS / LÍQUIDOS / SAL E EXTRAS (Sal + Azeite) / FERMENTO. Implementação 028 respeitou exatamente. Achado guardiao-design (revisão alta) constatou divergência do mockup aprovado — azeite renderizado em seção "Gorduras" separada. Corrigido nesta mesma iteração (TDD primeira): `renderRecipePrintView` e `renderRecipeCostsPrintView` agrupam por categoria (`ingredients` filtrados por tipo), azeite (category='fat') agora renderizado com sal (category='salt'), formando bloco "Sal e Extras" único sem "Gorduras" órfã. Suíte 342/342 verde após correção. Revisão guardiao-design: aprovada, ZERO achados remanescentes (reprovado→corrigido). Revisão revisor-spec: aprovado (com achados MÉDIOS registrados em issue 029 TODO: calculadora sem teste do gate showCosts; design-system.html desatualizado seção "Impressão/PDF").
 
 5. **CLASSES `.PDF-*` NOVAS, CLASSES `.PRINT-*` MORTAS (issue 028, refactor layout)**: `print.ts` e `design-system.css` marcam fim de `.print-view/.print-title/.print-section/.print-line/.print-label/.print-value` — layout velho lista rótulo→valor. Novo layout `.card` (borda fina `--print-border`) contendo `.table`/`.kv` (classes compartilhadas com tela, regra 2). Classes `.pdf-*` novas: `.pdf-meta` (metadados página gerada), `.pdf-section` (h2 uppercase), `.kv` (key-value pairs vertical, anterior `.metric-pair` batchPanel), `.pdf-credit/.pdf-debit` (semântica cor), `.pdf-muted-row` (planejada cinza itálico §14.6), `.pdf-alert` (alerta prejuízo, box vermelha, icon). Snapshot de classes em `print.test.ts` trava à migração (caso 2: `.card` + `table.table thead/tbody/tfoot`, zero `.print-*`). Motivo: visual consistente tela↔PDF, reutilização design-system (zero CSS duplicado), manutenção centrada.
+
+---
+
+## Iteração 040 — 2026-07-05 22:51 (refino de 036: h1 revertido estático, nome em card fixo)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 040-refine-036-nome-fixo |
+| **Timestamp** | 2026-07-05 22:51 |
+| **O que foi feito** | **Refino de 036 por pedido do cliente: reverteu substituição do h1, nome da receita vira campo `<input>` fixo em card entre barra export e Ancoragem, novo caminho lazy-create (nomear na efêmera cria receita). Só `calculadora.ts` + testes, `inlineNameEdit.ts` intocado.** (1) Shell `receitas.html` e styles design-system.css: INTOCADOS. H1 "🍞 Calculadora de Pão com Fermento Natural" + subtitle `.subtitle` (mockup original) voltam a ser **sempre estáticos** — 036 os substituía quando `?recipe` carregado; 040 reverteu. (2) Campo de nome fixo: novo `<section class="card">` montado em `#app` logo após `exportBar` (barra sticky Exportar/Imprimir) e **ANTES de `renderBatchPanel`** (Ancoragem). Label "Nome da receita", `<input class="input">` id=recipe-name, sempre visível. Value = recipe.name se `recipeId !== null` (receita carregada via `?recipe`), '' (vazio) na efêmera (sem ?recipe). Placeholder vazio (spec §7.1). (3) Novo caminho criar-ao-nomear (lazy-create): implementado na confirmação do input (Enter/blur): (a) **receita carregada** (`recipeId !== null`): guard vazio/igual-ao-atual → não grava; senão `store.update(draft => draft.name = newValue)` + autosave pipeline existente persiste (SEM `recipeStore.rename` direto — mesma decisão 036.3 persistência via store.update). (b) **efêmera** (`recipeId === null`): guard vazio → não cria nada (junk-prevention: autosave subscriptions registradas mas `flush()` torna no-op enquanto `recipeId === null`); nome não-vazio → `recipeStore.create({...recipe, name: newValue})` retorna novo Recipe com id gerado, **sincroniza id de volta em estado** (`store.update(draft => { draft.id = created.id; draft.name = newValue; })`), liga autosave (`recipeId = created.id`), chama `replaceUrl(...)` para `receitas.html?recipe=<id>` (dep injetável `InitCalculadoraDeps.replaceUrl`, default `history.replaceState`, permite teste jsdom sem tocar `history` real), sem navegação/reload — reload subsequente mantém `?recipe`. Sem modal (diferença 036 que usava `inlineNameEdit` click-to-edit). (4) Cabeçalho `calculadora.ts` (L45–73) citando issue 040 com detalhe: reverteu h1, campo fixo em card entre export+Ancoragem, lazy-create por nomear, junk-prevention `recipeId === null`, replaceUrl injetável. Seções spec: §1.6 (store.update persistência), §2.F (criar receita), §7.1 (entrada vazia, placeholder). (5) `calculadora.test.ts` novo caso (ou casos) exercendo: (a) h1 sempre presente e estático (não substituído); (b) field value vazio/carregado conforme `recipeId`; (c) Enter com nome vazio → não cria; (d) Enter com nome na efêmera → create + id sincronizado + URL updated; (e) Enter na receita carregada → update nome existente. |
+| **Hash do commit** | (pendente — aguardando revisão) |
+| **Testes** | Vitest: **408/408 pass** (não houve regressão de 036, inlineNameEdit.ts continua servindo recipesList.ts intocado). Novos casos em `calculadora.test.ts` cobrem: (1) h1 renderizado, textContent "🍞 Calculadora", não substitui quando `?recipe` carregado; (2) input#recipe-name presente, value = recipe.name se carregado, '' na efêmera; (3) confirmação vazio → no-op; (4) confirmação efêmera não-vazio → spy recipeStore.create, id sincronizado em state, replaceUrl chamado com novo `?recipe=<id>`; (5) confirmação receita carregada → spy store.update, autosave persiste. `tsc --noEmit` limpo. `npm run build` sem erro. |
+| **Reviews** | **revisor-spec**: APROVADO (§1.6 persistência via store.update, §2.F criar receita lazy, §7.1 entrada/placeholder, refactor 036→040 reversível e consciente). **guardiao-design**: APROVADO (h1 "🍞…" sempre estático conforme mockup, nome fixo em card posicionado corretamente, lazy-create UX intuitiva — nomear = criar). Achado baixo anterior (aria-label redundante no modal 035) corrigido nesta rodada sem issue de fix (removido aria-label do input `<input>`, nome acessível só do `<label for>`). Sem achados remanescentes. |
+| **Observações** | Decisões autônomas: 5 registradas em "Decisões da noite" acima (040.1–040.5). Reverteu 036 (h1 estático), mantendo mecânica `inlineNameEdit` em recipesList (issue 033) intocada — escopo 040 é APENAS Calculadora. Cabeçalho `calculadora.ts` (L1–73) extensamente documentado com issue 040, spec §1.6/§2.F/§7.1, replaceUrl injetável, lazy-create decisão. Nenhum módulo novo (diff 036: `inlineNameEdit` criou novo módulo; 040 estende apenas `calculadora.ts`). Interface `InitCalculadoraDeps` ampliada: novo campo `replaceUrl?` (default `history.replaceState`). Cabeçalho comentário: seções 1–2, 1.6, 2.B, 2.C, 2.D, 2.E, 2.F, 3.D, 3.E, 4, 9–10. |
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028/029/036.
+ * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028/029/036/040.
  *
  * O que faz: instancia `createPrefsStore` (011), o estado inicial via
  * `goldenSeed` (§12) + `createAppState` (§1.6) — com o `normalize` opcional
@@ -17,11 +17,12 @@
  * Integração `?recipe=<id>` (issue 017, §2.F): `new
  * URLSearchParams(location.search).get('recipe')` — se presente e
  * `recipeStore.get(id)` existir, essa `Recipe` (storage real, 011) vira a
- * semente inicial (no lugar de `goldenSeed()`) e liga o auto-save; se o id
- * não existir, cai em `goldenSeed()` + chip de aviso discreto ("Receita não
- * encontrada; abrindo modelo padrão."). Sem `?recipe` (acesso direto a
- * `receitas.html`) o comportamento é o de sempre: golden seed efêmero, SEM
- * auto-save (preserva o comportamento anterior às issues 014–016).
+ * semente inicial (no lugar de `goldenSeed()`) e liga o auto-save
+ * (`recipeId = found.id`); se o id não existir, cai em `goldenSeed()` + chip
+ * de aviso discreto ("Receita não encontrada; abrindo modelo padrão."). Sem
+ * `?recipe` (acesso direto a `receitas.html`) a semente é o golden seed
+ * efêmero e `recipeId` nasce `null` — SEM auto-save até o usuário nomear a
+ * receita pelo campo fixo do header (issue 040, abaixo).
  *
  * Auto-save (decisão registrada, §10 "debounce em inputs" + §1.6 "sem
  * botão Salvar"): `store.subscribe` reagenda um `setTimeout` de ~400ms a
@@ -41,18 +42,31 @@
  * plano (§2.F): id válido + auto-save após debounce, id inexistente (banner
  * + sem persistir) e flush em `visibilitychange` (aba escondida).
  *
- * Nome editável no header (issue 036): quando `autosaveEnabled` (receita
- * carregada via `?recipe=<id>` válido), o `<h1>` estático do shell
- * (`receitas.html`) é substituído em runtime pelo nome da receita
- * (`store.getState().recipe.name`), editável inline no MESMO padrão sem
- * `window.prompt`/modal do card de `recipesList.ts` (issue 033) — mecânica
- * genérica extraída para `startInlineNameEdit` (`inlineNameEdit.ts`, regra de
- * ouro 2: mesma lógica, dois pontos parametrizados). Escrita SEMPRE via
- * `store.update((draft) => { draft.name = value; })` — nunca
- * `recipeStore.rename` direto — para que a persistência passe pelo MESMO
- * pipeline de autosave (debounce + flush) descrito acima, sem duplicar
- * caminho de escrita. Sem `?recipe` ou id inexistente: `<h1>` estático
- * permanece (comportamento inalterado).
+ * Nome da receita como campo fixo (issue 040, refino de posicionamento): o
+ * `<h1>` estático "🍞 Calculadora de Pão com Fermento Natural" e o
+ * `.subtitle` do shell (`receitas.html`) permanecem SEMPRE intactos — a 036
+ * os substituía quando havia receita carregada; a 040 reverteu isso. O
+ * `<input class="input">` fixo (label "Nome da receita") mora dentro de um
+ * `<section class="card">` próprio, anexado a `#app` logo após a barra de
+ * exportação (`exportBar`) e ANTES do card de Ancoragem/Planejamento da
+ * Fornada (`renderBatchPanel`) — sempre visível, mesmo na efêmera (sem
+ * `?recipe`), caso em que nasce VAZIO (nunca o nome do `goldenSeed()`). Ao
+ * confirmar (Enter/blur):
+ *  - receita carregada (`recipeId !== null`): guarda (vazio ou igual ao nome
+ *    atual → não grava) e só então `store.update((draft) => { draft.name =
+ *    value; })` — o MESMO pipeline de autosave abaixo persiste; nunca
+ *    `recipeStore.rename` direto (evita um segundo caminho de escrita).
+ *  - efêmera (`recipeId === null`): nome vazio não cria nada (junk-
+ *    prevention); nome não-vazio → `recipeStore.create({ ...recipe, name })`
+ *    (novo id, ignora o id da semente), sincroniza esse id de volta no store
+ *    (`store.update((draft) => { draft.id = created.id; draft.name = value;
+ *    })` — necessário porque o autosave localiza o registro por `recipe.id`),
+ *    liga o autosave (`recipeId = created.id`) e `replaceUrl(...)` para
+ *    `receitas.html?recipe=<id>` (dep injetável, default
+ *    `history.replaceState`) — reload subsequente mantém a receita.
+ * `inlineNameEdit.ts` (issue 036) NÃO é reusado aqui: o pedido é um campo
+ * SEMPRE visível (inclusive vazio/placeholder), o oposto do click-to-edit —
+ * ele segue intocado servindo `recipesList.ts` (renomear o card, issue 033).
  *
  * Seções implementadas: §1–2 (composição da tela), §1.3, §1.5, §2.B, §2.C,
  * §2.D, §2.E, §2.F, §3.D, §3.E, §4, §9–10 (app 100% client-side).
@@ -70,7 +84,6 @@ import { renderSourdoughTable, inheritSourdoughFlourCosts } from '../sourdoughTa
 import { renderHydrationPanel } from '../hydrationPanel';
 import { renderPricingPanel } from '../pricingPanel';
 import { h, clear, on } from '../dom';
-import { startInlineNameEdit } from '../inlineNameEdit';
 import { formatDate } from '../../core/format';
 import { workbookToBlob, downloadBlob } from '../../export/download';
 import { renderRecipePrintView, renderRecipeCostsPrintView, mountPrintButton } from '../../export/print';
@@ -83,6 +96,13 @@ export interface InitCalculadoraDeps {
   storage?: StorageLike;
   /** Default `location.search` — permite jsdom simular `?recipe=<id>` sem tocar na URL global. */
   search?: string;
+  /**
+   * Default `(url) => history.replaceState(null, '', url)` (issue 040): troca
+   * a URL sem navegar/recarregar, para que um reload após a criação lazy
+   * (caminho efêmera → nomeada) mantenha `?recipe=<id>`. Injetável para jsdom
+   * nunca tocar `history`/`location` reais em teste.
+   */
+  replaceUrl?: (url: string) => void;
 }
 
 /**
@@ -97,21 +117,29 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
   const storage = deps.storage ?? defaultStorage();
   const recipeStore = deps.recipeStore ?? createRecipeStore({ storage });
   const search = deps.search ?? location.search;
+  const replaceUrl = deps.replaceUrl ?? ((url: string) => history.replaceState(null, '', url));
 
   // §2.F: `?recipe=<id>` carrega uma receita salva; ausente/inexistente → golden seed.
   const requestedId = new URLSearchParams(search).get('recipe');
   let initialRecipe = goldenSeed();
   let recipeNotFound = false;
-  let autosaveEnabled = false;
+  // Issue 040: `recipeId` substitui o antigo `autosaveEnabled: boolean` — o
+  // pipeline de autosave abaixo é SEMPRE registrado, mas só grava quando
+  // `recipeId !== null` (nulo na efêmera até o usuário nomear a receita).
+  let recipeId: string | null = null;
   if (requestedId) {
     const found = recipeStore.get(requestedId);
     if (found) {
       initialRecipe = found;
-      autosaveEnabled = true; // só grava quando a tela foi aberta por uma receita real
+      recipeId = found.id; // só grava quando a tela foi aberta por uma receita real
     } else {
       recipeNotFound = true;
     }
   }
+  // Campo de nome fixo (issue 040): valor inicial é o nome da receita
+  // carregada, ou VAZIO na efêmera — NUNCA `goldenSeed().name` (o cliente não
+  // quer "Pão Rústico" pré-preenchido num rascunho ainda não salvo).
+  const initialNameFieldValue = recipeId !== null ? initialRecipe.name : '';
 
   // §4: farinhas do fermento editadas manualmente (Preço Pago/Peso do Produto)
   // param de herdar do ingrediente principal vinculado por flourId — seam vivo
@@ -185,6 +213,62 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
     store.subscribe(syncCostsBtn);
     app.appendChild(exportBar);
 
+    // Card do nome da receita (issue 040, refino de posicionamento): `<h1>`/
+    // `.subtitle` do shell permanecem estáticos; este `.card` novo mora em
+    // `#app`, entre a barra de exportação (`exportBar`, acima) e o card de
+    // Ancoragem/Planejamento da Fornada (`renderBatchPanel`, logo abaixo).
+    // Reuso total do design system (`.field` label+control, `.input`) —
+    // nenhuma classe/token novo (regra de ouro 1).
+    const nameCard = h('section', { className: 'card' });
+    const nameField = h('div', { className: 'field' });
+    nameField.appendChild(h('label', { for: 'recipe-name-input' }, ['Nome da receita']));
+    const nameInput = h('input', {
+      // Nome acessível vem do `<label for>` acima — sem `aria-label` redundante
+      // (WAI-ARIA: evitar nome duplicado; mesma diretriz da issue 039).
+      id: 'recipe-name-input',
+      type: 'text',
+      className: 'input',
+      placeholder: 'Nome da receita',
+      value: initialNameFieldValue, // '' na efêmera — nunca goldenSeed().name
+    }) as HTMLInputElement;
+    nameField.appendChild(nameInput);
+    nameCard.appendChild(nameField);
+    app.appendChild(nameCard);
+
+    // Commit (Enter/blur) — decisões 3/5 do Plano Técnico (issue 040). Nome
+    // do usuário só chega ao DOM via `h`/`textContent` (regra de ouro 3) —
+    // aqui só entra em `value`/estado, nunca `innerHTML`.
+    const commitName = (value: string): void => {
+      if (recipeId !== null) {
+        // Receita carregada: guarda vazio/igual → não grava; senão o MESMO
+        // pipeline de autosave abaixo persiste (nunca `recipeStore.rename`).
+        if (value === '' || value === store.getState().recipe.name) return;
+        store.update((draft) => {
+          draft.name = value;
+        });
+        return;
+      }
+      // Efêmera: nome vazio não cria nada (junk-prevention); nome não-vazio
+      // cria a receita agora (lazy-create) e liga o autosave dali em diante.
+      if (value === '') return;
+      const created = recipeStore.create({ ...store.getState().recipe, name: value });
+      // Sincroniza o id publicado no store — `recipeStore.update` (autosave
+      // abaixo) localiza o registro por `recipe.id` (storage/recipes.ts).
+      store.update((draft) => {
+        draft.id = created.id;
+        draft.name = value;
+      });
+      recipeId = created.id; // liga o autosave a partir de agora
+      replaceUrl(`receitas.html?recipe=${created.id}`);
+    };
+    on(nameInput, 'keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitName(nameInput.value);
+      }
+    });
+    on(nameInput, 'blur', () => commitName(nameInput.value));
+
     // Cada `render*` anexa uma `section.card` a `app`; capturamos a referência
     // logo após, via `lastElementChild`, sem alterar as assinaturas usadas nos
     // testes (que ignoram retorno).
@@ -213,7 +297,7 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
     // custos, add/remove de linhas). Em jsdom (testes) não há layout
     // (`width === 0`) nem `ResizeObserver` — o sync é um no-op, sem afetar o
     // comportamento observado pelos testes.
-    const followers = [exportBar, batchCard, sourdoughCard, grid];
+    const followers = [exportBar, nameCard, batchCard, sourdoughCard, grid];
     const syncWidths = (): void => {
       const width = ingredientsCard.getBoundingClientRect().width;
       if (width <= 0) return; // sem layout (jsdom) — nada a espelhar
@@ -230,73 +314,29 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
     }
   }
 
-  if (autosaveEnabled) {
-    // Nome editável no header (issue 036): só quando a tela foi aberta por
-    // uma receita real (`?recipe=<id>` válido) o `<h1>` estático do shell
-    // (`receitas.html`) vira o nome da receita, editável inline no MESMO
-    // padrão sem `window.prompt`/modal do card (`recipesList.ts`, issue 033)
-    // — mecânica reusada via `startInlineNameEdit` (regra de ouro 2).
-    // Escrita SEMPRE via `store.update` (nunca `recipeStore.rename` direto):
-    // `notify()` dispara o pipeline de autosave já existente logo abaixo,
-    // evitando um segundo caminho de gravação (decisão 2 do Plano Técnico).
-    const staticH1 = document.querySelector('.page-header h1');
-    if (staticH1) {
-      // Achado ALTO (revisão issue 036, guardiao-design): `<h1>` é elemento
-      // não-interativo — só `click` deixava usuários de teclado sem meio de
-      // renomear (o `title` é dica mouse-only). Correção: `tabindex="0"` +
-      // `role="button"` + `aria-label` tornam o título focável/anunciado por
-      // leitor de tela, e o `keydown` (Enter/Espaço) dispara a MESMA
-      // `startInlineNameEdit` do clique — nenhuma classe/token novo, só
-      // atributos ARIA/teclado (spec §10 "navegação por teclado").
-      const makeName = (name: string): HTMLHeadingElement => {
-        const el = h('h1', {
-          title: 'Clique para renomear',
-          tabindex: 0,
-          role: 'button',
-          'aria-label': 'Renomear receita — pressione Enter',
-        }, [name]) as HTMLHeadingElement; // textContent — escapa XSS (regra 3)
-        const openEdit = (): void => {
-          startInlineNameEdit({
-            target: el,
-            currentName: store.getState().recipe.name,
-            makeDisplay: makeName,
-            onCommit: (value) => {
-              store.update((draft) => {
-                draft.name = value;
-              });
-            },
-          });
-        };
-        on(el, 'click', openEdit);
-        on(el, 'keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault(); // Espaço não deve rolar a página (MDN KeyboardEvent)
-            openEdit();
-          }
-        });
-        return el;
-      };
-      staticH1.replaceWith(makeName(store.getState().recipe.name));
+  // Autosave (issue 040: `autosaveEnabled: boolean` virou `recipeId: string |
+  // null` — subscribe/flush/visibilitychange/beforeunload ficam SEMPRE
+  // registrados; `flush` faz early-return enquanto `recipeId === null`
+  // (efêmera não-nomeada, junk-prevention). Mesmo debounce ~400ms (§10) +
+  // flush imediato em `visibilitychange`/`beforeunload` de sempre.
+  const AUTOSAVE_DEBOUNCE_MS = 400; // §10 "debounce em inputs"
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const flush = (): void => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
     }
-
-    const AUTOSAVE_DEBOUNCE_MS = 400; // §10 "debounce em inputs"
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const flush = (): void => {
-      if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      recipeStore.update(store.getState().recipe); // 011 — grava, preserva id/createdAt
-    };
-    store.subscribe(() => {
-      if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(flush, AUTOSAVE_DEBOUNCE_MS);
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) flush(); // aba escondida — não esperar o debounce
-    });
-    window.addEventListener('beforeunload', flush); // fechar/recarregar — última chance de gravar
-  }
+    if (recipeId === null) return; // efêmera não-nomeada — nada a gravar
+    recipeStore.update(store.getState().recipe); // 011 — grava, preserva id/createdAt
+  };
+  store.subscribe(() => {
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(flush, AUTOSAVE_DEBOUNCE_MS);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) flush(); // aba escondida — não esperar o debounce
+  });
+  window.addEventListener('beforeunload', flush); // fechar/recarregar — última chance de gravar
 }
 
 // Composition root real (script da página, `receitas.html`): sem argumentos —
