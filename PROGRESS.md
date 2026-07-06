@@ -179,6 +179,20 @@ Resumo entregue:
 
 ---
 
+## Iteração 049 — 2026-07-06 19:07 (exportar métrica Margem F/C nos relatórios do Histórico)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 049-export-margem-fc-historico |
+| **Timestamp** | 2026-07-06 19:07 |
+| **O que foi feito** | **Exportação XLSX + PDF Financeiro: coluna Margem F/C (%) em ambos os formatos.** (1) **XLSX (`buildHistoryWorkbook` em `src/export/xlsx.ts`)**: coluna "Margem (F/C %)" inserida após "Lucro (R$)", antes de "Status"; formato FMT_PERCENT; null→célula vazia; reusa `bakeStatus` (issue 045 core). Aba "Resumo do Período": linha "Margem (ΣF/ΣC) (%)" após "Margem média". Sem custos → sem Margem. **Mudança P2**: planejadas com custos deixaram de gravar projetados — passam a "—"/vazio em Vendido/Preço unit./Faturamento/Lucro/Margem, preenchidos Data/Receita/Produzido/Custo unit./Custo total, fora dos Σ (espelha aba BALANÇO). Só aba "Fornadas"; "Resumo do Período" e `buildRecipeWorkbook` intocados. (2) **PDF Financeiro (`renderHistoryCostsPrintView` em `src/export/print.ts`)**: coluna "Margem (F/C %)" após Lucro; agregado ΣF/ΣC no tfoot E no card "Resumo financeiro" (mesmo valor via `aggregateMargin` novo); cor neutra (sem pdf-credit/pdf-debit). PDF sem custos inalterado. (3) **Reuso obrigatório**: `bakeStatus` (issue 045) — export não recalcula F/C, apenas formata. (4) **Testes**: casos 049-N em xlsx.test.ts e print.test.ts, incluindo bordas (Vendas=0→0%, C=0→"—"/vazia, ΣC=0→vazia/"—", planejada espelha). Gates: tsc limpo, 458/458, build OK. |
+| **Hash do commit** | (pendente — orquestrador) |
+| **Testes** | Vitest: **458/458 pass** (suíte completa, incluindo novos testes 049-N xlsx/print). Core/UI/storage/export sem regressão. `npm run build` verde; `tsc --noEmit` limpo. Golden §12 intacto (números não mudam, export nova é formação apenas). |
+| **Reviews** | ✓ revisor-spec (aprovado); ✓ guardião-design (aprovado); 3 gaps de cobertura já fechados em reviews anteriores. |
+| **Observações** | **Decisão 049.1 — Reuso bakeStatus**: export chama dono único de F/C×100 (core 045), zero recálculo duplicado (regra 2, regra de ouro 1). **Decisão 049.2 — Mudança comportamento planejadas**: respeitando spec export-status-balanco.md (aprovada), planejadas em XLSX "Fornadas" agora espelham aba BALANÇO (sem projetados em colunas de venda). **Decisão 049.3 — Margem cor neutra**: PDF Financeiro não aplica pdf-credit/pdf-debit ao Status (memória projeto — cor financeira do cliente é azul/vermelho só para faturamento/custo, status-preço é métrica derivada, neutra em cor). **Spec**: `specs/export-status-balanco.md` (aprovada), fonte das regras é `specs/aba-balanco.md`. |
+
+---
+
 ## Iteração 046 — 2026-07-06 18:27 (pills de visualização no card Balanço: Completa/Unidades/Fornadas)
 
 | Campo | Valor |

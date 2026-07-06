@@ -472,6 +472,92 @@ describe('renderHistoryCostsPrintView (Financeiro — sempre $, estilo v2)', () 
     expect(root.querySelector('script')).toBeNull();
     expect(root.textContent).toContain('<script>alert(1)</script>');
   });
+
+  // --- issue 049: Margem (F/C) ---
+
+  it('049-8. coluna "Margem (F/C %)" na listagem, à direita de "Lucro"; célula neutra com "%"', () => {
+    const lucrativa = bake({ id: 'b1', unitCost: 4.43, unitSalePrice: 7.38, quantityProduced: 2, quantitySold: 2 });
+    const root = renderFinanceiro([lucrativa]);
+    const headTexts = Array.from(root.querySelectorAll('table.table thead th')).map((th) => th.textContent);
+    const iMargem = headTexts.indexOf('Margem (F/C %)');
+    const iLucro = headTexts.indexOf('Lucro');
+    expect(iMargem).toBeGreaterThan(-1);
+    expect(iMargem).toBe(iLucro + 1);
+
+    // Célula da fornada = bakeStatus(14.76, 8.86) = 166,59% (neutra).
+    const rowOk = tableRow(root, '2026-07-05');
+    const cells = rowOk!.querySelectorAll('td');
+    const margemCell = cells[cells.length - 1] as HTMLElement;
+    expect(margemCell.textContent).toBe('166,59%');
+    expect(margemCell.classList.contains('pdf-credit')).toBe(false);
+    expect(margemCell.classList.contains('pdf-debit')).toBe(false);
+  });
+
+  it('049-9. tfoot Total: Margem agregada ΣF/ΣC, neutra', () => {
+    const a = bake({ id: 'b1', unitCost: 4.43, unitSalePrice: 7.38, quantityProduced: 2, quantitySold: 2 });
+    const b = bake({ id: 'b2', date: new Date(2026, 6, 6), unitCost: 3, unitSalePrice: 6, quantityProduced: 10, quantitySold: 8 });
+    const root = renderFinanceiro([a, b]);
+    const totalRow = tableRow(root, 'Total');
+    const cells = totalRow!.querySelectorAll('td');
+    const margemCell = cells[cells.length - 1] as HTMLElement;
+    // ΣF=62,76 / ΣC=38,86 → 161,50%.
+    expect(margemCell.textContent).toBe('161,50%');
+    expect(margemCell.classList.contains('pdf-credit')).toBe(false);
+    expect(margemCell.classList.contains('pdf-debit')).toBe(false);
+  });
+
+  it('049-10. card "Resumo financeiro": linha "Margem (F/C)" = mesmo valor do tfoot; "Margem média" distinta', () => {
+    const a = bake({ id: 'b1', unitCost: 4.43, unitSalePrice: 7.38, quantityProduced: 2, quantitySold: 2 });
+    const b = bake({ id: 'b2', date: new Date(2026, 6, 6), unitCost: 3, unitSalePrice: 6, quantityProduced: 10, quantitySold: 8 });
+    const root = renderFinanceiro([a, b]);
+    const cardCell = kvCell(root, 'Margem (F/C)');
+    expect(cardCell).not.toBeNull();
+    expect(cardCell!.textContent).toBe('161,50%'); // mesmo valor do tfoot (049-9)
+    expect(cardCell!.classList.contains('pdf-credit')).toBe(false);
+    expect(cardCell!.classList.contains('pdf-debit')).toBe(false);
+    // "Margem média" continua presente e distinta.
+    expect(kvCell(root, 'Margem média')).not.toBeNull();
+  });
+
+  it('049-11. ΣC≤0 → "—" no tfoot E no card "Margem (F/C)"', () => {
+    // só fornadas com unitCost 0 → ΣC=0 → bakeStatus(F,0)=null.
+    const z1 = bake({ id: 'b1', unitCost: 0, unitSalePrice: 5, quantityProduced: 4, quantitySold: 4 });
+    const root = renderFinanceiro([z1]);
+    const totalRow = tableRow(root, 'Total');
+    const totalCells = totalRow!.querySelectorAll('td');
+    expect((totalCells[totalCells.length - 1] as HTMLElement).textContent).toBe('—');
+    expect(kvCell(root, 'Margem (F/C)')!.textContent).toBe('—');
+    // §3 caso 2: a própria linha do corpo (C=0 → bakeStatus null) também mostra "—".
+    const bodyRow = tableRow(root, '2026-07-05');
+    const bodyCells = bodyRow!.querySelectorAll('td');
+    expect((bodyCells[bodyCells.length - 1] as HTMLElement).textContent).toBe('—');
+  });
+
+  it('049-12. planejada segue pulada na listagem financeira', () => {
+    const confirmada = bake({ id: 'b1', unitCost: 4, unitSalePrice: 7, quantityProduced: 10, quantitySold: 10 });
+    const planejada = bake({ id: 'b2', date: new Date(2026, 6, 7), planned: true, quantitySold: 0 });
+    const root = renderFinanceiro([confirmada, planejada]);
+    const bodyRows = Array.from(root.querySelectorAll('table.table tbody tr'));
+    expect(bodyRows.length).toBe(1); // só a confirmada
+  });
+
+  it('049-13. PDF Fornadas sem custos (renderHistoryPrintView): sem "Margem"', () => {
+    const root = renderFornadas([bake()]);
+    expect(root.textContent).not.toContain('Margem');
+  });
+
+  it('049-14. §3 caso 1: confirmada Vendas=0 (F=0, C>0) → célula Margem do corpo = "0,00%" (0≠null, nunca "—"), neutra', () => {
+    // bakeStatus(0, C>0) = 0 (não null): F=0 é resultado real, não impossível.
+    const semVenda = bake({ id: 'b1', unitCost: 5, unitSalePrice: 5, quantityProduced: 5, quantitySold: 0 });
+    const root = renderFinanceiro([semVenda]);
+    const rowOk = tableRow(root, '2026-07-05');
+    expect(rowOk).not.toBeNull();
+    const cells = rowOk!.querySelectorAll('td');
+    const margemCell = cells[cells.length - 1] as HTMLElement;
+    expect(margemCell.textContent).toBe('0,00%');
+    expect(margemCell.classList.contains('pdf-credit')).toBe(false);
+    expect(margemCell.classList.contains('pdf-debit')).toBe(false);
+  });
 });
 
 describe('mountPrintButton (clique-só, §8, intocado)', () => {

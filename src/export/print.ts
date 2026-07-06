@@ -53,6 +53,7 @@ import type { Recipe, RecipeSummary, BakeEntry, BakeHistorySummary, Sourdough } 
 import { formatWeight, formatPercent, formatCurrency, formatProportion, formatDate } from '../core/format';
 import { ingredientRecipeCost } from '../core/costs';
 import { isLoss } from '../core/pricing';
+import { bakeStatus } from '../core/bakes';
 import { h } from '../ui/dom';
 
 export interface RecipePrintViewOptions {
@@ -467,6 +468,11 @@ export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrin
   const { entries, summary } = opts;
   const sections: HTMLElement[] = [];
 
+  // §2.1.2/§2.3.2 (issue 049): Margem agregada = ΣF/ΣC (razão dos totais,
+  // aba-balanco §2.4) — reuso de bakeStatus, mesmo valor no tfoot e no card
+  // (P3). null (ΣC≤0) → "—". Neutra (percentual não é fluxo de caixa, §2.3.5).
+  const aggregateMargin = bakeStatus(summary.totalRevenue, summary.totalCost);
+
   // Resumo financeiro (§14.4).
   sections.push(
     secCard(
@@ -476,6 +482,7 @@ export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrin
         ['Faturamento', td(money(summary.totalRevenue), { cls: 'pdf-credit' })],
         ['Lucro', signedMoneyTd(summary.totalProfit, false)],
         ['Margem média', td(pct(summary.averageProfitMargin))], // métrica — neutra
+        ['Margem (F/C)', td(pct(aggregateMargin))], // §2.3.3: mesmo valor do tfoot, neutra
       ]),
     ),
   );
@@ -489,23 +496,30 @@ export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrin
         h('th', {}, ['Receita']),
         h('th', { className: 'num' }, ['Custo']),
         h('th', { className: 'num' }, ['Lucro']),
+        h('th', { className: 'num' }, ['Margem (F/C %)']), // §2.3.1 (issue 049), à direita de Lucro
       ]),
     ]),
   );
   const tbody = h('tbody');
   for (const entry of entries) {
     if (entry.planned === true) continue; // §14.4: planejada não tem financeiro real
+    // §2.1.2 (issue 049): reuso de bakeStatus (campos opcionais → guarda); null→"—" neutro.
+    const margin =
+      entry.totalRevenue != null && entry.totalCost != null
+        ? bakeStatus(entry.totalRevenue, entry.totalCost)
+        : null;
     tbody.appendChild(
       h('tr', {}, [
         td(formatDate(entry.date)),
         td(entry.recipeName),
         td(money(entry.totalCost), { num: true, cls: 'pdf-debit' }),
         signedMoneyTd(entry.totalProfit),
+        td(pct(margin), { num: true }), // Margem neutra (§2.3.5)
       ]),
     );
   }
   table.appendChild(tbody);
-  // tfoot Total: custo débito, lucro por sinal.
+  // tfoot Total: custo débito, lucro por sinal, Margem agregada ΣF/ΣC neutra.
   table.appendChild(
     h('tfoot', {}, [
       h('tr', {}, [
@@ -513,6 +527,7 @@ export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrin
         td('', {}),
         td(money(summary.totalCost), { num: true, cls: 'pdf-debit' }),
         signedMoneyTd(summary.totalProfit),
+        td(pct(aggregateMargin), { num: true }),
       ]),
     ]),
   );

@@ -50,3 +50,4 @@
 | 046 | Card Balanço — pills de visualização (Completa/Unidades/Fornadas), totais sempre visíveis | ui | 045 | done | b190c22 |
 | 047 | Fix — achados baixos da revisão da issue 046 (pills de visualização do Balanço) | fix | 046 | done | d487614 |
 | 048 | Card Balanço — coluna Saldo também na visualização Unidades (antes de Status) | fix | 046 | done | 83a2b3c |
+| 049 | Exportar métrica Margem (F/C) nos relatórios do Histórico (XLSX + PDF Financeiro) | export | 019, 028, 043, 045 | todo | — |

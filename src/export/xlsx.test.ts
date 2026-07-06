@@ -101,6 +101,14 @@ function valueByLabel(wb: ExcelJS.Workbook, label: string): unknown {
   return undefined;
 }
 
+/** Textos do cabeçalho (linha 1) de uma aba, na ordem das colunas. */
+function headerRow(wb: ExcelJS.Workbook, sheet: string): unknown[] {
+  const ws = wb.getWorksheet(sheet)!;
+  const cells: unknown[] = [];
+  ws.getRow(1).eachCell({ includeEmpty: false }, (cell) => cells.push(cell.value));
+  return cells;
+}
+
 // --- BakeEntries do histórico ---
 
 function bakeA(): BakeEntry {
@@ -108,6 +116,18 @@ function bakeA(): BakeEntry {
 }
 function bakeB(): BakeEntry {
   return { id: 'b2', recipeId: 'r1', recipeName: 'Pão A', date: new Date(2026, 6, 2), quantityProduced: 10, quantitySold: 8, unitCost: 3, unitSalePrice: 6 };
+}
+// Confirmada com C=0 (unitCost 0) → bakeStatus null (§3 caso 2).
+function bakeZeroCost(): BakeEntry {
+  return { id: 'b3', recipeId: 'r1', recipeName: 'Pão A', date: new Date(2026, 6, 3), quantityProduced: 4, quantitySold: 4, unitCost: 0, unitSalePrice: 5 };
+}
+// Confirmada com Vendas=0 (F=0), C>0 → bakeStatus 0 (§3 caso 1).
+function bakeNoSales(): BakeEntry {
+  return { id: 'b4', recipeId: 'r1', recipeName: 'Pão A', date: new Date(2026, 6, 4), quantityProduced: 5, quantitySold: 0, unitCost: 2, unitSalePrice: 5 };
+}
+// Planejada (data futura) — projeta custos, sem venda real (§2.2.4).
+function bakePlanned(): BakeEntry {
+  return { id: 'b5', recipeId: 'r1', recipeName: 'Pão A', date: new Date(2026, 6, 20), quantityProduced: 6, quantitySold: 6, unitCost: 2, unitSalePrice: 5, planned: true };
 }
 
 describe('buildRecipeWorkbook', () => {
@@ -190,5 +210,110 @@ describe('buildHistoryWorkbook', () => {
     expect(strings).not.toContain('Lucro (R$)');
     // dados não-financeiros permanecem:
     expect(valueByLabel(wb, 'Total produzido')).toBe(12);
+  });
+
+  // --- issue 049: Margem (F/C) ---
+
+  it('049-1. coluna "Margem (F/C %)" com custos: após "Lucro (R$)", antes de "Status"', async () => {
+    const entries = [computeBakeDerived(bakeA()), computeBakeDerived(bakeB())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 1), new Date(2026, 6, 2));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    const header = headerRow(wb, 'Fornadas');
+    const iMargem = header.indexOf('Margem (F/C %)');
+    const iLucro = header.indexOf('Lucro (R$)');
+    const iStatus = header.indexOf('Status');
+    expect(iMargem).toBeGreaterThan(-1);
+    expect(iMargem).toBe(iLucro + 1); // logo após Lucro
+    expect(iStatus).toBe(iMargem + 1); // logo antes de Status
+  });
+
+  it('049-2. valor F/C por linha (numFmt 0.00): bakeA→166.59, bakeB→160.00', async () => {
+    const entries = [computeBakeDerived(bakeA()), computeBakeDerived(bakeB())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 1), new Date(2026, 6, 2));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    const ws = wb.getWorksheet('Fornadas')!;
+    const header = headerRow(wb, 'Fornadas');
+    const col = header.indexOf('Margem (F/C %)') + 1;
+    const cellA = ws.getRow(2).getCell(col);
+    const cellB = ws.getRow(3).getCell(col);
+    expect(cellA.value).toBe(166.59);
+    expect(cellA.numFmt).toBe('0.00');
+    expect(cellB.value).toBe(160.0);
+  });
+
+  it('049-3. C=0 na fornada → célula Margem vazia (null≠0)', async () => {
+    const entries = [computeBakeDerived(bakeZeroCost())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 3), new Date(2026, 6, 3));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    const ws = wb.getWorksheet('Fornadas')!;
+    const col = headerRow(wb, 'Fornadas').indexOf('Margem (F/C %)') + 1;
+    expect(ws.getRow(2).getCell(col).value == null).toBe(true);
+  });
+
+  it('049-4. Vendas=0 (C>0) → Margem 0 (célula preenchida, 0≠null)', async () => {
+    const entries = [computeBakeDerived(bakeNoSales())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 4), new Date(2026, 6, 4));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    const ws = wb.getWorksheet('Fornadas')!;
+    const col = headerRow(wb, 'Fornadas').indexOf('Margem (F/C %)') + 1;
+    expect(ws.getRow(2).getCell(col).value).toBe(0);
+  });
+
+  it('049-5. Resumo: "Margem (ΣF/ΣC) (%)" = 161.50; "Margem média (%)" intocada', async () => {
+    const entries = [computeBakeDerived(bakeA()), computeBakeDerived(bakeB())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 1), new Date(2026, 6, 2));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    expect(valueByLabel(wb, 'Margem (ΣF/ΣC) (%)')).toBe(161.5);
+    // "Margem média (%)" coexiste (outra métrica, v5 §14.4).
+    expect(allStrings(wb)).toContain('Margem média (%)');
+  });
+
+  it('049-8. §3 caso 3: Resumo com ΣC=0 → célula "Margem (ΣF/ΣC) (%)" vazia (bakeStatus(F,0)→null→setNum vazia)', async () => {
+    // Só fornada confirmada com unitCost 0 → ΣC=0 (mas ΣF>0). bakeStatus(20,0)=null.
+    const entries = [computeBakeDerived(bakeZeroCost())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 3), new Date(2026, 6, 3));
+    expect(period.totalCost).toBe(0); // ΣC=0
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    expect(valueByLabel(wb, 'Margem (ΣF/ΣC) (%)') == null).toBe(true); // célula vazia, nunca 0
+  });
+
+  it('049-6. sem custos: Margem ausente por completo', async () => {
+    const entries = [computeBakeDerived(bakeA()), computeBakeDerived(bakeB())];
+    const period = aggregatePeriod(entries, new Date(2026, 6, 1), new Date(2026, 6, 2));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: false }));
+    const strings = allStrings(wb);
+    expect(strings).not.toContain('Margem (F/C %)');
+    expect(strings).not.toContain('Margem (ΣF/ΣC) (%)');
+    expect(headerRow(wb, 'Fornadas')).toEqual(['Data', 'Receita', 'Produzido', 'Vendido', 'Status']);
+  });
+
+  it('049-7. planejada com custos espelha BALANÇO: 5 colunas de venda vazias, custos preenchidos, fora dos Σ', async () => {
+    const confirmada = computeBakeDerived(bakeA());
+    const planejada = computeBakeDerived(bakePlanned());
+    const entries = [confirmada, planejada];
+    // aggregatePeriod já exclui planejadas dos Σ (§14.4).
+    const period = aggregatePeriod(entries, new Date(2026, 6, 1), new Date(2026, 6, 20));
+    const wb = await reload(buildHistoryWorkbook(entries, period, { includeCosts: true }));
+    const ws = wb.getWorksheet('Fornadas')!;
+    const header = headerRow(wb, 'Fornadas');
+    const at = (label: string): number => header.indexOf(label) + 1;
+    const plannedRow = ws.getRow(3); // linha 1 = header, 2 = confirmada, 3 = planejada
+
+    // Vazias: Vendido, Preço unit., Faturamento, Lucro, Margem.
+    expect(plannedRow.getCell(at('Vendido')).value == null).toBe(true);
+    expect(plannedRow.getCell(at('Preço unit. (R$)')).value == null).toBe(true);
+    expect(plannedRow.getCell(at('Faturamento (R$)')).value == null).toBe(true);
+    expect(plannedRow.getCell(at('Lucro (R$)')).value == null).toBe(true);
+    expect(plannedRow.getCell(at('Margem (F/C %)')).value == null).toBe(true);
+
+    // Preenchidas: Data, Receita, Produzido, Custo unit., Custo total, Status.
+    expect(plannedRow.getCell(at('Produzido')).value).toBe(6);
+    expect(plannedRow.getCell(at('Custo unit. (R$)')).value).toBe(2);
+    expect(plannedRow.getCell(at('Custo total (R$)')).value).toBe(12);
+    expect(plannedRow.getCell(at('Status')).value).toBe('Planejada');
+
+    // Fora dos Σ: totais = só a confirmada (bakeA → produzido 2, custo 8.86).
+    expect(valueByLabel(wb, 'Total produzido')).toBe(2);
+    expect(valueByLabel(wb, 'Custo total (R$)')).toBe(8.86);
   });
 });

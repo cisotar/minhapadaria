@@ -35,6 +35,7 @@
 import ExcelJS from 'exceljs';
 import type { Recipe, RecipeSummary, BakeEntry, BakeHistorySummary, PackageCost } from '../core/types';
 import { formatDate } from '../core/format';
+import { bakeStatus } from '../core/bakes';
 
 export interface ExportOptions {
   /** §2.A.2: inclui colunas/seções financeiras (pref global "Exibir custos"). */
@@ -187,21 +188,38 @@ export function buildHistoryWorkbook(
 
   // --- Aba Fornadas ---
   const ws = wb.addWorksheet('Fornadas');
+  // §2.2.1 (issue 049): "Margem (F/C %)" entra depois de "Lucro (R$)" e antes de
+  // "Status" (col 10; "Status" Planejada/Confirmada passa a col 11).
   const header = includeCosts
-    ? ['Data', 'Receita', 'Produzido', 'Vendido', 'Custo unit. (R$)', 'Preço unit. (R$)', 'Custo total (R$)', 'Faturamento (R$)', 'Lucro (R$)', 'Status']
+    ? ['Data', 'Receita', 'Produzido', 'Vendido', 'Custo unit. (R$)', 'Preço unit. (R$)', 'Custo total (R$)', 'Faturamento (R$)', 'Lucro (R$)', 'Margem (F/C %)', 'Status']
     : ['Data', 'Receita', 'Produzido', 'Vendido', 'Status'];
   ws.addRow(header);
 
   for (const entry of entries) {
     const status = entry.planned === true ? 'Planejada' : 'Confirmada';
     if (includeCosts) {
-      const row = ws.addRow([formatDate(entry.date), entry.recipeName, entry.quantityProduced, entry.quantitySold]);
+      const planned = entry.planned === true;
+      // §2.2.4 (issue 049): planejada espelha a aba BALANÇO — colunas dependentes
+      // de venda (Vendido/Preço unit./Faturamento/Lucro/Margem) ficam vazias;
+      // Data/Receita/Produzido/Custo unit./Custo total (custo projetado) são
+      // preenchidas. A planejada já está fora dos Σ (aggregatePeriod, §14.4).
+      const row = ws.addRow([formatDate(entry.date), entry.recipeName, entry.quantityProduced]);
+      if (!planned) row.getCell(4).value = entry.quantitySold;
       setNum(row.getCell(5), entry.unitCost, 2, FMT_MONEY);
-      setNum(row.getCell(6), entry.unitSalePrice, 2, FMT_MONEY);
       setNum(row.getCell(7), entry.totalCost ?? null, 2, FMT_MONEY);
-      setNum(row.getCell(8), entry.totalRevenue ?? null, 2, FMT_MONEY);
-      setNum(row.getCell(9), entry.totalProfit ?? null, 2, FMT_MONEY);
-      row.getCell(10).value = status;
+      if (!planned) {
+        setNum(row.getCell(6), entry.unitSalePrice, 2, FMT_MONEY);
+        setNum(row.getCell(8), entry.totalRevenue ?? null, 2, FMT_MONEY);
+        setNum(row.getCell(9), entry.totalProfit ?? null, 2, FMT_MONEY);
+        // §2.1.2 (issue 049): reuso de bakeStatus (F/C×100) — export NÃO recalcula.
+        // Campos opcionais → guarda de tipo; null (C≤0) → setNum grava célula vazia.
+        const margin =
+          entry.totalRevenue != null && entry.totalCost != null
+            ? bakeStatus(entry.totalRevenue, entry.totalCost)
+            : null;
+        setNum(row.getCell(10), margin, 2, FMT_PERCENT);
+      }
+      row.getCell(11).value = status;
     } else {
       ws.addRow([formatDate(entry.date), entry.recipeName, entry.quantityProduced, entry.quantitySold, status]);
     }
@@ -216,6 +234,10 @@ export function buildHistoryWorkbook(
     setNum(rs.addRow(['Faturamento (R$)']).getCell(2), period.totalRevenue, 2, FMT_MONEY);
     setNum(rs.addRow(['Lucro (R$)']).getCell(2), period.totalProfit, 2, FMT_MONEY);
     setNum(rs.addRow(['Margem média (%)']).getCell(2), period.averageProfitMargin, 2, FMT_PERCENT);
+    // §2.2.3 (issue 049): Margem agregada = ΣF/ΣC (razão dos totais, NÃO média das
+    // linhas — aba-balanco §2.4). "Margem média" (v5 §14.4) é outra métrica e
+    // coexiste. ΣC≤0 → bakeStatus null → setNum grava célula vazia.
+    setNum(rs.addRow(['Margem (ΣF/ΣC) (%)']).getCell(2), bakeStatus(period.totalRevenue, period.totalCost), 2, FMT_PERCENT);
   }
   setNum(rs.addRow(['Desperdício (%)']).getCell(2), period.wastageRate, 2, FMT_PERCENT);
 
