@@ -42,3 +42,5 @@
 | 038 | Fix — resíduo de doc da issue 031/030 (Água "1 L" → "1 kg" no guia vivo) | fix | 031 | done | c186e1c |
 | 039 | Fix — achado da revisão da issue 035 (aria-label redundante no modal) | fix | 035 | done | 0155c36 |
 | 040 | Nome da receita como campo fixo (card entre export e Ancoragem) na Calculadora (+ criar-ao-nomear) | ui | 036, 035 | done | 12e72e0 |
+| 041 | Precificação — margem-sobre-preço → markup-sobre-custo (% de lucro) | fix | 007, 008 | done | 15bc803 |
+| 042 | Card Precificação — custo read-only topo, campos empilhados, rótulo "% de lucro" | fix | 041, 016 | todo | — |
