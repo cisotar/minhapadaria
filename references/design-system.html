@@ -243,7 +243,6 @@
       <thead>
         <tr>
           <th>Ingrediente</th>
-          <th>Unidade</th>
           <th class="num">%</th>
           <th class="num">Peso (g)</th>
           <th class="num cost-col">Preço pago</th>
@@ -255,7 +254,6 @@
       <tbody>
         <tr>
           <td><input class="cell-input" value="Farinha Branca"></td>
-          <td>g</td>
           <td class="num"><input class="cell-input num" value="100,00"></td>
           <td class="num readonly"><input class="cell-input num" value="1.000,0" readonly></td>
           <td class="num cost-col"><input class="cell-input num" value="R$ 8,00"></td>
@@ -265,11 +263,6 @@
         </tr>
         <tr>
           <td><input class="cell-input" value="Água"></td>
-          <td>
-            <span class="unit-toggle">
-              <button class="active">g</button><button>mL</button>
-            </span>
-          </td>
           <td class="num"><input class="cell-input num" value="70,00"></td>
           <td class="num readonly"><input class="cell-input num" value="700,0" readonly></td>
           <td class="num cost-col"><input class="cell-input num" value="R$ 0,00"></td>
@@ -279,11 +272,6 @@
         </tr>
         <tr>
           <td><input class="cell-input" value="Azeite"> <small style="color:var(--text-muted)">(gordura — fora da hidratação)</small></td>
-          <td>
-            <span class="unit-toggle">
-              <button class="active">g</button><button>mL</button>
-            </span>
-          </td>
           <td class="num"><input class="cell-input num" value="4,00"></td>
           <td class="num readonly"><input class="cell-input num" value="40,0" readonly></td>
           <td class="num cost-col"><input class="cell-input num" value="R$ 80,00"></td>
@@ -296,7 +284,6 @@
             Fermento
             <button class="expand-link" onclick="document.getElementById('sub-fermento').scrollIntoView({behavior:'smooth'})">▸ ver composição</button>
           </td>
-          <td>g</td>
           <td class="num"><input class="cell-input num" value="20,00" title="Proporção do fermento — mesma célula editável de qualquer ingrediente"></td>
           <td class="num readonly"><input class="cell-input num" value="200,0" readonly title="Peso = F_total × %/100, igual a qualquer ingrediente"></td>
           <td class="num cost-col readonly">—</td>
@@ -306,7 +293,6 @@
         </tr>
         <tr>
           <td><input class="cell-input" value="Sal"></td>
-          <td>g</td>
           <td class="num"><input class="cell-input num" value="2,00"></td>
           <td class="num readonly"><input class="cell-input num" value="20,0" readonly></td>
           <td class="num cost-col"><input class="cell-input num" value="R$ 3,00"></td>
@@ -315,14 +301,14 @@
           <td class="num cost-col"><input class="cell-input num" value="R$ 0,06" readonly></td>
         </tr>
         <tr>
-          <td colspan="8" style="padding:var(--sp-2) var(--sp-3)">
+          <td colspan="7" style="padding:var(--sp-2) var(--sp-3)">
             <button class="btn btn-secondary" style="font-size:var(--fs-small);padding:4px 10px">+ ingrediente</button>
           </td>
         </tr>
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="2">Total da massa</td>
+          <td>Total da massa</td>
           <td class="num">196,00</td>
           <td class="num">1.960,0</td>
           <td class="cost-col" colspan="3"></td>
