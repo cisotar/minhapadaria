@@ -11,6 +11,7 @@ import { createBakeStore, type BakeStore } from '../storage/bakes';
 import { createPrefsStore } from '../storage/prefs';
 import { goldenSeed } from './seed';
 import { renderHistoryView } from './historyView';
+import { formatCurrency, formatPercent } from '../core/format';
 import type { Recipe, BakeEntry } from '../core/types';
 
 function goldenSeedNoFat(name: string): Recipe {
@@ -80,6 +81,21 @@ function setDateInput(root: HTMLElement, ariaLabel: string, value: string): void
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+// issue 045: a página ganhou uma 2ª `table` (BALANÇO, `aria-label="Balanço por
+// fornada"`) depois da tabela editável "Fornadas registradas". `table tbody tr`
+// sem escopo passaria a casar linhas das DUAS tabelas — este helper mantém as
+// asserções das suítes 018/044 apontando só para a 1ª `table` (a editável),
+// preservando `querySelector('table')` = editável (Plano Técnico da 045).
+function editableRows(root: HTMLElement): NodeListOf<HTMLTableRowElement> {
+  return root.querySelector('table')!.querySelectorAll('tbody tr');
+}
+
+// issue 045: tabela BALANÇO, localizada pelo `aria-label` (hook de teste — não
+// é a 1ª `table` da página, que é a editável "Fornadas registradas").
+function balanceTable(root: HTMLElement): HTMLTableElement {
+  return root.querySelector('table[aria-label="Balanço por fornada"]') as HTMLTableElement;
+}
+
 describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
   it('1. filtro por receita restringe tabela e KPIs', () => {
     const m = mount();
@@ -96,7 +112,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     select.dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(kpiValue(m.root, 'Produzido').textContent).toContain('10 pães');
-    const rows = m.root.querySelectorAll('table tbody tr');
+    const rows = editableRows(m.root);
     expect(rows).toHaveLength(1);
     expect(rows[0].textContent).toContain('Pão Rústico');
   });
@@ -212,7 +228,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     bake(m.bakeStore, { recipeId: 'ghost-id', recipeName: 'Receita Fantasma', date: new Date(2026, 6, 2) }); // órfã
     render(m);
 
-    const rows = m.root.querySelectorAll('table tbody tr');
+    const rows = editableRows(m.root);
     const dates = Array.from(rows).map((r) => r.querySelector('td')!.textContent);
     expect(dates).toEqual(['2026-07-03', '2026-07-02', '2026-07-01']); // recentes primeiro
 
@@ -229,7 +245,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     const deleteBtn = Array.from(m1.root.querySelectorAll('button')).find((b) => b.textContent === 'Excluir') as HTMLButtonElement;
     deleteBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(removeSpy).toHaveBeenCalledTimes(1);
-    expect(m1.root.querySelectorAll('table tbody tr')).toHaveLength(0);
+    expect(editableRows(m1.root)).toHaveLength(0);
 
     const m2 = mount({ confirm: () => false });
     const r2 = m2.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
@@ -239,7 +255,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     const deleteBtn2 = Array.from(m2.root.querySelectorAll('button')).find((b) => b.textContent === 'Excluir') as HTMLButtonElement;
     deleteBtn2.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(removeSpy2).not.toHaveBeenCalled();
-    expect(m2.root.querySelectorAll('table tbody tr')).toHaveLength(1);
+    expect(editableRows(m2.root)).toHaveLength(1);
   });
 
   it('9. confirmar planejada: confirmPlanned + bakeStore.update; passa a contar nos KPIs', () => {
@@ -270,7 +286,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     render(m);
     expect(m.root.querySelector('script')).toBeNull();
     expect(m.root.querySelector('img')).toBeNull();
-    const rows = m.root.querySelectorAll('table tbody tr');
+    const rows = editableRows(m.root);
     expect(rows[0].textContent).toContain('<script>alert(1)</script>');
   });
 
@@ -314,5 +330,208 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
     const finOn = findFin(on.root);
     expect(finOn).toBeDefined();
     expect(finOn!.classList.contains('hidden')).toBe(false);
+  });
+
+  // --- BALANÇO (issue 045, spec `specs/aba-balanco.md` §2) ---
+  describe('BALANÇO (§2) — tabela nova, só-leitura, dentro do Histórico', () => {
+    it('13. thead com as 10 colunas da §2.1, na ordem, via aria-label da tabela', () => {
+      const m = mount();
+      render(m);
+      const table = balanceTable(m.root);
+      expect(table).not.toBeNull();
+      const headers = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent);
+      expect(headers).toEqual([
+        'Data',
+        'Receita',
+        'Produção',
+        'Custo unitário',
+        'Custo (C)',
+        'Vendas',
+        'Preço unitário',
+        'Faturamento (F)',
+        'Saldo',
+        'Status',
+      ]);
+    });
+
+    it('14. linha confirmada: Status = F/C×100 (2 casas); Saldo≥0 neutro; Status sem classe de cor', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      // Produção 10 × Custo unit. 4 → C=40; Vendas 8 × Preço unit. 7 → F=56; Saldo=+16; Status=140%.
+      bake(m.bakeStore, {
+        recipeId: r1.id,
+        recipeName: r1.name,
+        date: new Date(2026, 6, 3),
+        quantityProduced: 10,
+        quantitySold: 8,
+        unitCost: 4,
+        unitSalePrice: 7,
+      });
+      render(m);
+
+      const row = balanceTable(m.root).querySelector('tbody tr')!;
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[2].textContent).toBe('10'); // Produção
+      expect(cells[3].textContent).toBe(formatCurrency(4)); // Custo unitário
+      expect(cells[4].textContent).toBe(formatCurrency(40)); // Custo (C)
+      expect(cells[5].textContent).toBe('8'); // Vendas
+      expect(cells[6].textContent).toBe(formatCurrency(7)); // Preço unitário
+      expect(cells[7].textContent).toBe(formatCurrency(56)); // Faturamento (F)
+      expect(cells[8].textContent).toBe(formatCurrency(16)); // Saldo
+      expect(cells[8].classList.contains('loss')).toBe(false);
+      expect(cells[9].textContent).toBe(`${formatPercent(140)}%`); // Status
+      // Status % neutro (§2.5 P5): só `.num` (tabular-nums, célula numérica),
+      // nenhuma classe de cor (`.loss`/chip) — diferente de Saldo, que ganha
+      // `.loss` quando negativo.
+      expect(cells[9].className).toBe('num');
+    });
+
+    it('15. Saldo negativo → `.loss`; Status continua neutro', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      // Vendas=0 → F=0, Saldo=-C=-40, Status=0% (não null, §3 caso 1).
+      bake(m.bakeStore, {
+        recipeId: r1.id,
+        recipeName: r1.name,
+        date: new Date(2026, 6, 3),
+        quantityProduced: 10,
+        quantitySold: 0,
+        unitCost: 4,
+        unitSalePrice: 7,
+      });
+      render(m);
+
+      const row = balanceTable(m.root).querySelector('tbody tr')!;
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[8].textContent).toBe(formatCurrency(-40));
+      expect(cells[8].classList.contains('loss')).toBe(true);
+      expect(cells[9].textContent).toBe(`${formatPercent(0)}%`);
+      expect(cells[9].classList.contains('loss')).toBe(false);
+    });
+
+    it('16. Custo unitário 0 (C=0): Status da linha = "—" (§3 caso 3)', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      bake(m.bakeStore, {
+        recipeId: r1.id,
+        recipeName: r1.name,
+        date: new Date(2026, 6, 3),
+        quantityProduced: 10,
+        quantitySold: 8,
+        unitCost: 0,
+        unitSalePrice: 7,
+      });
+      render(m);
+
+      const row = balanceTable(m.root).querySelector('tbody tr')!;
+      const cells = Array.from(row.querySelectorAll('td'));
+      expect(cells[4].textContent).toBe(formatCurrency(0)); // Custo (C) = 0
+      expect(cells[9].textContent).toBe('—'); // Status indefinido
+    });
+
+    it('17. tfoot: Σ bate com `currentSummary`; Status agregado = ΣF/ΣC (não média das linhas)', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      // A: F=120,C=100 (Produção 20×5, Vendas 24×5) · B: F=60,C=100 (Produção 20×5, Vendas 12×5)
+      // ΣF=180, ΣC=200, ΣSaldo=-20, Status_total=90% (§2.4 exemplo do cliente).
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 1), quantityProduced: 20, quantitySold: 24, unitCost: 5, unitSalePrice: 5 });
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 2), quantityProduced: 20, quantitySold: 12, unitCost: 5, unitSalePrice: 5 });
+      render(m);
+
+      const foot = balanceTable(m.root).querySelector('tfoot tr')!;
+      const cells = Array.from(foot.querySelectorAll('td'));
+      expect(cells[2].textContent).toBe('40'); // ΣProdução
+      expect(cells[4].textContent).toBe(formatCurrency(200)); // ΣC
+      expect(cells[5].textContent).toBe('36'); // ΣVendas
+      expect(cells[7].textContent).toBe(formatCurrency(180)); // ΣF
+      expect(cells[8].textContent).toBe(formatCurrency(-20)); // ΣSaldo
+      expect(cells[8].classList.contains('loss')).toBe(true);
+      expect(cells[9].textContent).toBe(`${formatPercent(90)}%`); // Status agregado ΣF/ΣC
+      // NÃO é a média simples dos Status das linhas (120% e 60% → mean 90% aqui
+      // por coincidência de números; a fórmula é sempre ΣF/ΣC, não a média).
+    });
+
+    it('18. planejada: badge + "—" em Vendas/Preço unit./F/Saldo/Status; Data/Receita/Produção/Custo unit./C reais; fora do tfoot', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 8, unitCost: 4, unitSalePrice: 7 });
+      bake(m.bakeStore, {
+        recipeId: r1.id,
+        recipeName: r1.name,
+        date: new Date(2026, 6, 4),
+        quantityProduced: 15,
+        quantitySold: 0,
+        unitCost: 3,
+        unitSalePrice: 6,
+        planned: true,
+      });
+      render(m);
+
+      const rows = balanceTable(m.root).querySelectorAll('tbody tr');
+      const plannedRow = Array.from(rows).find((r) => r.querySelector('.badge-planned') !== null)!;
+      expect(plannedRow).toBeDefined();
+      const cells = Array.from(plannedRow.querySelectorAll('td'));
+      expect(cells[0].textContent).toBe('2026-07-04'); // Data real
+      expect(cells[1].textContent).toContain('Pão Rústico'); // Receita real
+      expect(cells[2].textContent).toBe('15'); // Produção real
+      expect(cells[3].textContent).toBe(formatCurrency(3)); // Custo unitário real
+      expect(cells[4].textContent).toBe(formatCurrency(45)); // Custo (C) real (15×3, projetado)
+      expect(cells[5].textContent).toBe('—'); // Vendas
+      expect(cells[6].textContent).toBe('—'); // Preço unitário
+      expect(cells[7].textContent).toBe('—'); // Faturamento (F)
+      expect(cells[8].textContent).toBe('—'); // Saldo
+      expect(cells[9].textContent).toBe('—'); // Status
+
+      // fora do tfoot: os totais refletem SÓ a fornada confirmada (C=40,F=56,Saldo=16).
+      const foot = balanceTable(m.root).querySelector('tfoot tr')!;
+      const footCells = Array.from(foot.querySelectorAll('td'));
+      expect(footCells[4].textContent).toBe(formatCurrency(40));
+      expect(footCells[7].textContent).toBe(formatCurrency(56));
+      expect(footCells[8].textContent).toBe(formatCurrency(16));
+    });
+
+    it('19a. tabela vazia (nenhuma fornada): estado vazio orientando a registrar; Σ = 0; Status agregado "—"', () => {
+      const m = mount();
+      render(m); // nenhuma fornada
+      const table = balanceTable(m.root);
+      expect(table.querySelector('tbody tr')!.textContent).toMatch(/Nenhuma fornada/);
+
+      const foot = table.querySelector('tfoot tr')!;
+      const cells = Array.from(foot.querySelectorAll('td'));
+      expect(cells[2].textContent).toBe('0');
+      expect(cells[4].textContent).toBe(formatCurrency(0));
+      expect(cells[5].textContent).toBe('0');
+      expect(cells[7].textContent).toBe(formatCurrency(0));
+      expect(cells[8].textContent).toBe(formatCurrency(0));
+      expect(cells[9].textContent).toBe('—'); // ΣC=0 → "—"
+    });
+
+    it('19b. só fornada planejada (sem confirmadas): tbody lista a linha; Σ segue 0/"—"', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), planned: true });
+      render(m);
+
+      const rowsOnlyPlanned = balanceTable(m.root).querySelectorAll('tbody tr');
+      expect(rowsOnlyPlanned.length).toBe(1);
+      expect(rowsOnlyPlanned[0].querySelector('.badge-planned')).not.toBeNull();
+      const foot2 = balanceTable(m.root).querySelector('tfoot tr')!;
+      const cells2 = Array.from(foot2.querySelectorAll('td'));
+      expect(cells2[2].textContent).toBe('0'); // ΣProdução (planejada fora)
+      expect(cells2[9].textContent).toBe('—'); // ΣC=0 → "—"
+    });
+
+    it('20. ordenação por data decrescente (§2.5 P6)', () => {
+      const m = mount();
+      const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 1) });
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3) });
+      bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 2) });
+      render(m);
+
+      const rows = balanceTable(m.root).querySelectorAll('tbody tr');
+      const dates = Array.from(rows).map((r) => r.querySelector('td')!.textContent);
+      expect(dates).toEqual(['2026-07-03', '2026-07-02', '2026-07-01']);
+    });
   });
 });

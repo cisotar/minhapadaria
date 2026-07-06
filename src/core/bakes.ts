@@ -5,6 +5,8 @@
  * por dia/semana/mês (§14.4), filtros por receita/intervalo (§14.5), comparação
  * de períodos com variação % (§14.5), melhor/pior período por lucro (§14.5),
  * confirmação de planejada (§14.6) e detecção de fornada órfã (§14.7).
+ * Inclui o Status F/C×100 da aba BALANÇO (spec aba-balanco §2.2 linha / §2.4
+ * agregado ΣF/ΣC) — métrica de exibição derivada dos mesmos snapshots.
  *
  * Regras da spec respeitadas:
  *  - 100% lógica pura: sem DOM, sem localStorage, sem rede, sem arredondamento
@@ -57,6 +59,24 @@ export function bakeWastage(produced: number, sold: number): number {
 export function bakeWastageRate(produced: number, sold: number): number | null {
   if (produced <= 0) return null;
   return (bakeWastage(produced, sold) / produced) * 100;
+}
+
+/**
+ * Status = F / C × 100 (spec aba-balanco §2.2 — markup sobre o custo, rótulo
+ * "Status" escolhido pelo cliente; NÃO é margem clássica (F−C)/F). É display-only,
+ * não persistido: não entra em BakeEntry nem em computeBakeDerived.
+ *
+ * DONO ÚNICO de F/C×100: a MESMA função serve a linha (F/C da fornada) e o
+ * agregado do rodapé (ΣF/ΣC — razão dos totais, §2.4, NÃO média dos Status das
+ * linhas) — basta chamá-la com os somatórios.
+ *
+ * Guarda ÷0 idêntica a bakeWastageRate: totalCost ≤ 0 → null (contrato null≠0
+ * do codebase, §5.C) → "—" na UI, nunca 0/NaN. Cobre C=0 na linha e ΣC=0 no
+ * agregado (§3 caso 3/3b). Vendas=0 dá F=0 → Status 0% (0, não null), pois C>0.
+ */
+export function bakeStatus(totalRevenue: number, totalCost: number): number | null {
+  if (totalCost <= 0) return null;
+  return (totalRevenue / totalCost) * 100;
 }
 
 /**

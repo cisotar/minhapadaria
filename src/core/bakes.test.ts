@@ -10,6 +10,7 @@ import { formatDate } from './format';
 import {
   computeBakeDerived,
   bakeWastageRate,
+  bakeStatus,
   isPlanned,
   confirmPlanned,
   aggregatePeriod,
@@ -62,6 +63,46 @@ describe('bakes core — por fornada (§14.3)', () => {
     expect(JSON.stringify(entry)).toBe(snapshot); // entrada intacta
     expect(entry).not.toHaveProperty('totalCost');
     expect(d).not.toBe(entry);
+  });
+});
+
+describe('bakes core — Status F/C (aba-balanco §2.2/§2.4)', () => {
+  it('S1. bakeStatus(120,100) → 120 (markup do gabarito do cliente, §2.2)', () => {
+    expect(bakeStatus(120, 100)).toBeCloseTo(120, 10);
+  });
+
+  it('S2. bakeStatus(180,200) → 90 (razão dos totais ΣF/ΣC, §2.4)', () => {
+    // Agregado A(F=120,C=100) + B(F=60,C=100): ΣF=180, ΣC=200 → 90%.
+    expect(bakeStatus(180, 200)).toBeCloseTo(90, 10);
+  });
+
+  it('S3. agregado usa razão dos totais, NÃO média das linhas (§2.4)', () => {
+    // A(F=120,C=100)=120% e B(F=60,C=200)=30%; média das linhas=75%.
+    // ΣF/ΣC = 180/300 = 60% — prova que a fórmula é a razão dos totais.
+    const a = { f: 120, c: 100 };
+    const b = { f: 60, c: 200 };
+    const sumF = a.f + b.f;
+    const sumC = a.c + b.c;
+    expect(bakeStatus(sumF, sumC)).toBeCloseTo(60, 10);
+    const meanOfLines = (bakeStatus(a.f, a.c)! + bakeStatus(b.f, b.c)!) / 2;
+    expect(meanOfLines).toBeCloseTo(75, 10);
+    expect(bakeStatus(sumF, sumC)).not.toBeCloseTo(meanOfLines, 5);
+  });
+
+  it('S4. bakeStatus(0,100) → 0 (Vendas=0 dá 0%, não null; §3 caso 1)', () => {
+    expect(bakeStatus(0, 100)).toBe(0);
+  });
+
+  it('S5. bakeStatus(60,0) → null (C=0, div/0 → contrato null≠0, §5.C/§3 caso 3)', () => {
+    expect(bakeStatus(60, 0)).toBeNull();
+  });
+
+  it('S6. bakeStatus(0,0) → null (ΣC=0, tabela vazia/só planejadas; §3 caso 3b)', () => {
+    expect(bakeStatus(0, 0)).toBeNull();
+  });
+
+  it('S7. bakeStatus(50,100) → 50 (Saldo negativo, Status < 100%)', () => {
+    expect(bakeStatus(50, 100)).toBeCloseTo(50, 10);
   });
 });
 

@@ -53,6 +53,15 @@
  *
  * Seções implementadas: §8 (export/print, revisão issue 019), §14.2 (hospeda
  * bakeForm), §14.3, §14.4, §14.5, §14.6, §14.7.
+ *
+ * Seção BALANÇO (issue 045, `specs/aba-balanco.md` §2): tabela NOVA e
+ * só-leitura, montada DEPOIS da tabela "Fornadas registradas" (preserva a
+ * suíte 018/044 — `querySelector('table')` continua pegando a 1ª tabela, a
+ * editável). Reusa `periodFiltered`/`currentSummary`/`isPlanned`/
+ * `computeBakeDerived` já computados em `renderAll` (§1.6, zero recálculo
+ * duplicado) + `bakeStatus` (core/bakes.ts, único cálculo novo: F/C×100 por
+ * linha e ΣF/ΣC no rodapé, §2.2/§2.4). Zero classe/token novo: `.table`/
+ * `.table tfoot`/`.loss`/`.badge-planned`/`.planned`/`.num` (design-system.css).
  */
 import {
   computeBakeDerived,
@@ -68,6 +77,7 @@ import {
   bestPeriod,
   worstPeriod,
   isOrphan,
+  bakeStatus,
 } from '../core/bakes';
 import { priceFromSalePrice, isLoss, marginStatus } from '../core/pricing';
 import { validateQuantityProduced, validateQuantitySold } from '../core/validation';
@@ -376,6 +386,98 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   table.appendChild(tbody);
   tableCard.appendChild(table);
 
+  // --- BALANÇO (spec aba-balanco §2, issue 045) — seção NOVA, só-leitura ---
+  // P1/P2 (§2.3): tabela adicionada DEPOIS da tabela editável acima (não a
+  // altera/estende); P3/P4/P5/P6 (§2.4/§2.5): 10 colunas fixas + tfoot de
+  // totais + planejadas com "—" nas 5 colunas dependentes de venda + só
+  // `.loss` em Saldo<0 (sem azul-crédito on-screen, changelog do arquiteto) +
+  // ordenação data desc. `aria-label` serve de hook de teste (evita colidir
+  // com a 1ª `table` da página, a editável).
+  const balanceCard = h('section', { className: 'card' });
+  root.appendChild(balanceCard);
+  balanceCard.appendChild(h('h2', {}, ['Balanço']));
+  const balanceTable = h('table', { className: 'table', 'aria-label': 'Balanço por fornada' });
+  balanceTable.appendChild(
+    h('thead', {}, [
+      h('tr', {}, [
+        h('th', {}, ['Data']),
+        h('th', {}, ['Receita']),
+        h('th', { className: 'num' }, ['Produção']),
+        h('th', { className: 'num' }, ['Custo unitário']),
+        h('th', { className: 'num' }, ['Custo (C)']),
+        h('th', { className: 'num' }, ['Vendas']),
+        h('th', { className: 'num' }, ['Preço unitário']),
+        h('th', { className: 'num' }, ['Faturamento (F)']),
+        h('th', { className: 'num' }, ['Saldo']),
+        h('th', { className: 'num' }, ['Status']),
+      ]),
+    ]),
+  );
+  const balanceBody = h('tbody');
+  balanceTable.appendChild(balanceBody);
+  const balanceFoot = h('tfoot');
+  balanceTable.appendChild(balanceFoot);
+  balanceCard.appendChild(balanceTable);
+
+  // Nº de colunas do BALANÇO (§2.1) — usado no colspan do estado vazio (§3 caso 7).
+  const BALANCE_COLS = 10;
+
+  /** Uma linha do BALANÇO: confirmada mostra os 5 derivados de venda;
+   *  planejada (§2.5) mostra "—" nas 5 dependentes de venda (Vendas/Preço
+   *  unitário/Faturamento/Saldo/Status) e o badge, mantendo Data/Receita/
+   *  Produção/Custo unitário/Custo (C) reais (independem de venda). */
+  function buildBalanceRow(entry: BakeEntry): HTMLElement {
+    const planned = isPlanned(entry);
+    const derived = computeBakeDerived(entry); // §14.3: totalCost/totalRevenue/totalProfit
+    const tr = h('tr', planned ? { className: 'planned' } : {});
+
+    const recipeCell = h('td', {}, [entry.recipeName]); // textContent — regra de ouro 3
+    if (planned) {
+      recipeCell.appendChild(document.createTextNode(' '));
+      recipeCell.appendChild(h('span', { className: 'badge-planned' }, ['◌ Planejada — fora dos totais']));
+    }
+
+    const status = bakeStatus(derived.totalRevenue ?? 0, derived.totalCost ?? 0); // §2.2
+    const balanceCell = h('td', { className: 'num' }, [planned ? '—' : formatCurrency(derived.totalProfit ?? 0)]);
+    if (!planned && (derived.totalProfit ?? 0) < 0) balanceCell.classList.add('loss'); // §2.5 P5
+
+    tr.appendChild(h('td', { className: 'num num--left' }, [formatDate(entry.date)]));
+    tr.appendChild(recipeCell);
+    tr.appendChild(h('td', { className: 'num' }, [String(entry.quantityProduced)]));
+    tr.appendChild(h('td', { className: 'num' }, [formatCurrency(entry.unitCost)]));
+    tr.appendChild(h('td', { className: 'num' }, [formatCurrency(derived.totalCost ?? 0)]));
+    tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : String(entry.quantitySold)]));
+    tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : formatCurrency(entry.unitSalePrice)]));
+    tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : formatCurrency(derived.totalRevenue ?? 0)]));
+    tr.appendChild(balanceCell);
+    tr.appendChild(
+      h('td', { className: 'num' }, [planned || status === null ? '—' : `${formatPercent(status)}%`]),
+    );
+    return tr;
+  }
+
+  /** Rodapé de totais (§2.4): Σ vem de `currentSummary` (aggregatePeriod já
+   *  exclui planejadas internamente); Status agregado = ΣF/ΣC (não média das
+   *  linhas) via a MESMA `bakeStatus`. Colunas não-somáveis (Data/Receita/
+   *  Custo unitário/Preço unitário) ficam vazias/"Total". */
+  function buildBalanceFootRow(summary: BakeHistorySummary): HTMLElement {
+    const status = bakeStatus(summary.totalRevenue, summary.totalCost);
+    const balanceCell = h('td', { className: 'num' }, [formatCurrency(summary.totalProfit)]);
+    if (summary.totalProfit < 0) balanceCell.classList.add('loss'); // §2.5 P5
+    return h('tr', {}, [
+      h('td', {}, ['Total']),
+      h('td', {}),
+      h('td', { className: 'num' }, [String(summary.totalProduced)]),
+      h('td', {}),
+      h('td', { className: 'num' }, [formatCurrency(summary.totalCost)]),
+      h('td', { className: 'num' }, [String(summary.totalSold)]),
+      h('td', {}),
+      h('td', { className: 'num' }, [formatCurrency(summary.totalRevenue)]),
+      balanceCell,
+      h('td', { className: 'num' }, [status === null ? '—' : `${formatPercent(status)}%`]),
+    ]);
+  }
+
   // --- Linha da tabela (edição inline só de Produzida/Vendida, §14.5) ---
   function buildRow(entry: BakeEntry, recipeIds: ReadonlySet<string>): HTMLElement {
     const planned = isPlanned(entry);
@@ -579,6 +681,31 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
       return ka < kb ? 1 : ka > kb ? -1 : 0;
     });
     for (const entry of sorted) tbody.appendChild(buildRow(entry, recipeIds));
+
+    // --- BALANÇO (§2.3/§2.5): corpo = `periodFiltered` (receita+intervalo,
+    //     inclui planejadas), data desc — mesma comparação de `sorted` acima,
+    //     porém sobre `periodFiltered` (não `recipeFiltered`), §2.4 "conjunto
+    //     exibido sob os filtros ativos". ---
+    clear(balanceBody);
+    const balanceSorted = [...periodFiltered].sort((a, b) => {
+      const ka = formatDate(a.date);
+      const kb = formatDate(b.date);
+      return ka < kb ? 1 : ka > kb ? -1 : 0;
+    });
+    if (balanceSorted.length === 0) {
+      // §3 caso 7: estado vazio orientando a registrar (não tabela em branco).
+      balanceBody.appendChild(
+        h('tr', {}, [
+          h('td', { colspan: BALANCE_COLS, className: 'note-muted' }, [
+            'Nenhuma fornada no período. Registre uma fornada no formulário acima.',
+          ]),
+        ]),
+      );
+    } else {
+      for (const entry of balanceSorted) balanceBody.appendChild(buildBalanceRow(entry));
+    }
+    clear(balanceFoot);
+    balanceFoot.appendChild(buildBalanceFootRow(currentSummary)); // §2.4: Σ já exclui planejadas
 
     // §8 (issue 019): fatia para o XLSX — fornadas do período (derivadas §14.3,
     // incl. planejadas com marca) + resumo já agregado (planejadas fora).
