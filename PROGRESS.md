@@ -4,6 +4,24 @@
 
 ## Decisões da noite
 
+### Encerramento ciclo bugfix precificação — 2026-07-06 08:15
+
+**CICLO BUGFIX PRECIFICAÇÃO CONCLUÍDO — Issues 041 + 042 (commits 15bc803 + ac455ea). 413 testes 100% verde.**
+
+**Resumo de ponta a ponta — mudança semântica precificação de "margem-sobre-preço" para "markup-sobre-custo":**
+
+**Estado final**: 413 testes 100% verde, `npm run build` ok, Golden §12 recomputado (custo unitário 4,43 → preço 6,202, lucro 1,772, totais 8,86/12,404/3,544).
+
+**Mudanças de ponta a ponta:**
+- **Issue 041 (Core): Mudança de semântica precificação** — CONTRARIA DELIBERADAMENTE spec v5 §3.E/§12. Nova fórmula: `preço = custo × (1 + p/100)` (markup-sobre-custo) em vez `preço = custo/(1−m/100)` (margem-sobre-preço). Removidos teto 99,9% (variáveis `MARGIN_MAX`/`clampMargin`). Profitmargin denominador muda para SEMPRE custo (`lucro/custo × 100`). Reescritas 3 funções (`priceFromMargin`, `priceFromSalePrice`, `priceFromProfit`). Validação bloqueia só negativos. Golden §12 recomputado com novos números.
+- **Issue 042 (UI): Card precificação reorganizado** — Custo unitário agora é **1º campo read-only** empilhado verticalmente (`.stack`), seguido de lucro unitário, % de lucro (rótulo novo: "% de lucro" antes "Margem %"), preço de venda. Custo removido da linha de totais (evitar duplicação). Zero alteração em sincronização trio, validação ou proteção `activeField`.
+
+**ALERTA CRÍTICO PARA REVISÃO HUMANA**: Decisão 041.1 é **autônoma divergência consciente** da spec v5. Nova definição de precificação é **declarada FONTE DA VERDADE DO PRODUTO** por autoridade cliente (2026-07-06, ver `spec.md` ciclo bugfix precificação). Mudança **CONTRARIA EXPLICITAMENTE** exemplo §12 validado (margem 40% = R$ 7,3833 antigo). Cabeçalhos `pricing.ts` (L1–31) + `validation.ts` (L147–154) citam "spec v5 §3.E/§12 sobrescrita pela issue 041". **Recomendação para revisor-spec**: auditar 041.1 contra `spec.md` ciclo bugfix.
+
+**PENDENTE FUTURA (não bloqueador)**: Nomenclatura "% de lucro"/"Lucro" ainda não alinhada em `recipesList.ts`, `historyView.ts`, `export/*` (ainda dizem "Margem"). Issue futura para unificar nomenclatura em toda aplicação.
+
+---
+
 ### Encerramento da noite — 2026-07-06 07:43
 
 **Issue 041 (mudança de semântica precificação) concluída nesta rodada — DIVERGÊNCIA CONSCIENTE E DELIBERADA DA SPEC V5.**

@@ -29,16 +29,16 @@ Todos importam [references/design-system.css](references/design-system.css) — 
 
 ## Status
 
-**v1 completa e backlog concluído — 3 telas funcionais, core testado por TDD, exportação/backup/refactores (issues 004–039)**
+**v1 completa e ciclo bugfix concluído — 3 telas funcionais, core testado por TDD, precificação markup, exportação/backup (issues 004–042)**
 
 A v1 entrega a aplicação inteira do fluxo da spec v5, 100% client-side (sem
 backend, sem rede em runtime): formular receitas em baker's percentage, calcular
-custo e precificação, gerenciar receitas salvas e acompanhar o histórico de
+custo e precificação (agora markup-sobre-custo), gerenciar receitas salvas e acompanhar o histórico de
 fornadas — com exportação (XLSX/PDF) e backup local (JSON).
 
-Todas as issues do backlog implementadas (029–039): modal "+ Nova receita",
+Backlog (029–039) e ciclo bugfix precificação (041–042) implementados: modal "+ Nova receita",
 edição inline de nomes (Calculadora + Cards), refactor PDF v2, eliminação volume,
-rota inicial receitas.html. **409 testes, 100% pass; build ok.**
+rota inicial receitas.html, precificação com markup-sobre-custo (% de lucro), card reorganizado. **413 testes, 100% pass; build ok.**
 
 ### Scaffold (✓ Concluído)
 - [x] Vite + TypeScript strict + Vitest
