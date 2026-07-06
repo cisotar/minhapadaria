@@ -45,8 +45,14 @@ import { svg } from './dom';
 
 const VIEW_W = 600;
 const VIEW_H = 220;
-const MARGIN_LEFT = 40;
-const MARGIN_RIGHT = 40;
+// MARGIN_LEFT/RIGHT: geometria do viewBox (não token de estilo) — folga para
+// caber o texto formatado por `formatCurrency` sem vazar do SVG (fix visual
+// pós-018): eixo Y ("R$ 1.000,00", ~58px a 11px/regular) alinhado à direita
+// terminando em MARGIN_LEFT − Y_LABEL_GAP; rótulo direto (11px/bold, mais
+// largo) desenhado em `last.x + 10` à direita do último ponto.
+const MARGIN_LEFT = 76;
+const MARGIN_RIGHT = 80;
+const Y_LABEL_GAP = 8; // espaço entre o fim do label do eixo Y e a grade
 const BASELINE_Y = 180; // y do valor 0
 const TOP_Y = 20; // topo utilizável do gráfico (folga acima do maior ponto)
 const TICKS = 4;
@@ -148,7 +154,13 @@ export function renderTrendChart(summaries: BakeHistorySummary[]): SVGSVGElement
     root.appendChild(
       svg('line', { className: 'gridline', x1: MARGIN_LEFT, y1: y, x2: VIEW_W - MARGIN_RIGHT, y2: y }),
     );
-    root.appendChild(svg('text', { className: 'axis-label', x: 0, y: y + 4 }, [formatCurrency(value)]));
+    root.appendChild(
+      svg(
+        'text',
+        { className: 'axis-label', x: MARGIN_LEFT - Y_LABEL_GAP, y: y + 4, 'text-anchor': 'end' },
+        [formatCurrency(value)],
+      ),
+    );
   }
 
   // Eixo X — uma label por período (§14.5).

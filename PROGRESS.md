@@ -4,6 +4,10 @@
 
 ## Decisões da noite
 
+### Fix visual gráfico de tendência — 2026-07-06 (loop-visual)
+
+`trendChart.ts`: labels do eixo Y invadiam a grade (x=0, anchor start, MARGIN_LEFT=40 curto p/ "R$ 1.000,00") e rótulos diretos vazavam do viewBox (last.x+10 com MARGIN_RIGHT=40). Fix: MARGIN_LEFT 40→76, MARGIN_RIGHT 40→80, labels Y `text-anchor:end` em MARGIN_LEFT−8. Só geometria SVG, zero classe/token novo. `guardiao-design`: zero achados, aprovado. 417 testes verdes, build ok.
+
 ### Refactor visual Histórico PDF + pendentes 044 — 2026-07-06 08:38
 
 **REFACTOR HISTÓRICO PDF CONCLUÍDO — Issue 043 (commit pendente). 417 testes 100% verde.**
