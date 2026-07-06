@@ -45,4 +45,4 @@
 | 041 | Precificação — margem-sobre-preço → markup-sobre-custo (% de lucro) | fix | 007, 008 | done | 15bc803 |
 | 042 | Card Precificação — custo read-only topo, campos empilhados, rótulo "% de lucro" | fix | 041, 016 | done | ac455ea |
 | 043 | Relatórios do Histórico no estilo v2 (cards por seção) dos da Calculadora | export | 028, 034 | done | c393843 |
-| 044 | Polir densidade da listagem do Histórico (paridade table.rt) + remover CSS órfã pdf-section | fix | 043 | todo | — |
+| 044 | Polir densidade da listagem do Histórico (paridade table.rt) + remover CSS órfã pdf-section | fix | 043 | done | 4fa2ab2 |
