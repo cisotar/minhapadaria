@@ -194,6 +194,18 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .field label {
   font-size: var(--fs-small); font-weight: 600; color: var(--text-2);
 }
+/* Modificador de `.field` (issue 042 revisão): rótulo e valor na MESMA linha
+   — rótulo à esquerda, número à direita (card Precificação). Contraparte
+   horizontal do `.field` padrão (coluna). Largura do input fixada em 6,5rem,
+   mesma convenção de `.table .cell-input.num`. Só tokens, sem valor bruto novo.
+   O alinhamento à direita do número já vem de `.num`. */
+.field--inline {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.field--inline .input { width: 6.5rem; }
 
 .input {
   font: inherit;

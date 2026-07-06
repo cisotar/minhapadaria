@@ -79,7 +79,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
     fieldKey: ActiveField,
     validate: ((parsed: number) => ValidationResult) | null,
   ): { field: HTMLElement; input: HTMLInputElement; sync: (text: string) => void } {
-    const field = h('div', { className: 'field' });
+    const field = h('div', { className: 'field field--inline' }); // issue 042 revisão: rótulo + valor na mesma linha
     field.appendChild(h('label', {}, [label]));
     const input = h('input', { className: 'input num', 'aria-label': ariaLabel }) as HTMLInputElement;
     // Último valor confirmado (§7.1) — atualizado só por `sync` (nunca durante
@@ -147,7 +147,7 @@ export function renderPricingPanel(root: HTMLElement, store: AppStateStore): voi
   // `store.update`). Reusa `.field`/`.readonly` (design-system.css) e
   // `setDerivedDisplay` (cellHelpers.ts, regra de ouro 2), mesmo padrão de
   // `ingredientsTable.ts`/`batchPanel.ts`.
-  const costField = h('div', { className: 'field' });
+  const costField = h('div', { className: 'field field--inline' }); // issue 042 revisão: rótulo + valor na mesma linha
   costField.appendChild(h('label', {}, ['Custo unitário']));
   const costInput = h('input', {
     className: 'input num readonly',
