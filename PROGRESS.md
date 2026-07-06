@@ -54,6 +54,20 @@
 
 ---
 
+## Iteração 037 — 2026-07-05 22:11 (fix doc: nota de reatividade do gate PDF por tela)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 037-fix-review-findings-029 |
+| **Timestamp** | 2026-07-05 22:11 |
+| **O que foi feito** | Fix doc-only (achado baixo da revisão da issue 029). `references/design-system.html` (nota da seção "Impressão / Salvar em PDF") afirmava genericamente que o botão gated (`.hidden`) era re-exibido reativamente via `store.subscribe` "coberto em calculadora.test.ts/historyView.test.ts" — impreciso para o Histórico. Nota separada por tela: **Calculadora** — reativa (toggle "Exibir custos" → `store.setShowCosts` → `store.subscribe` re-exibe "Imprimir Custos" sem re-mount, coberto em `calculadora.test.ts`); **Histórico** — `.hidden` de "Imprimir Financeiro" resolvido uma única vez no mount a partir de `prefs.getShowCosts()` (sem toggle nesta tela; caso 12 de `historyView.test.ts` cobre só o estado inicial, não reatividade). |
+| **Hash do commit** | (pendente) |
+| **Testes** | Sem teste novo (doc-only). Suíte completa **408/408 pass**; `npm run build` verde. |
+| **Reviews** | Fix tipo doc — sem re-review (memória "Fixes sem re-review no loop"): TDD/gates bastam; mudança de texto sem superfície de runtime. |
+| **Observações** | Nenhuma mudança de código de produção/teste. Só `references/design-system.html`. |
+
+---
+
 ## Iteração 036 — 2026-07-05 22:15 (edição inline de nome na Calculadora, extração mecânica genérica)
 
 | Campo | Valor |

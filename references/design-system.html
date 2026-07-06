@@ -485,12 +485,19 @@
       O segundo botão de cada par ("Imprimir Custos"/"Imprimir Financeiro") é
       *gated* por <code>.hidden</code> conforme a pref global "Exibir custos"
       (<code>prefs.getShowCosts()</code>, §2.A.2): oculto por padrão
-      (<code>showCosts=false</code>, como nos dois exemplos acima) e
-      re-exibido reativamente via <code>store.subscribe</code> quando o
-      usuário liga o toggle "Exibir custos" da tabela de Ingredientes/filtros
-      — sem re-mount da tela (coberto em <code>calculadora.test.ts</code>/
-      <code>historyView.test.ts</code>). O primeiro botão de cada par (sem
-      valores monetários) fica sempre visível.
+      (<code>showCosts=false</code>, como nos dois exemplos acima). O
+      comportamento difere por tela:
+      <strong>Calculadora</strong> — reativo: o toggle "Exibir custos" da
+      tabela de Ingredientes chama <code>store.setShowCosts</code>, e um
+      <code>store.subscribe</code> re-exibe o botão "Imprimir Custos" sem
+      re-mount da tela (coberto em <code>calculadora.test.ts</code>);
+      <strong>Histórico</strong> — o <code>.hidden</code> de "Imprimir
+      Financeiro" é resolvido uma única vez no mount a partir de
+      <code>prefs.getShowCosts()</code> (esta tela não tem toggle "Exibir
+      custos"; mudança feita alhures só reflete ao reabrir/remontar a tela —
+      o caso 12 de <code>historyView.test.ts</code> cobre o estado inicial,
+      não reatividade). O primeiro botão de cada par (sem valores monetários)
+      fica sempre visível.
     </p>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
       (exemplos acima com <code>position:static</code> só para não fixar dentro
