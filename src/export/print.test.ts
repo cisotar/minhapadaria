@@ -14,13 +14,15 @@
  * `renderHistoryCostsPrintView` (Fornadas/Financeiro) NÃO mudam — casos 6/7/8c/8d
  * continuam usando `table.table`.
  *
- * Números do golden seed (recalculate(goldenSeed()), Isca=1, denom global 3):
- * F 1.000g/100%, Água 700g/70%, Sal 20g/2%, Azeite 40g/4%; fermento W_ferm=200g,
+ * Números do golden seed (recalculate(goldenSeed()), Isca=1, denom global 3;
+ * issue 035: seed sem Azeite — o caso "2" abaixo injeta um `fat` local para
+ * exercitar a categoria, sem afetar os demais números):
+ * F 1.000g/100%, Água 700g/70%, Sal 20g/2%; fermento W_ferm=200g,
  * cada componente (Isca/Farinha/Água) = 66,7g, Proporção 1/1/1, Total 3/200,0g;
  * hidratação real 71,87%, Farinha Real Consumida 1.066,7g; custo Farinha R$8,00,
- * Sal R$0,06, Azeite R$2,56, Água R$0,00; fermento: Isca R$0,00, Farinha R$0,53,
- * Água R$0,00, Total de fermento R$0,53; custo total (fornada) R$11,15, custo/un
- * R$5,58, preço R$9,29, margem 40,00%, lucro/un R$3,72, lucro fornada R$7,44.
+ * Sal R$0,06, Água R$0,00; fermento: Isca R$0,00, Farinha R$0,53,
+ * Água R$0,00, Total de fermento R$0,53; custo total (fornada) R$8,59, custo/un
+ * R$4,30, preço R$7,16, margem 40,00%, lucro/un R$2,86, lucro fornada R$5,73.
  * Rende (pricing.quantity) = 2.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -97,7 +99,18 @@ describe('renderRecipePrintView (Receita v2 — cards por seção, zero $)', () 
   });
 
   it('2. fat/extra caem em "Sal e Extras" (Azeite+Sal na mesma table.rt); sem seção "Gorduras"', () => {
-    const root = renderRecipe(); // seed tem Azeite (fat) + Sal (salt)
+    // issue 035: goldenSeed() não tem mais Azeite — fixture local com `fat`
+    // para exercitar a categoria (não enfraquece a cobertura).
+    const recipe = goldenSeed();
+    recipe.ingredients.push({
+      id: 'oil-1',
+      name: 'Azeite',
+      category: 'fat',
+      weight: 0,
+      percentage: 4,
+      packageCost: { pricePaid: 80, packageSize: 1250, packageUnit: 'g' },
+    });
+    const root = renderRecipe(recipe); // recipe tem Azeite (fat) + Sal (salt)
     const titles = Array.from(root.querySelectorAll('.sec-head')).map((el) => el.textContent);
     expect(titles).not.toContain('Gorduras');
     const card = secCard(root, 'Sal e Extras');
@@ -189,7 +202,7 @@ describe('renderRecipePrintView (Receita v2 — cards por seção, zero $)', () 
   it('conteúdo golden e ZERO "R$" (Receita nunca mostra dinheiro)', () => {
     const root = renderRecipe();
     const text = root.textContent ?? '';
-    expect(text).toContain('Pão Rústico de Azeite');
+    expect(text).toContain('Pão Rústico');
     expect(text).toContain('1.000,0'); // F_total (Farinhas)
     expect(text).toContain('700,0'); // água
     expect(text).toContain('71,87'); // hidratação real (seed Isca=1)
@@ -250,13 +263,13 @@ describe('renderRecipeCostsPrintView (Custos v2 — coluna Custo, Custo Total, P
     expect(fermentoFoot.querySelector('.pdf-debit')?.textContent).toBe('R$ 0,53');
   });
 
-  it('7. Custo Total: fornada (2 pães) = R$ 11,15; um pão = R$ 5,58 (débito)', () => {
+  it('7. Custo Total: fornada (2 pães) = R$ 8,59; um pão = R$ 4,30 (débito)', () => {
     const root = renderCosts();
     const fornada = kvCell(root, 'Custo da fornada (2 pães)');
-    expect(fornada!.textContent).toBe('R$ 11,15');
+    expect(fornada!.textContent).toBe('R$ 8,59');
     expect(fornada!.classList.contains('pdf-debit')).toBe(true);
     const umPao = kvCell(root, 'Custo de um pão');
-    expect(umPao!.textContent).toBe('R$ 5,58');
+    expect(umPao!.textContent).toBe('R$ 4,30');
     expect(umPao!.classList.contains('pdf-debit')).toBe(true);
   });
 
@@ -274,7 +287,7 @@ describe('renderRecipeCostsPrintView (Custos v2 — coluna Custo, Custo Total, P
   it('9. Precificação após Custo Total: Preço/Lucros crédito (feliz), Margem neutra, sem alerta', () => {
     const root = renderCosts();
     const preco = kvCell(root, 'Preço de venda (un.)');
-    expect(preco!.textContent).toBe('R$ 9,29');
+    expect(preco!.textContent).toBe('R$ 7,16');
     expect(preco!.classList.contains('pdf-credit')).toBe(true);
 
     const margem = kvCell(root, 'Margem de lucro');
@@ -283,11 +296,11 @@ describe('renderRecipeCostsPrintView (Custos v2 — coluna Custo, Custo Total, P
     expect(margem!.classList.contains('pdf-debit')).toBe(false);
 
     const lucroPao = kvCell(root, 'Lucro por pão');
-    expect(lucroPao!.textContent).toBe('R$ 3,72');
+    expect(lucroPao!.textContent).toBe('R$ 2,86');
     expect(lucroPao!.classList.contains('pdf-credit')).toBe(true);
 
     const lucroFornada = kvCell(root, 'Lucro da fornada');
-    expect(lucroFornada!.textContent).toBe('R$ 7,44');
+    expect(lucroFornada!.textContent).toBe('R$ 5,73');
     expect(lucroFornada!.classList.contains('pdf-credit')).toBe(true);
 
     expect(root.querySelector('.pdf-alert')).toBeNull();
@@ -338,7 +351,7 @@ function bake(overrides: Partial<BakeEntry> = {}): BakeEntry {
   return computeBakeDerived({
     id: overrides.id ?? 'b1',
     recipeId: overrides.recipeId ?? 'r1',
-    recipeName: overrides.recipeName ?? 'Pão Rústico de Azeite',
+    recipeName: overrides.recipeName ?? 'Pão Rústico',
     date: overrides.date ?? new Date(2026, 6, 5),
     quantityProduced: overrides.quantityProduced ?? 10,
     quantitySold: overrides.quantitySold ?? 8,
@@ -371,7 +384,7 @@ describe('renderHistoryPrintView (Fornadas — zero $, intocado)', () => {
     expect(text).toContain('Histórico de Fornadas');
     expect(text).toContain('Produzido');
     expect(text).toContain('2026-07-05'); // data (§7.1)
-    expect(text).toContain('Pão Rústico de Azeite');
+    expect(text).toContain('Pão Rústico');
     expect(text).not.toContain('R$');
     const plannedRow = root.querySelector('tr.pdf-muted-row');
     expect(plannedRow).not.toBeNull();

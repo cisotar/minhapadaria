@@ -52,11 +52,13 @@
  *     só no mockup).
  *
  * "Criar em branco" (§2.F, issue 025 item 5): a spec pede as duas formas —
- * "em branco ou a partir de valores padrão". "+ Nova receita" (padrão)
- * semeia com `goldenSeed()`; "Nova receita em branco" chama
- * `recipeStore.create()` SEM seed — `defaultRecipe()` (recipes.ts) já é um
- * `Recipe` válido e mínimo (zero ingredientes, zero fermento), reuso total
- * (regra de ouro 1), nenhuma lógica nova aqui.
+ * "em branco ou a partir de valores padrão". "+ Nova receita" (padrão, issue
+ * 035: abre `openPromptModal` pedindo o nome antes de criar — `modal.ts`,
+ * 1º modal do design system) semeia com `goldenSeed()`; "Nova receita em
+ * branco" continua sem modal, chama `recipeStore.create()` SEM seed —
+ * `defaultRecipe()` (recipes.ts) já é um `Recipe` válido e mínimo (zero
+ * ingredientes, zero fermento), reuso total (regra de ouro 1), nenhuma
+ * lógica nova aqui.
  *
  * Seções implementadas: §2.F, §4 (chip de margem), §5 (mensagens de erro),
  * §7.1 (datas aaaa-mm-dd), §9 (formatação), §10 (backup local), §14.7
@@ -79,6 +81,7 @@ import {
 import { goldenSeed } from './seed';
 import { h, clear, on } from './dom';
 import { marginChipClass } from './cellHelpers';
+import { openPromptModal } from './modal';
 
 export interface RecipesListDeps {
   recipeStore: RecipeStore;
@@ -194,10 +197,23 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   // --- Operações §2.F ---
 
   function createRecipe(): void {
-    // Semente de valores padrão (§2.F, caminho 1 de 2: "a partir de valores
-    // padrão") — mesmo gabarito usado na Calculadora quando não há `?recipe`.
-    const created = recipeStore.create(goldenSeed());
-    navigateFn(`receitas.html?recipe=${encodeURIComponent(created.id)}`);
+    // Issue 035: "+ Nova receita" abre um modal pedindo o nome ANTES de criar
+    // (era criação direta com nome genérico) — só ao confirmar com nome
+    // válido (trim não-vazio) a receita nasce já com esse nome, semeada com
+    // `goldenSeed()` (§2.F, caminho 1 de 2: "a partir de valores padrão" —
+    // mesmo gabarito usado na Calculadora quando não há `?recipe`). Cancelar
+    // (botão/Esc/backdrop) ou confirmar vazio não cria nada (`openPromptModal`
+    // cuida da validação/mensagem de erro/foco — zero lógica de receita ali).
+    openPromptModal({
+      title: 'Nova receita',
+      label: 'Nome da receita',
+      confirmLabel: 'Criar',
+      cancelLabel: 'Cancelar',
+      onConfirm: (name) => {
+        const created = recipeStore.create({ ...goldenSeed(), name });
+        navigateFn(`receitas.html?recipe=${encodeURIComponent(created.id)}`);
+      },
+    });
   }
 
   function createBlankRecipe(): void {

@@ -465,7 +465,7 @@ describe('batchPanel — tabela de Farinhas (jsdom)', () => {
   function mountBoth() {
     const root = document.createElement('div');
     const prefs = createPrefsStore({ storage: createMemoryStorage() });
-    const store = createAppState(goldenSeed(), prefs); // ordem: flour-1, water-1, oil-1, salt-1
+    const store = createAppState(goldenSeed(), prefs); // ordem: flour-1, water-1, salt-1 (issue 035: sem oil-1/Azeite)
     renderBatchPanel(root, store);
     renderIngredientsTable(root, store);
     return { root, store };
@@ -513,7 +513,7 @@ describe('batchPanel — tabela de Farinhas (jsdom)', () => {
   it('AC4/AC6 — "+ farinha" (push no FIM do array cru) ainda forma bloco CONTÍGUO no topo de Ingredientes, na mesma ordem da tabela Farinhas', () => {
     const { root, store } = mountBoth();
     const addBtn = Array.from(root.querySelectorAll('button')).find((b) => b.textContent === '+ farinha') as HTMLButtonElement;
-    addBtn.click(); // array cru vira [flour-1, water-1, oil-1, salt-1, <nova-farinha>] — NÃO contíguo no array
+    addBtn.click(); // array cru vira [flour-1, water-1, salt-1, <nova-farinha>] — NÃO contíguo no array
 
     const flours = store.getState().recipe.ingredients.filter((i) => i.category === 'flour');
     expect(flours).toHaveLength(2);
@@ -521,13 +521,12 @@ describe('batchPanel — tabela de Farinhas (jsdom)', () => {
 
     const rows = ingredientsBodyRows(root);
     // AC6: as N primeiras linhas do tbody são exatamente as farinhas, na mesma
-    // ordem da tabela Farinhas, antes de água/gordura/sal/Fermento.
+    // ordem da tabela Farinhas, antes de água/sal/Fermento.
     expect(rows[0].getAttribute('data-ingredient-id')).toBe('flour-1');
     expect(rows[1].getAttribute('data-ingredient-id')).toBe(newFlourId);
     expect(rows[2].getAttribute('data-ingredient-id')).toBe('water-1');
-    expect(rows[3].getAttribute('data-ingredient-id')).toBe('oil-1');
-    expect(rows[4].getAttribute('data-ingredient-id')).toBe('salt-1');
-    expect(rows[5].getAttribute('data-ingredient-id')).toBe('fermento');
+    expect(rows[3].getAttribute('data-ingredient-id')).toBe('salt-1');
+    expect(rows[4].getAttribute('data-ingredient-id')).toBe('fermento');
     // AC7: linha-espelho sem input editável e sem botão remover.
     expect(rows[1].querySelector('input')).toBeNull();
     expect(rows[1].querySelector('.col-actions button')).toBeNull();

@@ -132,7 +132,18 @@ describe('buildRecipeWorkbook', () => {
   });
 
   it('3. seções por categoria (§8): Farinhas, Líquidos, Gorduras, Sal e Extras, Fermento, Hidratação, Precificação', async () => {
-    const { state, summary } = recalculate(goldenSeed()); // seed tem as 4 categorias (inc. Azeite=fat)
+    // issue 035: goldenSeed() não tem mais ingrediente `fat` (Azeite) — fixture
+    // local para exercitar a categoria (regra de ouro: não enfraquecer a cobertura).
+    const recipe = goldenSeed();
+    recipe.ingredients.push({
+      id: 'oil-1',
+      name: 'Azeite',
+      category: 'fat',
+      weight: 0,
+      percentage: 4,
+      packageCost: { pricePaid: 80, packageSize: 1250, packageUnit: 'g' },
+    });
+    const { state, summary } = recalculate(recipe); // recipe tem as 4 categorias (inc. Azeite=fat, fixture local)
     const wb = await reload(buildRecipeWorkbook(state, summary, { includeCosts: true }));
     const strings = allStrings(wb);
     for (const label of ['Farinhas', 'Líquidos', 'Gorduras', 'Sal e Extras', 'Fermento Natural', 'Hidratação', 'Precificação']) {

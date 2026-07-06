@@ -83,6 +83,11 @@
   --radius-sm: 6px;
   --shadow: 0 1px 3px rgba(20, 18, 14, 0.08), 0 4px 14px rgba(20, 18, 14, 0.05);
   --focus-ring: 0 0 0 3px rgba(96, 108, 56, 0.35);
+
+  /* ---- Overlay de modal (issue 035 — 1º modal do design system) ----
+     ~50% do --tinta da marca (rgb(20,18,14), mesmo tom de --text) sobre o
+     conteúdo por trás do backdrop. */
+  --overlay: rgba(20, 18, 14, 0.5);
 }
 
 /* ============ Base ============ */
@@ -380,6 +385,32 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .form-status { font-size: var(--fs-small); font-weight: 600; min-height: 1em; }
 .form-status--error { color: var(--danger); }
 .form-status--ok { color: var(--status-ok-text); }
+
+/* ============ Modal (issue 035 — 1º do design system) ============
+   Exceção explícita do cliente ao registro anterior "sem modal"
+   (references/architecture.md) — escopo restrito ao fluxo "+ Nova receita".
+   `div` manual (não `<dialog>` nativo — decisão registrada no Plano Técnico
+   da issue 035, jsdom do projeto não implementa `showModal()`), montado
+   direto em `document.body` por `src/ui/modal.ts`. `.modal-overlay` é o
+   backdrop fixo, centralizador; `.modal` só ajusta a LARGURA da caixa —
+   fundo/borda/sombra/padding vêm de `.card` (reuso, a caixa carrega as duas
+   classes: `class="modal card"`). */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20; /* acima de `.banner-mode-alt` (10) e `.row--sticky` (11) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+  padding: var(--sp-4);
+}
+.modal {
+  width: 100%;
+  /* Largura derivada só de tokens de espaçamento (sem px/hex soltos):
+     var(--sp-6)=32px × 15 = 480px. */
+  max-width: calc(var(--sp-6) * 15);
+}
 
 /* ============ Barra de filtros (Histórico, Seção 14.5) ============ */
 .filter-bar {

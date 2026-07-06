@@ -186,7 +186,7 @@ describe('ingredientsTable (jsdom)', () => {
 
   it('11. contrato-espelho §3.2 (spec/refactor-farinhas-multiplas.md, AC6): farinhas formam bloco CONTÍGUO no topo mesmo com array NÃO-contíguo (ex.: farinha adicionada no fim, como o botão "+ farinha" faz)', () => {
     const prefs = createPrefsStore({ storage: createMemoryStorage() });
-    const recipe = goldenSeed(); // [flour-1, water-1, oil-1, salt-1]
+    const recipe = goldenSeed(); // [flour-1, water-1, salt-1] (issue 035: sem oil-1/Azeite)
     recipe.ingredients.push({
       id: 'flour-2',
       name: 'Farinha Integral',
@@ -194,18 +194,17 @@ describe('ingredientsTable (jsdom)', () => {
       weight: 0,
       percentage: 0,
       packageCost: { pricePaid: 6, packageSize: 1, packageUnit: 'kg' },
-    }); // array cru: [flour-1, water-1, oil-1, salt-1, flour-2] — farinhas NÃO adjacentes no array
+    }); // array cru: [flour-1, water-1, salt-1, flour-2] — farinhas NÃO adjacentes no array
     const store = createAppState(recipe, prefs);
     const root = document.createElement('div');
     renderIngredientsTable(root, store);
 
     const rows = Array.from(root.querySelectorAll('tbody tr')).filter((tr) => !tr.querySelector('.table-add-cell'));
-    // AC6: as 2 primeiras linhas são as farinhas, na ordem do array, antes de água/azeite/sal/Fermento.
+    // AC6: as 2 primeiras linhas são as farinhas, na ordem do array, antes de água/sal/Fermento.
     expect(rows.map((tr) => tr.getAttribute('data-ingredient-id'))).toEqual([
       'flour-1',
       'flour-2',
       'water-1',
-      'oil-1',
       'salt-1',
       'fermento',
     ]);

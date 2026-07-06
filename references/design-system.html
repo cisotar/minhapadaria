@@ -170,6 +170,7 @@
         <tr><td><code>.subrow-indent</code></td><td>Issue 022 — indentação da sub-linha de farinha do fermento (§2.B.3) sob a linha-cabeçalho "Farinha": <code>padding-left:calc(var(--sp-3) + var(--sp-4))</code>.</td></tr>
         <tr><td><code>.card--fit</code></td><td>Refatoração de layout da Calculadora — card dimensionado pelo CONTEÚDO (<code>width:fit-content;max-width:100%</code>) em vez de esticar à largura da página. Aplicado ao card de Ingredientes: cresce/encolhe com as colunas visíveis (toggle "Exibir custos"), sem esticar 3 colunas à força (spec §10 desktop-first). Os demais cards da tela recebem por JS (<code>calculadora.ts</code>) a MESMA largura recalculada, para interface simétrica.</td></tr>
         <tr><td><code>.col-actions</code></td><td>Refatoração de layout da Calculadora — coluna de ações da linha (botão remover), sempre visível à direita de todas as colunas de dados/custo: <code>width:1%;white-space:nowrap;text-align:center</code> (coluna que encolhe pelo conteúdo). O botão remover deixou de ficar embaixo do nome e passou a ser a última ação horizontal da linha.</td></tr>
+        <tr><td><code>.modal-overlay</code> / <code>.modal</code></td><td>Issue 035 — 1º modal do design system (exceção explícita do cliente ao registro anterior "sem modal", escopo restrito ao fluxo "+ Nova receita"). <code>.modal-overlay</code>: backdrop fixo/centralizador (<code>position:fixed;inset:0;z-index:20</code>, acima de <code>.banner-mode-alt</code>/<code>.row--sticky</code>; fundo <code>var(--overlay)</code>, token novo ~50% do <code>--tinta</code> da marca). <code>.modal</code> só define a LARGURA da caixa (<code>max-width:calc(var(--sp-6) * 15)</code> = 480px, derivado só de token de espaçamento) — fundo/borda/sombra/padding vêm de <code>.card</code> (a caixa carrega as duas classes). Montado via <code>src/ui/modal.ts</code> (<code>div</code> manual, não <code>&lt;dialog&gt;</code> nativo — jsdom do projeto não implementa <code>showModal()</code>).</td></tr>
       </tbody>
     </table>
     <div class="title-row">
@@ -229,6 +230,25 @@
     </div>
     <p class="form-status form-status--error" style="margin-top:var(--sp-3)">Exemplo <code>.form-status--error</code> — Arquivo de backup inválido: não é um JSON válido.</p>
     <p class="form-status form-status--ok">Exemplo <code>.form-status--ok</code> — Backup restaurado com sucesso.</p>
+    <p class="note-muted mt-3">
+      Exemplo <code>.modal-overlay</code>/<code>.modal</code> (issue 035) — abaixo, com
+      <code>position:static</code> só para não cobrir o style guide (nas telas reais é
+      <code>position:fixed</code>, herdada de <code>.modal-overlay</code>):
+    </p>
+    <div class="modal-overlay" style="position:static;padding:0">
+      <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modal-demo-title" style="margin:0">
+        <h2 id="modal-demo-title">Nova receita</h2>
+        <div class="field">
+          <label for="modal-demo-input">Nome da receita</label>
+          <input id="modal-demo-input" class="input" value="">
+        </div>
+        <div class="form-status"></div>
+        <div class="row row--end">
+          <button class="btn btn-secondary">Cancelar</button>
+          <button class="btn btn-primary">Criar</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="card">

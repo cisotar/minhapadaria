@@ -4,8 +4,11 @@
  * O que faz: `goldenSeed()` devolve uma `Recipe` crua (sem derivados — quem
  * preenche pesos/custos é `recalculate`, §1.6) reproduzindo o gabarito da §12
  * (Farinha Branca 1000g/100% · Água 700g/70% · Sal 20g/2% · Fermento 20%,
- * Partes 0:1:1) mais o Azeite 40g/4% do mockup `mockups/calculadora.html`
- * (usado ali para exercitar a categoria `fat` — plano da issue 014).
+ * Partes 0:1:1). Ajuste do cliente (issue 035, "+ Nova receita" via modal): o
+ * ingrediente Azeite (40g/4%, categoria `fat`) que vinha pré-preenchido desde
+ * a issue 014 foi removido — a receita padrão não sugere mais gordura por
+ * padrão; quem precisar de um ingrediente `fat` para testar essa categoria usa
+ * um fixture local (ver `src/export/print.test.ts`/`xlsx.test.ts`).
  * Só dados — zero lógica, zero fórmula. Serve de estado inicial até existir o
  * fluxo "abrir receita" (telas de Receitas, issue 017/`src/storage/recipes.ts`).
  *
@@ -33,7 +36,7 @@ export function goldenSeed(): Recipe {
   const now = new Date(2026, 6, 3); // 2026-07-03 (determinístico, sem `new Date()` ambíguo)
   return {
     id: 'golden-seed',
-    name: 'Pão Rústico de Azeite',
+    name: 'Pão Rústico',
     calculationMode: 'percentage-to-weight',
     batchPlanningMode: 'per-unit', // planejamento por unidade — único modo exposto na UI (refactor 2026-07-05)
     flourPerUnit: 500, // F_unit × N(=2) = F_total 1000 do gabarito §12
@@ -54,14 +57,6 @@ export function goldenSeed(): Recipe {
         weight: 0,
         percentage: 70,
         packageCost: { pricePaid: 0, packageSize: 1, packageUnit: 'kg' }, // issue 030: torneira em peso (era 'L')
-      },
-      {
-        id: 'oil-1',
-        name: 'Azeite',
-        category: 'fat', // fora da hidratação (§2.A/§2.C)
-        weight: 0,
-        percentage: 4,
-        packageCost: { pricePaid: 80, packageSize: 1250, packageUnit: 'g' },
       },
       {
         id: 'salt-1',

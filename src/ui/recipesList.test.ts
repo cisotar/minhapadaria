@@ -9,7 +9,7 @@
  * navegação/diálogo/arquivo (`confirm`/`prompt`/`navigate`/`readFile`/
  * `download`/`onError`) são injetadas — zero `window.confirm` real em teste.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createMemoryStorage } from '../storage/local';
 import { createRecipeStore, type RecipeStore } from '../storage/recipes';
 import { BAKES_STORAGE_KEY } from '../storage/backup';
@@ -133,20 +133,182 @@ describe('recipesList (jsdom)', () => {
     expect(h3.textContent).toBe(evil);
   });
 
-  it('5. criar: clique "+ Nova receita" → list().length +1; navigate chamado com receitas.html?recipe=<id>', () => {
+  it('5. clique "+ Nova receita" (issue 035) → NÃO cria direto, abre o modal (caso 12 do bloco "modal nova receita" abaixo cobre o fluxo completo)', () => {
     const storage = createMemoryStorage();
     const recipeStore = makeStore(storage);
-    const navigate = vi.fn();
-    const { root } = mount({ storage, recipeStore, navigate });
+    const { root } = mount({ storage, recipeStore });
+    document.body.appendChild(root); // modal se anexa a document.body — precisa estar no documento
 
-    const before = recipeStore.list().map((r) => r.id);
+    const before = recipeStore.list().length;
     const newBtn = Array.from(root.querySelectorAll('button')).find((b) => b.textContent === '+ Nova receita')!;
     newBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    const after = recipeStore.list();
-    expect(after).toHaveLength(before.length + 1);
-    const created = after.find((r) => !before.includes(r.id))!;
-    expect(navigate).toHaveBeenCalledWith(`receitas.html?recipe=${created.id}`);
+    expect(recipeStore.list()).toHaveLength(before); // nada criado ainda
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+
+    document.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
+    document.body.removeChild(root);
+  });
+
+  // Issue 035 (refactor "Nova Receita" item 1): "+ Nova receita" abre
+  // `openPromptModal` (modal.ts) pedindo o nome ANTES de criar — casos 12–17
+  // do Plano Técnico. O componente genérico já é testado à parte em
+  // `modal.test.ts`; aqui só o wiring de negócio (recipeStore.create/navigate).
+  describe('modal nova receita (issue 035)', () => {
+    function mountAttached(deps: MountDeps = {}) {
+      const mounted = mount(deps);
+      document.body.appendChild(mounted.root); // modal se anexa a document.body
+      return mounted;
+    }
+
+    function clickNewBtn(root: HTMLElement): void {
+      const newBtn = Array.from(root.querySelectorAll('button')).find((b) => b.textContent === '+ Nova receita')!;
+      newBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
+
+    function dialogInput(): HTMLInputElement {
+      return document.querySelector('[role="dialog"] input') as HTMLInputElement;
+    }
+
+    function dialogBtn(text: string): HTMLButtonElement {
+      return Array.from(document.querySelectorAll('[role="dialog"] button')).find(
+        (b) => b.textContent === text,
+      ) as HTMLButtonElement;
+    }
+
+    afterEach(() => {
+      // limpeza defensiva — o modal se anexa a document.body por conta
+      // própria; um teste que deixa o modal aberto (caso 14) não pode vazar
+      // para o próximo (mesmo jsdom reusado por arquivo de teste).
+      document.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
+      document.body.innerHTML = '';
+    });
+
+    it('12. clique "+ Nova receita" → recipeStore.create NÃO chamado ainda; modal aberto', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const createSpy = vi.spyOn(recipeStore, 'create');
+      const { root } = mountAttached({ storage, recipeStore });
+
+      clickNewBtn(root);
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    });
+
+    it('13. confirmar com nome → create chamado com o nome digitado; navigate para receitas.html?recipe=<id>; modal fecha', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const navigate = vi.fn();
+      const { root } = mountAttached({ storage, recipeStore, navigate });
+
+      const before = recipeStore.list().map((r) => r.id);
+      clickNewBtn(root);
+      dialogInput().value = 'Pão de Forma';
+      dialogBtn('Criar').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      const after = recipeStore.list();
+      expect(after).toHaveLength(before.length + 1);
+      const created = after.find((r) => !before.includes(r.id))!;
+      expect(created.name).toBe('Pão de Forma');
+      expect(navigate).toHaveBeenCalledWith(`receitas.html?recipe=${created.id}`);
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('14. confirmar vazio → create/navigate NÃO chamados; modal aberto com erro', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const navigate = vi.fn();
+      const createSpy = vi.spyOn(recipeStore, 'create');
+      const { root } = mountAttached({ storage, recipeStore, navigate });
+
+      clickNewBtn(root);
+      dialogInput().value = '';
+      dialogBtn('Criar').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+      expect(document.querySelector('.form-status--error')).not.toBeNull();
+    });
+
+    it('15a. cancelar via botão → create/navigate NÃO chamados; modal fecha', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const navigate = vi.fn();
+      const createSpy = vi.spyOn(recipeStore, 'create');
+      const { root } = mountAttached({ storage, recipeStore, navigate });
+
+      clickNewBtn(root);
+      dialogBtn('Cancelar').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('15b. Esc → create/navigate NÃO chamados; modal fecha', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const navigate = vi.fn();
+      const createSpy = vi.spyOn(recipeStore, 'create');
+      const { root } = mountAttached({ storage, recipeStore, navigate });
+
+      clickNewBtn(root);
+      document
+        .querySelector('[role="dialog"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('15c. clique no backdrop → create/navigate NÃO chamados; modal fecha', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const navigate = vi.fn();
+      const createSpy = vi.spyOn(recipeStore, 'create');
+      const { root } = mountAttached({ storage, recipeStore, navigate });
+
+      clickNewBtn(root);
+      const overlay = document.querySelector('.modal-overlay') as HTMLElement;
+      overlay.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('16. XSS: nome malicioso → create recebe literal; sem <img> no DOM do modal', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const evil = '<img src=x onerror="x">';
+      const { root } = mountAttached({ storage, recipeStore, navigate: vi.fn() });
+
+      clickNewBtn(root);
+      dialogInput().value = evil;
+      expect(document.querySelector('.modal img')).toBeNull();
+      dialogBtn('Criar').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      const created = recipeStore.list().find((r) => r.name === evil);
+      expect(created).not.toBeUndefined();
+      expect(document.querySelector('.modal img')).toBeNull();
+    });
+
+    it('17. "Nova receita em branco" continua sem abrir modal (regressão)', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const { root } = mountAttached({ storage, recipeStore, navigate: vi.fn() });
+
+      const blankBtn = Array.from(root.querySelectorAll('button')).find(
+        (b) => b.textContent === 'Nova receita em branco',
+      )!;
+      blankBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    });
   });
 
   it('6. duplicar independente: +1 na lista, nome "Cópia de X"; mutar cópia não afeta original', () => {
