@@ -4,6 +4,57 @@
 
 ## Decisões da noite
 
+### Encerramento da noite — 2026-07-05 22:19
+
+**Backlog completo: todas as issues (029, 031, 035, 036, 037, 038, 039) concluídas nesta sessão.**
+
+**Estado final:** 409 testes 100% verde, `npm run build` ok, Golden §12 inalterado (1041,7g, R$ 8,86).
+
+Resumo entregue:
+
+1. **Issue 035 — Modal "+ Nova Receita" + Remoção Azeite da Seed** ⭐ Feature Central
+   - Novo `src/ui/modal.ts`: componente genérico `openPromptModal` reutilizável
+   - Integração recipesList.ts para "+ Nova receita" com validação trim-não-vazio
+   - `goldenSeed()` novo padrão: Pão Rústico sem Azeite (5 ingredientes base)
+   - Div manual `role="dialog"` vs `<dialog>` nativo (jsdom showModal não implementado)
+   - A11y completo: foco preso, Esc/backdrop, aria-modal/aria-labelledby
+
+2. **Issue 036 — Nome Editável na Calculadora** ⭐ Feature Central
+   - Novo `src/ui/inlineNameEdit.ts`: mecânica genérica de edição inline (reuso regra 2)
+   - `recipesList.ts` refatorada: `startInlineEdit` wrapper fino chamando `startInlineNameEdit`
+   - Calculadora `<h1>` nome editável: Enter/Space editar, Escape sair (tabindex/role/aria-label)
+   - Persistência store.update + autosave pipeline (não `recipeStore.rename` direto)
+   - **A11y achado alto (Enter/Space teclado em <h1>) levantado em revisão anterior, corrigido nesta rodada 036 — sem débito issue novo**
+
+3. **Fixes e limpeza (031, 037, 038, 039)** (4 issues tipo fix)
+   - 031: remover classe morta `.unit-toggle`, coluna "Unidade" design-system.html
+   - 037: nota reatividade gate PDF por tela (Calculadora reativa, Histórico estático)
+   - 038: Água "1 L" → "1 kg" em design-system.html
+   - 039: aria-label redundante input modal (apenas `<label for>`)
+
+4. **Issues anteriores na mesma sessão (030, 033, 032, 034, 028, 029)**
+   - 030: eliminação total volume (g/kg só), migração relabel, backup.ts gap corrigido
+   - 033: renomear receita edição inline (sem `window.prompt`)
+   - 032: rota inicial receitas.html (swap index.html ↔ receitas.html, URLs antigas quebram)
+   - 034: refactor PDF v2 — cards por seção, badge "Rende N pães", colgroup/proporção
+   - 028: paleta impressão (débito azul/crédito vermelho), split 4 renders
+   - 029: gate "Imprimir Custos" testável + design-system.html documentado
+
+**Decisões autônomas consolidadas:**
+- 035.1 — 1º modal como exceção explícita (escopo "+ Nova receita")
+- 035.2 — Azeite removido seed (UX pronta para editar)
+- 035.3 — Div manual `role="dialog"` vs `<dialog>` (jsdom limitação)
+- 036.1 — Extração mecânica genérica edição inline (reuso regra 2)
+- 036.2 — <h1> acessível teclado Enter/Space (a11y achado corrigido nesta rodada)
+- 036.3 — Persistência store.update + autosave pipeline
+- 030.1 — Eliminação total volume (divergência spec v5 consciente, cliente pedido)
+
+**Divergências spec v5 documentadas (não são achados):**
+- Issue 030: volume eliminado (spec §2.A/§5.C exigem volume — app nunca oferece)
+- Issue 035: modal "+ Nova receita" (UX interativa pedida cliente)
+
+---
+
 **2026-07-05 (issue 036 — nome da receita exibido e editável inline na Calculadora)**
 
 1. **EXTRAÇÃO MECÂNICA GENÉRICA DE EDIÇÃO INLINE (issue 036, regra de ouro 2 reuso)**: Issue 033 implementou renomear inline no card de receitas (função `startInlineEdit` em recipesList.ts, ~50 LOC). Issue 036 extrai essa mecânica em módulo novo `src/ui/inlineNameEdit.ts` (`startInlineNameEdit` genérica, desacoplada de store). Motivo: Calculadora agora monta `<h1>` editável no header (mockup aprovado), IDÊNTICA disciplina em ambos os usos (tríplice guarda: vazio/sem mudança NÃO grava, Enter/blur confirmam, Esc cancela, flag `settled` evita reprocessamento blur pós-Enter/Esc). Reuso total: `makeDisplay(name)` (callback que recria o nó de exibição) e `onCommit(newName)` (callback persistência) são parametrizados. Ambos os usos (card + Calculadora) reutilizam `h/on` de dom.ts (zero lib nova, regra 1). Sequência implementação: (dev-core) nenhuma mudança; (dev-ui) novo `inlineNameEdit.ts` (51 LOC), `recipesList.ts` `startInlineEdit` agora wrapper fino que chama `startInlineNameEdit` (simplificação, sem duplicação); `calculadora.ts` monta `<h1>` com `tabindex=0` e `role=button` para acessibilidade (§11.1 gatilho teclado Enter/Space), clique ou Enter/Space chama `startInlineNameEdit` com `onCommit = store.update` + autosave pipeline (NÃO recipeStore.rename direto — persistência via store.update é pipeline correto para Calculadora §1.6, autosave existente sincroniza ao localStorage).

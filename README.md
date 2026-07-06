@@ -29,12 +29,16 @@ Todos importam [references/design-system.css](references/design-system.css) — 
 
 ## Status
 
-**v1 completa — 3 telas funcionais, core testado por TDD, exportação e backup (issues 004–027)**
+**v1 completa e backlog concluído — 3 telas funcionais, core testado por TDD, exportação/backup/refactores (issues 004–039)**
 
 A v1 entrega a aplicação inteira do fluxo da spec v5, 100% client-side (sem
 backend, sem rede em runtime): formular receitas em baker's percentage, calcular
 custo e precificação, gerenciar receitas salvas e acompanhar o histórico de
 fornadas — com exportação (XLSX/PDF) e backup local (JSON).
+
+Todas as issues do backlog implementadas (029–039): modal "+ Nova receita",
+edição inline de nomes (Calculadora + Cards), refactor PDF v2, eliminação volume,
+rota inicial receitas.html. **409 testes, 100% pass; build ok.**
 
 ### Scaffold (✓ Concluído)
 - [x] Vite + TypeScript strict + Vitest
