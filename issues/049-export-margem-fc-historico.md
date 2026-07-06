@@ -3,7 +3,7 @@ id: "049"
 titulo: Exportar métrica Margem (F/C) nos relatórios do Histórico (XLSX + PDF Financeiro)
 tipo: export
 deps: ["019", "028", "043", "045"]
-status: todo
+status: done
 ---
 
 ## Contexto
