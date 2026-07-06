@@ -1,5 +1,5 @@
 /**
- * historyView.ts — Dashboard de Fornadas (spec §14.4/§14.5/§14.6/§14.7) · issues 018/028.
+ * historyView.ts — Dashboard de Fornadas (spec §14.4/§14.5/§14.6/§14.7) · issues 018/028/045/046.
  *
  * O que faz: `renderHistoryView(root, deps)` monta, dentro de `root`, TODA a
  * tela "Histórico de Fornadas" (mockup `mockups/historico.html`): a barra de
@@ -62,6 +62,16 @@
  * duplicado) + `bakeStatus` (core/bakes.ts, único cálculo novo: F/C×100 por
  * linha e ΣF/ΣC no rodapé, §2.2/§2.4). Zero classe/token novo: `.table`/
  * `.table tfoot`/`.loss`/`.badge-planned`/`.planned`/`.num` (design-system.css).
+ *
+ * Pills de visualização (issue 046, `specs/aba-balanco.md` §2.6): barra
+ * segmented control `.period-toggle` (reuso regra 2 — não duplicar em
+ * `.view-toggle` — mesma classe, contexto diferente) acima da tabela BALANÇO,
+ * com 3 botões (Completa/Unidades/Fornadas), default Completa ativo. Handler
+ * `setBalanceView` alterna classe no `<table>` (`.view-completa|unidades|
+ * fornadas`), triggering 2 regras CSS `display:none` que escondem grupos de
+ * colunas condicionais (.col-unit: Custo un./Preço un.; .col-bake: Custo C/
+ * Faturamento/Saldo). Zero re-render/reordenar — dados/ordem/filtros/planejadas/
+ * cores .loss intactos (puro CSS). Zero fórmula, zero classe/token novo.
  */
 import {
   computeBakeDerived,
@@ -396,19 +406,40 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const balanceCard = h('section', { className: 'card' });
   root.appendChild(balanceCard);
   balanceCard.appendChild(h('h2', {}, ['Balanço']));
-  const balanceTable = h('table', { className: 'table', 'aria-label': 'Balanço por fornada' });
+
+  // Issue 046 (spec §2.6): barra de pills "Exibição" — alterna QUAIS colunas a
+  // tabela do Balanço mostra (Completa/Unidades/Fornadas), sem tocar dados,
+  // filtro, ordenação ou o rodapé de totais. Reusa `.period-toggle` (mesmo
+  // componente do filtro Período acima; regra de ouro 1/2 — não duplicar
+  // regra idêntica numa classe irmã `.view-toggle`).
+  const viewField = h('div', { className: 'field' });
+  viewField.appendChild(h('label', {}, ['Exibição']));
+  const viewToggle = h('div', { className: 'period-toggle' });
+  const viewCompletaBtn = h('button', { type: 'button', className: 'active' }, ['Completa']) as HTMLButtonElement;
+  const viewUnidadesBtn = h('button', { type: 'button' }, ['Unidades']) as HTMLButtonElement;
+  const viewFornadasBtn = h('button', { type: 'button' }, ['Fornadas']) as HTMLButtonElement;
+  viewToggle.appendChild(viewCompletaBtn);
+  viewToggle.appendChild(viewUnidadesBtn);
+  viewToggle.appendChild(viewFornadasBtn);
+  viewField.appendChild(viewToggle);
+  balanceCard.appendChild(viewField);
+
+  const balanceTable = h('table', {
+    className: 'table balance-table view-completa',
+    'aria-label': 'Balanço por fornada',
+  });
   balanceTable.appendChild(
     h('thead', {}, [
       h('tr', {}, [
         h('th', {}, ['Data']),
         h('th', {}, ['Receita']),
         h('th', { className: 'num' }, ['Produção']),
-        h('th', { className: 'num' }, ['Custo unitário']),
-        h('th', { className: 'num' }, ['Custo (C)']),
+        h('th', { className: 'num col-unit' }, ['Custo unitário']),
+        h('th', { className: 'num col-bake' }, ['Custo (C)']),
         h('th', { className: 'num' }, ['Vendas']),
-        h('th', { className: 'num' }, ['Preço unitário']),
-        h('th', { className: 'num' }, ['Faturamento (F)']),
-        h('th', { className: 'num' }, ['Saldo']),
+        h('th', { className: 'num col-unit' }, ['Preço unitário']),
+        h('th', { className: 'num col-bake' }, ['Faturamento (F)']),
+        h('th', { className: 'num col-bake' }, ['Saldo']),
         h('th', { className: 'num' }, ['Status']),
       ]),
     ]),
@@ -418,6 +449,19 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
   const balanceFoot = h('tfoot');
   balanceTable.appendChild(balanceFoot);
   balanceCard.appendChild(balanceTable);
+
+  // Handler de troca de view (molde de `setGranularity`, `:280-285`): só
+  // alterna `.active` no botão e a classe de view no `<table>` — SEM
+  // `renderAll()` (é puro CSS/`display`, §2.3 P2, dados/ordem intactos).
+  function setBalanceView(view: 'completa' | 'unidades' | 'fornadas', btn: HTMLButtonElement): void {
+    for (const b of [viewCompletaBtn, viewUnidadesBtn, viewFornadasBtn]) b.classList.remove('active');
+    btn.classList.add('active');
+    balanceTable.classList.remove('view-completa', 'view-unidades', 'view-fornadas');
+    balanceTable.classList.add(`view-${view}`);
+  }
+  on(viewCompletaBtn, 'click', () => setBalanceView('completa', viewCompletaBtn));
+  on(viewUnidadesBtn, 'click', () => setBalanceView('unidades', viewUnidadesBtn));
+  on(viewFornadasBtn, 'click', () => setBalanceView('fornadas', viewFornadasBtn));
 
   // Nº de colunas do BALANÇO (§2.1) — usado no colspan do estado vazio (§3 caso 7).
   const BALANCE_COLS = 10;
@@ -438,17 +482,20 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
     }
 
     const status = bakeStatus(derived.totalRevenue ?? 0, derived.totalCost ?? 0); // §2.2
-    const balanceCell = h('td', { className: 'num' }, [planned ? '—' : formatCurrency(derived.totalProfit ?? 0)]);
+    // Issue 046: 5 células condicionais ganham `.col-unit`/`.col-bake` (mapa
+    // §2.6) — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Status)
+    // não recebem classe de coluna.
+    const balanceCell = h('td', { className: 'num col-bake' }, [planned ? '—' : formatCurrency(derived.totalProfit ?? 0)]);
     if (!planned && (derived.totalProfit ?? 0) < 0) balanceCell.classList.add('loss'); // §2.5 P5
 
     tr.appendChild(h('td', { className: 'num num--left' }, [formatDate(entry.date)]));
     tr.appendChild(recipeCell);
     tr.appendChild(h('td', { className: 'num' }, [String(entry.quantityProduced)]));
-    tr.appendChild(h('td', { className: 'num' }, [formatCurrency(entry.unitCost)]));
-    tr.appendChild(h('td', { className: 'num' }, [formatCurrency(derived.totalCost ?? 0)]));
+    tr.appendChild(h('td', { className: 'num col-unit' }, [formatCurrency(entry.unitCost)]));
+    tr.appendChild(h('td', { className: 'num col-bake' }, [formatCurrency(derived.totalCost ?? 0)]));
     tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : String(entry.quantitySold)]));
-    tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : formatCurrency(entry.unitSalePrice)]));
-    tr.appendChild(h('td', { className: 'num' }, [planned ? '—' : formatCurrency(derived.totalRevenue ?? 0)]));
+    tr.appendChild(h('td', { className: 'num col-unit' }, [planned ? '—' : formatCurrency(entry.unitSalePrice)]));
+    tr.appendChild(h('td', { className: 'num col-bake' }, [planned ? '—' : formatCurrency(derived.totalRevenue ?? 0)]));
     tr.appendChild(balanceCell);
     tr.appendChild(
       h('td', { className: 'num' }, [planned || status === null ? '—' : `${formatPercent(status)}%`]),
@@ -462,17 +509,19 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
    *  Custo unitário/Preço unitário) ficam vazias/"Total". */
   function buildBalanceFootRow(summary: BakeHistorySummary): HTMLElement {
     const status = bakeStatus(summary.totalRevenue, summary.totalCost);
-    const balanceCell = h('td', { className: 'num' }, [formatCurrency(summary.totalProfit)]);
+    // Issue 046: mesmas 5 células condicionais do corpo/thead ganham
+    // `.col-unit`/`.col-bake` — o tfoot esconde/mostra junto com o corpo.
+    const balanceCell = h('td', { className: 'num col-bake' }, [formatCurrency(summary.totalProfit)]);
     if (summary.totalProfit < 0) balanceCell.classList.add('loss'); // §2.5 P5
     return h('tr', {}, [
       h('td', {}, ['Total']),
       h('td', {}),
       h('td', { className: 'num' }, [String(summary.totalProduced)]),
-      h('td', {}),
-      h('td', { className: 'num' }, [formatCurrency(summary.totalCost)]),
+      h('td', { className: 'col-unit' }),
+      h('td', { className: 'num col-bake' }, [formatCurrency(summary.totalCost)]),
       h('td', { className: 'num' }, [String(summary.totalSold)]),
-      h('td', {}),
-      h('td', { className: 'num' }, [formatCurrency(summary.totalRevenue)]),
+      h('td', { className: 'col-unit' }),
+      h('td', { className: 'num col-bake' }, [formatCurrency(summary.totalRevenue)]),
       balanceCell,
       h('td', { className: 'num' }, [status === null ? '—' : `${formatPercent(status)}%`]),
     ]);

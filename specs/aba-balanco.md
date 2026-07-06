@@ -3,6 +3,7 @@
 **Status:** aprovada
 **Data:** 2026-07-06
 **Changelog:** 2026-07-06 — cliente respondeu P1–P3 e delegou defaults de P4–P6; proposta promovida a aprovada. Perguntas em aberto convertidas em decisões travadas: P1 seção do Histórico (§2.3), P2 só-leitura (§2.3), P3 linha de totais + Status agregado ΣF/ΣC (§2.4), P4 espelha o Histórico (§2.5), P5 cor por semântica contábil (§2.5), P6 data desc (§2.5).
+**Changelog (arquiteto, 2026-07-06 — issue 046):** adicionada §2.6 (seletor de visualização Completa/Unidades/Fornadas) — feature puramente de EXIBIÇÃO pedida pelo cliente em 2026-07-06, aditiva e sem tocar dado, fórmula, filtro, ordenação ou os totais da §2.4. O mapa de colunas por visualização foi confirmado com o cliente e travado nesta seção. Não altera nenhuma decisão anterior (P1–P6 intactas).
 **Changelog (arquiteto, 2026-07-06):** esclarecidas duas lacunas encontradas ao planejar a issue 045, sem mudar decisão do cliente: (a) §2.5 P5 — a paleta ON-SCREEN da marca não tem token de "azul crédito" (o azul-crédito de `--print-*`/issue 028 é exclusivo dos PDFs); na tela reusa-se só `.loss` (vermelho) em Saldo < 0, com Saldo ≥ 0 e demais monetários NEUTROS, espelhando a tabela irmã do Histórico (que já deixa lucro positivo neutro). (b) §2.5 P4 — fixada a lista exata de colunas com "—" nas linhas planejadas (Vendas, Preço unitário, Faturamento, Saldo, Status), mantendo Data/Receita/Produção/Custo unitário/Custo (C) preenchidos.
 **Supera:** nenhuma — aditivo puro. Não altera nenhuma fórmula da v5 §14 (Histórico de Fornadas); adiciona uma visão nova sobre os mesmos dados + 1 métrica nova (Status).
 **Relaciona:** v5 §14.1–14.3 (fornadas e fórmulas por fornada), §14.4 (agregações), §14.5–14.7 (funcionalidades, validações, relação com receitas), §5.D (validações do histórico), §6 (`BakeEntry`), §7.1 (formatos), §8 (exportação), §9 (precisão). Contexto de nomenclatura: issue 041 (precificação passou de margem-sobre-preço para markup-sobre-custo). Convenção de cor: memória `pdf-credit-debit-color-and-financial-debt` (issue 028). Telas reusadas: issues 018/044 (UI do Histórico, `src/ui/historyView.ts`).
@@ -87,6 +88,40 @@ $$\text{Status}_{\text{total}} = \frac{\Sigma F}{\Sigma C} \times 100\%$$
   - **Esclarecimento ON-SCREEN (arquiteto 2026-07-06):** a paleta da marca na tela (`references/design-system.css` `:root`) é quente e **não possui token de "azul crédito"** — o azul-crédito/vermelho-débito da issue 028 vive apenas nos tokens `--print-*`/classes `.pdf-credit`/`.pdf-debit`, exclusivos do contexto de impressão. Portanto, **na tela** o BALANÇO reusa **somente `.loss`** para Saldo < 0; **Saldo ≥ 0 e todos os demais monetários (Custo C, Faturamento F, os Σ) ficam neutros** — idêntico à tabela irmã "Fornadas registradas" do Histórico, que já deixa o lucro positivo neutro e só aplica `.loss` ao negativo. Isso honra o intento do cliente (perda visível em vermelho) sem introduzir cor fora da marca nem violar "só tokens". A convenção azul-crédito completa reaparece **se/quando** esta visão for exportada para PDF (follow-up de export), via `.pdf-credit`/`.pdf-debit` já existentes.
   - Isso resolve o P5 sem inventar semáforo de faixas (que a v5 §4 aplica só à precificação, não pedido aqui).
 - **P6 — ordenação: data decrescente** (mais recentes primeiro), espelhando o Histórico (v5 §14.5 e o sort atual de `historyView.ts`). Diverge da planilha de referência (crescente), mas prioriza a consistência com a tela anfitriã.
+
+### 2.6. Visualizações da tabela — seletor Completa / Unidades / Fornadas (issue 046 — travado com o cliente 2026-07-06)
+
+A tabela do BALANÇO ganha um **seletor de visualização** (barra de pills acima da tabela) que alterna **quais colunas** ficam visíveis. É **puramente de exibição**: não toca dado, fórmula, filtro (§2.5 receita/intervalo), ordenação (§2.5 P6 data desc) nem a linha de totais (§2.4) — todas as células continuam no DOM; a visualização só esconde/mostra grupos de colunas (mesma mecânica do toggle "Exibir custos" da v5 §2.A.2). O rodapé de totais (§2.4) **está sempre visível** nas três visualizações e esconde/mostra as **mesmas** colunas que o corpo.
+
+**Default:** **Completa** ativa ao abrir.
+
+**Mapa de colunas** (confirmado com o cliente):
+
+| Coluna (§2.1) | Completa | Unidades | Fornadas | Grupo |
+|---|:--:|:--:|:--:|---|
+| Data | ✓ | ✓ | ✓ | *sempre* (identidade da linha) |
+| Receita | ✓ | ✓ | ✓ | *sempre* (identidade da linha) |
+| Produção | ✓ | ✓ | ✓ | *sempre* (contagem de unidades) |
+| Custo unitário | ✓ | ✓ | — | por-unidade |
+| Custo (C) | ✓ | — | ✓ | agregado da fornada |
+| Vendas | ✓ | ✓ | ✓ | *sempre* (contagem de unidades) |
+| Preço unitário | ✓ | ✓ | — | por-unidade |
+| Faturamento (F) | ✓ | — | ✓ | agregado da fornada |
+| Saldo | ✓ | — | ✓ | agregado da fornada |
+| Status | ✓ | ✓ | ✓ | *sempre* (§2.2, markup F/C) |
+
+- **Completa** = as 10 colunas da §2.1 (comportamento da issue 045, inalterado).
+- **Unidades** (7 col) = Data · Receita · Produção · Custo unitário · Vendas · Preço unitário · Status — foco em dados por-unidade + contagens; esconde os agregados da fornada (Custo C, Faturamento F, Saldo).
+- **Fornadas** (8 col) = Data · Receita · Produção · Custo (C) · Vendas · Faturamento (F) · Saldo · Status — foco nos agregados da fornada; esconde os por-unidade (Custo unitário, Preço unitário).
+
+**Regras travadas com o cliente:**
+- **Status** (§2.2) aparece nas **três** visualizações.
+- **Produção** e **Vendas** (contagens) aparecem nas **três**.
+- **Data** e **Receita** = identidade da linha → **sempre** presentes.
+- A cor `.loss` do Saldo (§2.5 P5) é preservada: em Unidades a célula fica escondida junto com o grupo agregado e reaparece com a cor correta ao voltar para Completa/Fornadas.
+- O estado vazio (§3 caso 7) usa uma célula com `colspan` cobrindo as 10 colunas — esconder colunas não afeta essa linha.
+
+Esta seção **não** altera §2.1–§2.5: é uma camada de apresentação sobre a mesma tabela e os mesmos totais.
 
 ---
 

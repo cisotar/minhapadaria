@@ -317,6 +317,14 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .table .cost-col { display: none; }
 .table.show-costs .cost-col { display: table-cell; }
 
+/* Balanço (issue 046): pills "Exibição" (Completa/Unidades/Fornadas) alternam
+   grupos de colunas por `display` (mesmo mecanismo de `.show-costs` acima).
+   `.col-unit` = colunas por-unidade (Custo unitário, Preço unitário);
+   `.col-bake` = agregados da fornada (Custo (C), Faturamento (F), Saldo).
+   `view-completa` = tudo visível (sem regra própria). */
+.balance-table.view-unidades .col-bake { display: none; }
+.balance-table.view-fornadas .col-unit { display: none; }
+
 /* Coluna de ações da linha (botão remover) — sempre visível, à direita de
    todas as colunas de dados/custo (última ação horizontal da linha). Largura
    mínima pelo conteúdo (`width:1%` é o padrão de "coluna que encolhe" em

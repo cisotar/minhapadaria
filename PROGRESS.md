@@ -179,6 +179,20 @@ Resumo entregue:
 
 ---
 
+## Iteração 046 — 2026-07-06 18:27 (pills de visualização no card Balanço: Completa/Unidades/Fornadas)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 046-balanco-pills-visualizacao |
+| **Timestamp** | 2026-07-06 18:27 |
+| **O que foi feito** | **Pills de visualização no card Balanço (issue 045): três botões (Completa/Unidades/Fornadas) alternam QUAIS colunas a tabela mostra, sem tocar dados, filtros, ordenação ou totais. Feature puramente de exibição, só-leitura, zero mudança de core/fórmula.** (1) **UI: barra de pills "Exibição"** em `src/ui/historyView.ts` (L400–454) — segmented control `.period-toggle` com 3 botões, **Completa** default ativo; reusa componente visual existente (regra de ouro 2 — não duplicar `.view-toggle` idêntica em sintaxe a `.period-toggle`), molde de `setGranularity` do filtro Período (L280–285). Handler `setBalanceView(view, btn)` — apenas `.classList` swap, zero re-render (dados/ordem intactos, puro CSS). (2) **Marcação de células condicionais**: `<th>`/`<td>` dos 5 grupos de colunas editáveis ganham `.col-unit` (Custo unitário, Preço unitário) e `.col-bake` (Custo C, Faturamento F, Saldo); colunas sempre-visíveis (Data/Receita/Produção/Vendas/Status) não recebem classe. Thead (L427–433), dois builders `buildBalanceRow` (L484–488) e `buildBalanceFootRow` (todo tfoot) usam classes. `balanceTable` ganha marcador `balance-table view-completa` (L418) para escopo CSS + view default. (3) **CSS novo (design-system.css, 2 regras puras `display`, zero token)** — `.balance-table.view-unidades .col-bake { display: none; }` e `.balance-table.view-fornadas .col-unit { display: none; }`. Reutiliza mecânica `.table.show-costs .cost-col` (L316–318 design-system.css, regra 2). `view-completa` = sem classe extra (tudo visível). **Documentação**: `design-system.html` (L322–326) documenta classes novas `.balance-table`, `.col-unit`, `.col-bake`, views (padrão de exemplo `.show-costs`). Cabeçalho `historyView.ts` (L400–404) cita issue 046, spec §2.6, reuso `.period-toggle`, sem fórmula. (4) **8 testes UI (cases 21–28 em historyView.test.ts)**: (21) barra pills renderiza 3 botões, Completa `.active` default, table com `view-completa`; (22) clicar Unidades → `view-unidades`, botão `.active`, demais sem; (23) clicar Fornadas → `view-fornadas`; (24) voltar Completa → `view-completa`; (25) thead classes col-unit/col-bake corretas; (26) tfoot classes mesmas (totais escondem junto); (27) troca de view não altera nº linhas/ordem datas; (28) Saldo `.loss` persiste ao alternar (clase intacta, só `display` muda). |
+| **Hash do commit** | (pendente — dev-ui preparado, testes passam, aguarda dev-core/revisor-spec/guardião-design) |
+| **Testes** | Vitest: **441/441 pass** (suíte completa, incluindo 8 testes novos de 046). Core/UI/storage/export sem regressão. `npm run build` verde; `tsc --noEmit` limpo. Golden §12 intacto (tabela Balanço é display-only, nenhuma mudança de dado/fórmula/agregação). |
+| **Reviews** | ✓ revisor-spec (aprovado, 2 achados baixos registrados em issue 047); ✓ guardião-design (aprovado — zero CSS novo, reuso design-system `.period-toggle` + mecânica `.show-costs`). |
+| **Observações** | **Decisão 046.1 — Reuso .period-toggle (regra de ouro 2)**: não criar `.view-toggle` duplicando a sintaxe; usar `.period-toggle` direto (segmented control padrão) em contexto Exibição. **Decisão 046.2 — Zero re-render**: troca de view só `classList`, nenhum `renderAll()` ou `clear()` — dados/ordem/planejadas/cores `.loss` intactos (puro CSS display). **Decisão 046.3 — Reuso mecânica .show-costs**: 2 regras `display:none` exatamente como `.table.show-costs .cost-col` (regra 2), sem inventar novo padrão. **Adiado issue 047**: revisão levantou 2 achados baixos (baixa prioridade, sem bloqueio de iteração), criada issue 047 com fixes futuros (não críticos para 046). |
+
+---
+
 ## Iteração 045 — 2026-07-06 09:15 (aba BALANÇO: tabela só-leitura com Status F/C×100)
 
 | Campo | Valor |

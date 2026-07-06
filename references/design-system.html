@@ -450,6 +450,91 @@
   </section>
 
   <section class="card">
+    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+      <h2 style="margin:0;border:none;padding:0">Balanço — pills de visualização (issue 046)</h2>
+    </div>
+    <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
+      Mesmo mecanismo de <code>.show-costs</code>/<code>.cost-col</code> acima, aplicado à
+      tabela do card Balanço: pill <code>.period-toggle</code> (reusada, sem classe irmã nova)
+      alterna a classe <code>.view-completa|unidades|fornadas</code> no <code>&lt;table
+      class="balance-table"&gt;</code>, que esconde/mostra <code>.col-unit</code> (Custo
+      unitário, Preço unitário) e <code>.col-bake</code> (Custo (C), Faturamento (F), Saldo)
+      via <code>display</code> — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Status)
+      não recebem classe de coluna. Sem re-render: só troca de classes.
+    </p>
+    <div class="field" style="margin-bottom:var(--sp-3)">
+      <label>Exibição</label>
+      <div class="period-toggle">
+        <button type="button" class="active" onclick="
+          this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+          this.classList.add('active');
+          var t=document.getElementById('tbl-balanco');
+          t.classList.remove('view-completa','view-unidades','view-fornadas');
+          t.classList.add('view-completa');
+        ">Completa</button>
+        <button type="button" onclick="
+          this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+          this.classList.add('active');
+          var t=document.getElementById('tbl-balanco');
+          t.classList.remove('view-completa','view-unidades','view-fornadas');
+          t.classList.add('view-unidades');
+        ">Unidades</button>
+        <button type="button" onclick="
+          this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+          this.classList.add('active');
+          var t=document.getElementById('tbl-balanco');
+          t.classList.remove('view-completa','view-unidades','view-fornadas');
+          t.classList.add('view-fornadas');
+        ">Fornadas</button>
+      </div>
+    </div>
+    <table class="table balance-table view-completa" id="tbl-balanco" aria-label="Balanço por fornada">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Receita</th>
+          <th class="num">Produção</th>
+          <th class="num col-unit">Custo unitário</th>
+          <th class="num col-bake">Custo (C)</th>
+          <th class="num">Vendas</th>
+          <th class="num col-unit">Preço unitário</th>
+          <th class="num col-bake">Faturamento (F)</th>
+          <th class="num col-bake">Saldo</th>
+          <th class="num">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num" style="text-align:left">05/07</td>
+          <td>Pão campanha</td>
+          <td class="num">40</td>
+          <td class="num col-unit">R$ 2,10</td>
+          <td class="num col-bake">R$ 84,00</td>
+          <td class="num">38</td>
+          <td class="num col-unit">R$ 6,00</td>
+          <td class="num col-bake">R$ 228,00</td>
+          <td class="num col-bake">R$ 144,00</td>
+          <td class="num">171%</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td></td>
+          <td class="num">40</td>
+          <td class="col-unit"></td>
+          <td class="num col-bake">R$ 84,00</td>
+          <td class="num">38</td>
+          <td class="col-unit"></td>
+          <td class="num col-bake">R$ 228,00</td>
+          <td class="num col-bake">R$ 144,00</td>
+          <td class="num">171%</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <section class="card">
     <h2>Impressão / Salvar em PDF (issue 019/028/029, refactor v2 issue 034, §8)</h2>
     <p style="color:var(--text-muted);font-size:var(--fs-small);margin-top:0">
       Relatório imprimível montado por <code>src/export/print.ts</code> —

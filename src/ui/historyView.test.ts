@@ -533,5 +533,131 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
       const dates = Array.from(rows).map((r) => r.querySelector('td')!.textContent);
       expect(dates).toEqual(['2026-07-03', '2026-07-02', '2026-07-01']);
     });
+
+    // --- pills de visualização (issue 046, §2.6) ---
+    describe('pills de visualização (§2.6) — Completa/Unidades/Fornadas', () => {
+      function viewToggle(root: HTMLElement): HTMLElement {
+        // barra de views vive dentro do mesmo `.card` da tabela do Balanço,
+        // localizada via `.period-toggle` mais próximo da `balanceTable`.
+        return balanceTable(root).parentElement!.querySelector('.period-toggle') as HTMLElement;
+      }
+      function viewBtn(root: HTMLElement, label: string): HTMLButtonElement {
+        return Array.from(viewToggle(root).querySelectorAll('button')).find(
+          (b) => b.textContent === label,
+        ) as HTMLButtonElement;
+      }
+
+      it('21. barra de pills renderiza 3 botões; Completa ativa por padrão; table com view-completa', () => {
+        const m = mount();
+        render(m);
+        const toggle = viewToggle(m.root);
+        const labels = Array.from(toggle.querySelectorAll('button')).map((b) => b.textContent);
+        expect(labels).toEqual(['Completa', 'Unidades', 'Fornadas']);
+        expect(viewBtn(m.root, 'Completa').classList.contains('active')).toBe(true);
+        expect(viewBtn(m.root, 'Unidades').classList.contains('active')).toBe(false);
+        expect(viewBtn(m.root, 'Fornadas').classList.contains('active')).toBe(false);
+        expect(balanceTable(m.root).classList.contains('view-completa')).toBe(true);
+      });
+
+      it('22. clicar Unidades → table ganha view-unidades e perde view-completa; botão Unidades ativo', () => {
+        const m = mount();
+        render(m);
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const table = balanceTable(m.root);
+        expect(table.classList.contains('view-unidades')).toBe(true);
+        expect(table.classList.contains('view-completa')).toBe(false);
+        expect(viewBtn(m.root, 'Unidades').classList.contains('active')).toBe(true);
+        expect(viewBtn(m.root, 'Completa').classList.contains('active')).toBe(false);
+        expect(viewBtn(m.root, 'Fornadas').classList.contains('active')).toBe(false);
+      });
+
+      it('23. clicar Fornadas → table ganha view-fornadas', () => {
+        const m = mount();
+        render(m);
+        viewBtn(m.root, 'Fornadas').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const table = balanceTable(m.root);
+        expect(table.classList.contains('view-fornadas')).toBe(true);
+        expect(table.classList.contains('view-completa')).toBe(false);
+        expect(viewBtn(m.root, 'Fornadas').classList.contains('active')).toBe(true);
+      });
+
+      it('24. voltar para Completa restaura view-completa', () => {
+        const m = mount();
+        render(m);
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        viewBtn(m.root, 'Completa').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const table = balanceTable(m.root);
+        expect(table.classList.contains('view-completa')).toBe(true);
+        expect(table.classList.contains('view-unidades')).toBe(false);
+        expect(viewBtn(m.root, 'Completa').classList.contains('active')).toBe(true);
+      });
+
+      it('25. thead: Custo unitário/Preço unitário têm col-unit; Custo (C)/Faturamento (F)/Saldo têm col-bake; demais sem classe de coluna', () => {
+        const m = mount();
+        render(m);
+        const headers = Array.from(balanceTable(m.root).querySelectorAll('thead th'));
+        const byText = (label: string) => headers.find((th) => th.textContent === label)!;
+        expect(byText('Custo unitário').classList.contains('col-unit')).toBe(true);
+        expect(byText('Preço unitário').classList.contains('col-unit')).toBe(true);
+        expect(byText('Custo (C)').classList.contains('col-bake')).toBe(true);
+        expect(byText('Faturamento (F)').classList.contains('col-bake')).toBe(true);
+        expect(byText('Saldo').classList.contains('col-bake')).toBe(true);
+        for (const label of ['Data', 'Receita', 'Produção', 'Vendas', 'Status']) {
+          const th = byText(label);
+          expect(th.classList.contains('col-unit')).toBe(false);
+          expect(th.classList.contains('col-bake')).toBe(false);
+        }
+      });
+
+      it('26. tfoot carrega as mesmas classes de coluna (totais escondem junto)', () => {
+        const m = mount();
+        const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 8, unitCost: 4, unitSalePrice: 7 });
+        render(m);
+        const foot = balanceTable(m.root).querySelector('tfoot tr')!;
+        const cells = Array.from(foot.querySelectorAll('td'));
+        // ordem: Total, Receita, Produção, Custo unit., Custo(C), Vendas, Preço unit., Fatur.(F), Saldo, Status
+        expect(cells[3].classList.contains('col-unit')).toBe(true);
+        expect(cells[4].classList.contains('col-bake')).toBe(true);
+        expect(cells[6].classList.contains('col-unit')).toBe(true);
+        expect(cells[7].classList.contains('col-bake')).toBe(true);
+        expect(cells[8].classList.contains('col-bake')).toBe(true);
+        expect(cells[2].classList.contains('col-unit')).toBe(false);
+        expect(cells[2].classList.contains('col-bake')).toBe(false);
+        expect(cells[5].classList.contains('col-unit')).toBe(false);
+        expect(cells[9].classList.contains('col-bake')).toBe(false);
+      });
+
+      it('27. troca de view não altera nº de linhas do corpo nem a ordem das datas', () => {
+        const m = mount();
+        const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 1) });
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3) });
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 2) });
+        render(m);
+        const datesBefore = Array.from(balanceTable(m.root).querySelectorAll('tbody tr')).map(
+          (r) => r.querySelector('td')!.textContent,
+        );
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const rowsAfter = balanceTable(m.root).querySelectorAll('tbody tr');
+        const datesAfter = Array.from(rowsAfter).map((r) => r.querySelector('td')!.textContent);
+        expect(rowsAfter.length).toBe(3);
+        expect(datesAfter).toEqual(datesBefore);
+      });
+
+      it('28. Saldo .loss persiste ao alternar Completa → Unidades → Completa', () => {
+        const m = mount();
+        const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+        // Vendas=0 → Saldo negativo (§2.5 P5).
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 0, unitCost: 4, unitSalePrice: 7 });
+        render(m);
+        const saldoCell = () => balanceTable(m.root).querySelector('tbody tr td:nth-child(9)') as HTMLElement;
+        expect(saldoCell().classList.contains('loss')).toBe(true);
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(saldoCell().classList.contains('loss')).toBe(true); // escondido via display, classe intacta
+        viewBtn(m.root, 'Completa').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(saldoCell().classList.contains('loss')).toBe(true);
+      });
+    });
   });
 });
