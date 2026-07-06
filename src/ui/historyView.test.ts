@@ -658,6 +658,28 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         viewBtn(m.root, 'Completa').dispatchEvent(new MouseEvent('click', { bubbles: true }));
         expect(saldoCell().classList.contains('loss')).toBe(true);
       });
+
+      it('29. estado vazio (sem fornadas): td[colspan=10] permanece visível ao alternar Unidades/Fornadas', () => {
+        const m = mount();
+        render(m); // nenhuma fornada
+        const table = balanceTable(m.root);
+        // "visível" aqui = não escondida por `.col-unit`/`.col-bake` (regras `display:none`
+        // do design-system.css não são carregadas em jsdom; o contrato testável é a
+        // ausência dessas classes na célula do estado vazio, único td[colspan=10]).
+        const emptyCellVisible = () =>
+          Array.from(table.querySelectorAll('tbody td[colspan="10"]')).filter(
+            (td) => !td.classList.contains('col-unit') && !td.classList.contains('col-bake'),
+          );
+        expect(emptyCellVisible().length).toBe(1);
+
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(table.classList.contains('view-unidades')).toBe(true);
+        expect(emptyCellVisible().length).toBe(1);
+
+        viewBtn(m.root, 'Fornadas').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(table.classList.contains('view-fornadas')).toBe(true);
+        expect(emptyCellVisible().length).toBe(1);
+      });
     });
   });
 });
