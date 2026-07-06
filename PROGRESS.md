@@ -54,6 +54,20 @@
 
 ---
 
+## Iteração 038 — 2026-07-05 22:14 (fix doc: Água "1 L" → "1 kg" no guia vivo)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 038-fix-review-findings-031 |
+| **Timestamp** | 2026-07-05 22:14 |
+| **O que foi feito** | Fix doc-only (achados baixo das revisões da issue 031). `references/design-system.html`: as duas células "Peso do produto" da linha Água (tabela de insumos `#tbl-insumos` e composição do fermento `sub-fermento`) ainda mostravam `value="1 L"` — resíduo da issue 030 (eliminação de unidades de volume mL/L). Trocadas para `"1 kg"`. Zero `"1 L"` restante no arquivo. |
+| **Hash do commit** | (pendente) |
+| **Testes** | Sem teste novo (doc-only). Suíte completa **408/408 pass**; `npm run build` verde. |
+| **Reviews** | Fix tipo doc — sem re-review (memória "Fixes sem re-review no loop"). |
+| **Observações** | Nenhuma mudança de código de produção/teste. Só `references/design-system.html`. |
+
+---
+
 ## Iteração 037 — 2026-07-05 22:11 (fix doc: nota de reatividade do gate PDF por tela)
 
 | Campo | Valor |
