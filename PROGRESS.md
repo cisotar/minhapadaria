@@ -15,9 +15,9 @@
 **Mudanças de ponta a ponta:**
 - **Issue 043 (Refactor): Extração pdfPageV2 genérico** — novo helper `pdfPageV2(title, meta, badge, sections)` monta cabeçalho v2 (h1 + `.pdf-meta` + badge `.pdf-yield` opcional) + lista `.sec-card` + `.pdf-footer`. Antes Calculadora usava `recipePageV2` standalone; Histórico usava `pageCard`/`section()` legacy. Após 043: `recipePageV2` vira **wrapper fino** que chama `pdfPageV2` (mesma saída Calculadora, zero breaking change). Histórico (Fornadas/Financeiro) migra para `pdfPageV2(...)` — classes antigas `pageCard`/`section()` **deletadas**. Reuso puro: tokens design-system existentes (`:root` imutável), classes `.sec-card`/`.sec-body`/`.pdf-footer`/`.pdf-yield` já in design-system.css. Zero CSS novo.
 
-**PENDENTES ADIADOS PARA ISSUE 044 (A CRIAR)**:
-- **(a) Polir densidade tabela.table no Histórico**: padding de linha é 2× maior que `table.rt` da Calculadora (tokens design-system, sem hex novo) — cria estética inconsistente se impresso lado-a-lado. Futura sincronização visual via ajuste tokens.
-- **(b) Remover CSS órfão**: regra `#print-root h2.pdf-section {...}` (~linhas 622–628 design-system.css) é legacy para Histórico v1 — após 043 **zero uso** (nenhum `h2.pdf-section` gerado; Histórico usa `.sec-head` agora). Tarefa 044: considerar remoção.
+**PENDENTES DA 043 → RESOLVIDOS NA ISSUE 044 (2026-07-06 08:52, CSS-only, 417 verdes)**:
+- **(a) Densidade da listagem — FEITO**: regra escopada tokens-only `#print-root .sec-card > .sec-body table.table td/th { padding: var(--sp-1) var(--sp-2); }` equipara a densidade da `table.table` do Histórico à `table.rt` da Calculadora, só no print (telas intactas — `.table` global inalterado).
+- **(b) CSS órfã — FEITO**: regra `#print-root h2.pdf-section {...}` removida (sem uso após 043); comentário estale corrigido; nota atualizada em design-system.html.
 
 ---
 

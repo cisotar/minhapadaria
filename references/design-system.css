@@ -619,13 +619,8 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
     border-bottom: 2px solid var(--print-border-strong);
     margin-bottom: var(--sp-4);
   }
-  #print-root h2.pdf-section {
-    color: var(--print-text); font-size: var(--fs-small);
-    text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
-    margin: var(--sp-4) 0 var(--sp-2);
-    padding-bottom: 0; border-bottom: none; /* reset do `.card > h2` de tela */
-    break-after: avoid;
-  }
+  /* (issue 044) `#print-root h2.pdf-section` removida — órfã desde a issue 043,
+     que migrou o Histórico de `h2.pdf-section` para `.sec-card`. Sem uso em src/. */
 
   /* Tabelas herdam `.table` da tela; aqui só recolorimos p/ contraste de impressão. */
   #print-root .table th { color: var(--print-text); border-bottom-color: var(--print-border-strong); }
@@ -658,8 +653,10 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
      e passam a cards por seção (`.sec-card`) com uma tabela `table.rt` de
      layout FIXO e colgroup idêntico em toda seção — garante as colunas
      %/Proporção e Peso (e Custo, nos Custos) alinhadas verticalmente (req 4).
-     `renderHistoryPrintView`/`renderHistoryCostsPrintView` NÃO usam nada
-     abaixo (continuam em `h2.pdf-section`/`table.table`, regras acima). */
+     Desde a issue 043, `renderHistoryPrintView`/`renderHistoryCostsPrintView`
+     também usam este invólucro v2 (`.pdf-head`/`.sec-card`/`.pdf-footer`); só a
+     listagem cronológica interna segue em `table.table` (sem colgroup fixo),
+     com densidade equiparada à `table.rt` via regra escopada abaixo (issue 044). */
 
   /* Cabeçalho da página v2: h1+meta à esquerda, badge "Rende N pães" à direita
      (req 5). `.pdf-meta` interno perde a borda/margem própria (que viravam
@@ -702,6 +699,11 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
   #print-root .sec-card > .sec-body { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
   #print-root .sec-card > .sec-body .kv { margin-bottom: 0; }
   #print-root .sec-card > .sec-body .pdf-alert { margin-bottom: 0; }
+  /* (issue 044) Listagem `table.table` do Histórico dentro do card v2: equipara a
+     densidade das linhas à `table.rt` da Calculadora (mesmos tokens `--sp-1
+     --sp-2`) — só no print, nunca nas telas (`.table` global inalterado). */
+  #print-root .sec-card > .sec-body table.table td,
+  #print-root .sec-card > .sec-body table.table th { padding: var(--sp-1) var(--sp-2); }
 
   /* `table.rt` — layout FIXO e colgroup idêntico em TODAS as seções: a coluna
      Proporção existe SÓ no Fermento (req 3), no MESMO slot onde as outras

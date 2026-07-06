@@ -526,7 +526,7 @@
       Hidratação vira o card "Custo Total" (fornada + um pão); "Precificação"
       segue depois com Preço (<code>.pdf-credit</code>), Margem (neutra) e
       Lucro por pão/da fornada por sinal + <code>.pdf-alert</code> em prejuízo
-      (<code>isLoss</code>). Histórico agora usa <code>pdfPageV2</code>/<code>.sec-card</code>/<code>.pdf-footer</code> como a Calculadora (issue 043); só a tabela de listagem interna segue em <code>table.table</code> (não <code>table.rt</code>, pois não tem colgroup com proporção fixa).
+      (<code>isLoss</code>). Histórico agora usa <code>pdfPageV2</code>/<code>.sec-card</code>/<code>.pdf-footer</code> como a Calculadora (issue 043); só a tabela de listagem interna segue em <code>table.table</code> (não <code>table.rt</code>, pois não tem colgroup com proporção fixa), mas recebe padding escopado <code>--sp-1 --sp-2</code> dentro do <code>.sec-body</code> para equiparar a densidade das linhas à <code>table.rt</code> (issue 044).
     </p>
     <div class="sec-card" style="max-width:520px">
       <div class="sec-head">Fermento Natural</div>
