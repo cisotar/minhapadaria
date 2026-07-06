@@ -592,7 +592,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         expect(viewBtn(m.root, 'Completa').classList.contains('active')).toBe(true);
       });
 
-      it('25. thead: Custo unitário/Preço unitário têm col-unit; Custo (C)/Faturamento (F)/Saldo têm col-bake; demais sem classe de coluna', () => {
+      it('25. thead: Custo unitário/Preço unitário têm col-unit; Custo (C)/Faturamento (F) têm col-bake; Saldo e demais sem classe de coluna (issue 048)', () => {
         const m = mount();
         render(m);
         const headers = Array.from(balanceTable(m.root).querySelectorAll('thead th'));
@@ -601,15 +601,14 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         expect(byText('Preço unitário').classList.contains('col-unit')).toBe(true);
         expect(byText('Custo (C)').classList.contains('col-bake')).toBe(true);
         expect(byText('Faturamento (F)').classList.contains('col-bake')).toBe(true);
-        expect(byText('Saldo').classList.contains('col-bake')).toBe(true);
-        for (const label of ['Data', 'Receita', 'Produção', 'Vendas', 'Status']) {
+        for (const label of ['Data', 'Receita', 'Produção', 'Vendas', 'Saldo', 'Status']) {
           const th = byText(label);
           expect(th.classList.contains('col-unit')).toBe(false);
           expect(th.classList.contains('col-bake')).toBe(false);
         }
       });
 
-      it('26. tfoot carrega as mesmas classes de coluna (totais escondem junto)', () => {
+      it('26. tfoot carrega as mesmas classes de coluna (totais escondem junto); Saldo sem classe de coluna (issue 048)', () => {
         const m = mount();
         const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
         bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 8, unitCost: 4, unitSalePrice: 7 });
@@ -621,7 +620,8 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         expect(cells[4].classList.contains('col-bake')).toBe(true);
         expect(cells[6].classList.contains('col-unit')).toBe(true);
         expect(cells[7].classList.contains('col-bake')).toBe(true);
-        expect(cells[8].classList.contains('col-bake')).toBe(true);
+        expect(cells[8].classList.contains('col-unit')).toBe(false);
+        expect(cells[8].classList.contains('col-bake')).toBe(false);
         expect(cells[2].classList.contains('col-unit')).toBe(false);
         expect(cells[2].classList.contains('col-bake')).toBe(false);
         expect(cells[5].classList.contains('col-unit')).toBe(false);
@@ -645,7 +645,7 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         expect(datesAfter).toEqual(datesBefore);
       });
 
-      it('28. Saldo .loss persiste ao alternar Completa → Unidades → Completa', () => {
+      it('28. Saldo .loss persiste ao alternar Completa → Unidades → Completa; Saldo visível (sem col-unit/col-bake) em Unidades (issue 048)', () => {
         const m = mount();
         const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
         // Vendas=0 → Saldo negativo (§2.5 P5).
@@ -653,10 +653,32 @@ describe('historyView (jsdom) — §14.4/§14.5/§14.6/§14.7', () => {
         render(m);
         const saldoCell = () => balanceTable(m.root).querySelector('tbody tr td:nth-child(9)') as HTMLElement;
         expect(saldoCell().classList.contains('loss')).toBe(true);
+        expect(saldoCell().classList.contains('col-unit')).toBe(false);
+        expect(saldoCell().classList.contains('col-bake')).toBe(false);
         viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        expect(saldoCell().classList.contains('loss')).toBe(true); // escondido via display, classe intacta
+        // issue 048: Saldo agora sempre-visível — sem col-unit/col-bake também em Unidades.
+        expect(saldoCell().classList.contains('loss')).toBe(true);
+        expect(saldoCell().classList.contains('col-unit')).toBe(false);
+        expect(saldoCell().classList.contains('col-bake')).toBe(false);
         viewBtn(m.root, 'Completa').dispatchEvent(new MouseEvent('click', { bubbles: true }));
         expect(saldoCell().classList.contains('loss')).toBe(true);
+      });
+
+      it('29b. Unidades: Saldo não está entre as células escondidas (col-unit/col-bake) — visível antes de Status (issue 048)', () => {
+        const m = mount();
+        const r1 = m.recipeStore.create(goldenSeedNoFat('Pão Rústico'));
+        bake(m.bakeStore, { recipeId: r1.id, recipeName: r1.name, date: new Date(2026, 6, 3), quantityProduced: 10, quantitySold: 8, unitCost: 4, unitSalePrice: 7 });
+        render(m);
+        viewBtn(m.root, 'Unidades').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const table = balanceTable(m.root);
+        expect(table.classList.contains('view-unidades')).toBe(true);
+        const headers = Array.from(table.querySelectorAll('thead th'));
+        const byText = (label: string) => headers.find((th) => th.textContent === label)!;
+        const saldoTh = byText('Saldo');
+        expect(saldoTh.classList.contains('col-unit')).toBe(false);
+        expect(saldoTh.classList.contains('col-bake')).toBe(false);
+        // ordem física: Saldo (thead index 8) imediatamente antes de Status (índice 9).
+        expect(headers.indexOf(saldoTh)).toBe(headers.indexOf(byText('Status')) - 1);
       });
 
       it('29. estado vazio (sem fornadas): td[colspan=10] permanece visível ao alternar Unidades/Fornadas', () => {

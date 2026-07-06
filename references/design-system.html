@@ -458,9 +458,9 @@
       tabela do card Balanço: pill <code>.period-toggle</code> (reusada, sem classe irmã nova)
       alterna a classe <code>.view-completa|unidades|fornadas</code> no <code>&lt;table
       class="balance-table"&gt;</code>, que esconde/mostra <code>.col-unit</code> (Custo
-      unitário, Preço unitário) e <code>.col-bake</code> (Custo (C), Faturamento (F), Saldo)
-      via <code>display</code> — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Status)
-      não recebem classe de coluna. Sem re-render: só troca de classes.
+      unitário, Preço unitário) e <code>.col-bake</code> (Custo (C), Faturamento (F))
+      via <code>display</code> — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Saldo/
+      Status, issue 048) não recebem classe de coluna. Sem re-render: só troca de classes.
     </p>
     <div class="field" style="margin-bottom:var(--sp-3)">
       <label>Exibição</label>
@@ -499,7 +499,7 @@
           <th class="num">Vendas</th>
           <th class="num col-unit">Preço unitário</th>
           <th class="num col-bake">Faturamento (F)</th>
-          <th class="num col-bake">Saldo</th>
+          <th class="num">Saldo</th>
           <th class="num">Status</th>
         </tr>
       </thead>
@@ -513,7 +513,7 @@
           <td class="num">38</td>
           <td class="num col-unit">R$ 6,00</td>
           <td class="num col-bake">R$ 228,00</td>
-          <td class="num col-bake">R$ 144,00</td>
+          <td class="num">R$ 144,00</td>
           <td class="num">171%</td>
         </tr>
       </tbody>
@@ -527,7 +527,7 @@
           <td class="num">38</td>
           <td class="col-unit"></td>
           <td class="num col-bake">R$ 228,00</td>
-          <td class="num col-bake">R$ 144,00</td>
+          <td class="num">R$ 144,00</td>
           <td class="num">171%</td>
         </tr>
       </tfoot>

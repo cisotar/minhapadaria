@@ -3,6 +3,7 @@
 **Status:** aprovada
 **Data:** 2026-07-06
 **Changelog:** 2026-07-06 — cliente respondeu P1–P3 e delegou defaults de P4–P6; proposta promovida a aprovada. Perguntas em aberto convertidas em decisões travadas: P1 seção do Histórico (§2.3), P2 só-leitura (§2.3), P3 linha de totais + Status agregado ΣF/ΣC (§2.4), P4 espelha o Histórico (§2.5), P5 cor por semântica contábil (§2.5), P6 data desc (§2.5).
+**Changelog (arquiteto, 2026-07-06 — issue 048):** §2.6 — coluna **Saldo** movida para sempre-visível a pedido do cliente (após a 046): passa a aparecer nas **três** visualizações. Efeito prático: só a **acrescenta em Unidades** (Completa/Fornadas já a exibiam), que vai de 7 para **8 colunas** (Data · Receita · Produção · Custo unitário · Vendas · Preço unitário · **Saldo** · Status). Grupo dos agregados-da-fornada (`.col-bake`) reduzido a Custo (C) e Faturamento (F). Mudança **puramente de exibição**: zero fórmula/core, nenhum reorder de DOM, `.loss` do Saldo<0 preservado. Não altera §2.1–§2.5 nem os totais da §2.4.
 **Changelog (arquiteto, 2026-07-06 — issue 046):** adicionada §2.6 (seletor de visualização Completa/Unidades/Fornadas) — feature puramente de EXIBIÇÃO pedida pelo cliente em 2026-07-06, aditiva e sem tocar dado, fórmula, filtro, ordenação ou os totais da §2.4. O mapa de colunas por visualização foi confirmado com o cliente e travado nesta seção. Não altera nenhuma decisão anterior (P1–P6 intactas).
 **Changelog (arquiteto, 2026-07-06):** esclarecidas duas lacunas encontradas ao planejar a issue 045, sem mudar decisão do cliente: (a) §2.5 P5 — a paleta ON-SCREEN da marca não tem token de "azul crédito" (o azul-crédito de `--print-*`/issue 028 é exclusivo dos PDFs); na tela reusa-se só `.loss` (vermelho) em Saldo < 0, com Saldo ≥ 0 e demais monetários NEUTROS, espelhando a tabela irmã do Histórico (que já deixa lucro positivo neutro). (b) §2.5 P4 — fixada a lista exata de colunas com "—" nas linhas planejadas (Vendas, Preço unitário, Faturamento, Saldo, Status), mantendo Data/Receita/Produção/Custo unitário/Custo (C) preenchidos.
 **Supera:** nenhuma — aditivo puro. Não altera nenhuma fórmula da v5 §14 (Histórico de Fornadas); adiciona uma visão nova sobre os mesmos dados + 1 métrica nova (Status).
@@ -107,18 +108,19 @@ A tabela do BALANÇO ganha um **seletor de visualização** (barra de pills acim
 | Vendas | ✓ | ✓ | ✓ | *sempre* (contagem de unidades) |
 | Preço unitário | ✓ | ✓ | — | por-unidade |
 | Faturamento (F) | ✓ | — | ✓ | agregado da fornada |
-| Saldo | ✓ | — | ✓ | agregado da fornada |
+| Saldo | ✓ | ✓ | ✓ | *sempre* (issue 048 — imediatamente antes de Status) |
 | Status | ✓ | ✓ | ✓ | *sempre* (§2.2, markup F/C) |
 
 - **Completa** = as 10 colunas da §2.1 (comportamento da issue 045, inalterado).
-- **Unidades** (7 col) = Data · Receita · Produção · Custo unitário · Vendas · Preço unitário · Status — foco em dados por-unidade + contagens; esconde os agregados da fornada (Custo C, Faturamento F, Saldo).
+- **Unidades** (8 col — issue 048) = Data · Receita · Produção · Custo unitário · Vendas · Preço unitário · **Saldo** · Status — foco em dados por-unidade + contagens, **mais o Saldo** (sempre-visível a pedido do cliente); esconde os demais agregados da fornada (Custo C, Faturamento F). Saldo cai imediatamente antes de Status porque a ordem física do DOM já é Faturamento(F) · Saldo · Status e o Faturamento(F) segue escondido nesta visão.
 - **Fornadas** (8 col) = Data · Receita · Produção · Custo (C) · Vendas · Faturamento (F) · Saldo · Status — foco nos agregados da fornada; esconde os por-unidade (Custo unitário, Preço unitário).
 
 **Regras travadas com o cliente:**
 - **Status** (§2.2) aparece nas **três** visualizações.
 - **Produção** e **Vendas** (contagens) aparecem nas **três**.
 - **Data** e **Receita** = identidade da linha → **sempre** presentes.
-- A cor `.loss` do Saldo (§2.5 P5) é preservada: em Unidades a célula fica escondida junto com o grupo agregado e reaparece com a cor correta ao voltar para Completa/Fornadas.
+- **Saldo** (§2.1) aparece nas **três** visualizações (issue 048) — é sempre-visível, imediatamente antes de Status.
+- A cor `.loss` do Saldo<0 (§2.5 P5) é preservada em todas as visualizações, já que a célula Saldo nunca é escondida.
 - O estado vazio (§3 caso 7) usa uma célula com `colspan` cobrindo as 10 colunas — esconder colunas não afeta essa linha.
 
 Esta seção **não** altera §2.1–§2.5: é uma camada de apresentação sobre a mesma tabela e os mesmos totais.

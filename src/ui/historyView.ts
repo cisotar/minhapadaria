@@ -70,8 +70,13 @@
  * `setBalanceView` alterna classe no `<table>` (`.view-completa|unidades|
  * fornadas`), triggering 2 regras CSS `display:none` que escondem grupos de
  * colunas condicionais (.col-unit: Custo un./Preço un.; .col-bake: Custo C/
- * Faturamento/Saldo). Zero re-render/reordenar — dados/ordem/filtros/planejadas/
+ * Faturamento). Zero re-render/reordenar — dados/ordem/filtros/planejadas/
  * cores .loss intactos (puro CSS). Zero fórmula, zero classe/token novo.
+ *
+ * Issue 048 (`specs/aba-balanco.md` §2.6): Saldo passa a ser coluna
+ * sempre-visível (sem `.col-unit`/`.col-bake`) nas 3 views — antes só
+ * aparecia em Completa/Fornadas; agora também em Unidades, posicionada
+ * (ordem física do DOM inalterada) imediatamente antes de Status.
  */
 import {
   computeBakeDerived,
@@ -439,7 +444,7 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
         h('th', { className: 'num' }, ['Vendas']),
         h('th', { className: 'num col-unit' }, ['Preço unitário']),
         h('th', { className: 'num col-bake' }, ['Faturamento (F)']),
-        h('th', { className: 'num col-bake' }, ['Saldo']),
+        h('th', { className: 'num' }, ['Saldo']),
         h('th', { className: 'num' }, ['Status']),
       ]),
     ]),
@@ -482,10 +487,10 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
     }
 
     const status = bakeStatus(derived.totalRevenue ?? 0, derived.totalCost ?? 0); // §2.2
-    // Issue 046: 5 células condicionais ganham `.col-unit`/`.col-bake` (mapa
-    // §2.6) — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Status)
-    // não recebem classe de coluna.
-    const balanceCell = h('td', { className: 'num col-bake' }, [planned ? '—' : formatCurrency(derived.totalProfit ?? 0)]);
+    // Issue 046: 4 células condicionais ganham `.col-unit`/`.col-bake` (mapa
+    // §2.6) — colunas sempre-visíveis (Data/Receita/Produção/Vendas/Saldo/
+    // Status, issue 048) não recebem classe de coluna.
+    const balanceCell = h('td', { className: 'num' }, [planned ? '—' : formatCurrency(derived.totalProfit ?? 0)]);
     if (!planned && (derived.totalProfit ?? 0) < 0) balanceCell.classList.add('loss'); // §2.5 P5
 
     tr.appendChild(h('td', { className: 'num num--left' }, [formatDate(entry.date)]));
@@ -509,9 +514,10 @@ export function renderHistoryView(root: HTMLElement, deps: HistoryViewDeps): voi
    *  Custo unitário/Preço unitário) ficam vazias/"Total". */
   function buildBalanceFootRow(summary: BakeHistorySummary): HTMLElement {
     const status = bakeStatus(summary.totalRevenue, summary.totalCost);
-    // Issue 046: mesmas 5 células condicionais do corpo/thead ganham
+    // Issue 046: mesmas 4 células condicionais do corpo/thead ganham
     // `.col-unit`/`.col-bake` — o tfoot esconde/mostra junto com o corpo.
-    const balanceCell = h('td', { className: 'num col-bake' }, [formatCurrency(summary.totalProfit)]);
+    // Issue 048: Saldo sempre-visível, sem classe de coluna.
+    const balanceCell = h('td', { className: 'num' }, [formatCurrency(summary.totalProfit)]);
     if (summary.totalProfit < 0) balanceCell.classList.add('loss'); // §2.5 P5
     return h('tr', {}, [
       h('td', {}, ['Total']),
