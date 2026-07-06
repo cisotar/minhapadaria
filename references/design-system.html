@@ -526,8 +526,7 @@
       Hidratação vira o card "Custo Total" (fornada + um pão); "Precificação"
       segue depois com Preço (<code>.pdf-credit</code>), Margem (neutra) e
       Lucro por pão/da fornada por sinal + <code>.pdf-alert</code> em prejuízo
-      (<code>isLoss</code>). Histórico (Fornadas/Financeiro) não usa nada disso —
-      continua em <code>h2.pdf-section</code>/<code>table.table</code>.
+      (<code>isLoss</code>). Histórico agora usa <code>pdfPageV2</code>/<code>.sec-card</code>/<code>.pdf-footer</code> como a Calculadora (issue 043); só a tabela de listagem interna segue em <code>table.table</code> (não <code>table.rt</code>, pois não tem colgroup com proporção fixa).
     </p>
     <div class="sec-card" style="max-width:520px">
       <div class="sec-head">Fermento Natural</div>

@@ -375,7 +375,7 @@ function renderFinanceiro(entries: BakeEntry[]): HTMLElement {
   return root;
 }
 
-describe('renderHistoryPrintView (Fornadas — zero $, intocado)', () => {
+describe('renderHistoryPrintView (Fornadas — zero $, estilo v2)', () => {
   it('6. produção, ZERO "R$", planejada em tr.pdf-muted-row', () => {
     const confirmada = bake();
     const planejada = bake({ id: 'b2', date: new Date(2026, 6, 6), planned: true, quantitySold: 0 });
@@ -391,6 +391,27 @@ describe('renderHistoryPrintView (Fornadas — zero $, intocado)', () => {
     expect(plannedRow!.textContent).toContain('Planejada');
   });
 
+  it('6b. invólucro v2: .pdf-head (h1 "Histórico de Fornadas") + badge .pdf-yield "2 fornadas" (entries.length)', () => {
+    const confirmada = bake();
+    const planejada = bake({ id: 'b2', date: new Date(2026, 6, 6), planned: true, quantitySold: 0 });
+    const root = renderFornadas([confirmada, planejada]);
+    const head = root.querySelector('.pdf-head');
+    expect(head).not.toBeNull();
+    expect(head!.querySelector('h1')?.textContent).toBe('Histórico de Fornadas');
+    const badge = root.querySelector('.pdf-yield');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toContain('2'); // entries.length (confirmada + planejada)
+    expect(badge!.textContent).toContain('fornadas');
+  });
+
+  it('6c. seções em .sec-card (Resumo do período / Fornadas); sem h2.pdf-section; rodapé "Página 1/1"', () => {
+    const root = renderFornadas([bake()]);
+    expect(secCard(root, 'Resumo do período')).not.toBeNull();
+    expect(secCard(root, 'Fornadas')).not.toBeNull();
+    expect(root.querySelector('h2.pdf-section')).toBeNull();
+    expect(root.querySelector('.pdf-footer')?.textContent).toBe('Página 1/1');
+  });
+
   it('8c. escape XSS: recipeName com <script> vira texto', () => {
     const root = renderFornadas([bake({ recipeName: '<script>alert(1)</script>' })]);
     expect(root.querySelector('script')).toBeNull();
@@ -398,7 +419,7 @@ describe('renderHistoryPrintView (Fornadas — zero $, intocado)', () => {
   });
 });
 
-describe('renderHistoryCostsPrintView (Financeiro — sempre $, intocado)', () => {
+describe('renderHistoryCostsPrintView (Financeiro — sempre $, estilo v2)', () => {
   it('7. Custo .pdf-debit, Lucro colorido por sinal; Margem média neutra', () => {
     const lucrativa = bake({ id: 'b1', unitCost: 4, unitSalePrice: 7, quantityProduced: 10, quantitySold: 10 });
     const prejuizo = bake({ id: 'b2', unitCost: 10, unitSalePrice: 2, quantityProduced: 10, quantitySold: 10 });
@@ -422,6 +443,28 @@ describe('renderHistoryCostsPrintView (Financeiro — sempre $, intocado)', () =
     const totalRow = tableRow(root, 'Total');
     expect(totalRow).not.toBeNull();
     expect(totalRow!.querySelector('.pdf-debit')).not.toBeNull();
+  });
+
+  it('7b. invólucro v2: .pdf-head + badge .pdf-yield conta só confirmadas (§14.4); planejada fora', () => {
+    const lucrativa = bake({ id: 'b1', unitCost: 4, unitSalePrice: 7, quantityProduced: 10, quantitySold: 10 });
+    const prejuizo = bake({ id: 'b2', unitCost: 10, unitSalePrice: 2, quantityProduced: 10, quantitySold: 10 });
+    const planejada = bake({ id: 'b3', date: new Date(2026, 6, 7), planned: true, quantitySold: 0 });
+    const root = renderFinanceiro([lucrativa, prejuizo, planejada]);
+    const head = root.querySelector('.pdf-head');
+    expect(head).not.toBeNull();
+    expect(head!.querySelector('h1')?.textContent).toBe('Financeiro — Histórico de Fornadas');
+    const badge = root.querySelector('.pdf-yield');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toContain('2'); // só confirmadas (planejada fora, §14.4)
+    expect(badge!.textContent).toContain('fornadas');
+  });
+
+  it('7c. seções em .sec-card (Resumo financeiro / Fornadas); sem h2.pdf-section; rodapé "Página 1/1"', () => {
+    const root = renderFinanceiro([bake()]);
+    expect(secCard(root, 'Resumo financeiro')).not.toBeNull();
+    expect(secCard(root, 'Fornadas')).not.toBeNull();
+    expect(root.querySelector('h2.pdf-section')).toBeNull();
+    expect(root.querySelector('.pdf-footer')?.textContent).toBe('Página 1/1');
   });
 
   it('8d. escape XSS: recipeName com <script> vira texto', () => {

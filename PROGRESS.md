@@ -4,6 +4,23 @@
 
 ## Decisões da noite
 
+### Refactor visual Histórico PDF + pendentes 044 — 2026-07-06 08:38
+
+**REFACTOR HISTÓRICO PDF CONCLUÍDO — Issue 043 (commit pendente). 417 testes 100% verde.**
+
+**Resumo refactor — Histórico PDF (Fornadas/Financeiro) migra de pageCard/section() legacy para pdfPageV2 genérico:**
+
+**Estado final**: 417 testes 100% verde, `npm run build` ok, Golden §12 intacto (números inalterados, só visual muda).
+
+**Mudanças de ponta a ponta:**
+- **Issue 043 (Refactor): Extração pdfPageV2 genérico** — novo helper `pdfPageV2(title, meta, badge, sections)` monta cabeçalho v2 (h1 + `.pdf-meta` + badge `.pdf-yield` opcional) + lista `.sec-card` + `.pdf-footer`. Antes Calculadora usava `recipePageV2` standalone; Histórico usava `pageCard`/`section()` legacy. Após 043: `recipePageV2` vira **wrapper fino** que chama `pdfPageV2` (mesma saída Calculadora, zero breaking change). Histórico (Fornadas/Financeiro) migra para `pdfPageV2(...)` — classes antigas `pageCard`/`section()` **deletadas**. Reuso puro: tokens design-system existentes (`:root` imutável), classes `.sec-card`/`.sec-body`/`.pdf-footer`/`.pdf-yield` já in design-system.css. Zero CSS novo.
+
+**PENDENTES ADIADOS PARA ISSUE 044 (A CRIAR)**:
+- **(a) Polir densidade tabela.table no Histórico**: padding de linha é 2× maior que `table.rt` da Calculadora (tokens design-system, sem hex novo) — cria estética inconsistente se impresso lado-a-lado. Futura sincronização visual via ajuste tokens.
+- **(b) Remover CSS órfão**: regra `#print-root h2.pdf-section {...}` (~linhas 622–628 design-system.css) é legacy para Histórico v1 — após 043 **zero uso** (nenhum `h2.pdf-section` gerado; Histórico usa `.sec-head` agora). Tarefa 044: considerar remoção.
+
+---
+
 ### Encerramento ciclo bugfix precificação — 2026-07-06 08:15
 
 **CICLO BUGFIX PRECIFICAÇÃO CONCLUÍDO — Issues 041 + 042 (commits 15bc803 + ac455ea). 413 testes 100% verde.**
@@ -155,6 +172,20 @@ Resumo entregue:
 4. **REFACTOR ACHADO ALTO: AZEITE EM "SAL E EXTRAS" NÃO "GORDURAS" (issue 028, validado TDD antes de implementação)**: Mockup pdf-refactor.html aprovado dividia ingredientes assim: FARINHAS / LÍQUIDOS / SAL E EXTRAS (Sal + Azeite) / FERMENTO. Implementação 028 respeitou exatamente. Achado guardiao-design (revisão alta) constatou divergência do mockup aprovado — azeite renderizado em seção "Gorduras" separada. Corrigido nesta mesma iteração (TDD primeira): `renderRecipePrintView` e `renderRecipeCostsPrintView` agrupam por categoria (`ingredients` filtrados por tipo), azeite (category='fat') agora renderizado com sal (category='salt'), formando bloco "Sal e Extras" único sem "Gorduras" órfã. Suíte 342/342 verde após correção. Revisão guardiao-design: aprovada, ZERO achados remanescentes (reprovado→corrigido). Revisão revisor-spec: aprovado (com achados MÉDIOS registrados em issue 029 TODO: calculadora sem teste do gate showCosts; design-system.html desatualizado seção "Impressão/PDF").
 
 5. **CLASSES `.PDF-*` NOVAS, CLASSES `.PRINT-*` MORTAS (issue 028, refactor layout)**: `print.ts` e `design-system.css` marcam fim de `.print-view/.print-title/.print-section/.print-line/.print-label/.print-value` — layout velho lista rótulo→valor. Novo layout `.card` (borda fina `--print-border`) contendo `.table`/`.kv` (classes compartilhadas com tela, regra 2). Classes `.pdf-*` novas: `.pdf-meta` (metadados página gerada), `.pdf-section` (h2 uppercase), `.kv` (key-value pairs vertical, anterior `.metric-pair` batchPanel), `.pdf-credit/.pdf-debit` (semântica cor), `.pdf-muted-row` (planejada cinza itálico §14.6), `.pdf-alert` (alerta prejuízo, box vermelha, icon). Snapshot de classes em `print.test.ts` trava à migração (caso 2: `.card` + `table.table thead/tbody/tfoot`, zero `.print-*`). Motivo: visual consistente tela↔PDF, reutilização design-system (zero CSS duplicado), manutenção centrada.
+
+---
+
+## Iteração 043 — 2026-07-06 08:38 (refactor visual Histórico PDF: pdfPageV2 genérico)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 043-relatorios-historico-estilo-v2 |
+| **Timestamp** | 2026-07-06 08:38 |
+| **O que foi feito** | **Refactor visual dos relatórios PDF do Histórico (Fornadas/Financeiro): migração de layout legacy pageCard/section() para invólucro v2 pdfPageV2 genérico, reuso das classes .sec-card/.pdf-footer da Calculadora.** (1) **Extração helper genérico pdfPageV2**: novo helper exportado por `src/export/print.ts` — `pdfPageV2(title, meta, badge, sections)` monta cabeçalho v2 genérico (h1 + `.pdf-meta` + badge `.pdf-yield` opcional) + lista de `.sec-card` com `.sec-body` + `.pdf-footer` rodapé. Assinatura permitirá reutilização por múltiplos relatórios (Receita/Custos/Fornadas/Financeiro). (2) **Remoção recipePageV2 standalone**: função anterior `renderRecipePrintView` chamava `recipePageV2` para montar página da Calculadora — agora `recipePageV2` torna-se **wrapper fino** que chama `pdfPageV2` internamente (mesma assinatura para Calculadora, saída idêntica, zero breaking change). (3) **Migração Histórico para pdfPageV2**: `renderHistoryPrintView` (Fornadas) muda de: `pageCard({title, sections: [section(...), section(...)]})` → `pdfPageV2("Fornadas", meta, badge=null, sections)`. Idem `renderHistoryCostsPrintView` (Financeiro). Classes antigas `pageCard`/`section()` não existem mais (deletadas). (4) **Layout Histórico v2 idêntico à Calculadora**: `.pdf-head` + badge "N fornadas" (reuso `.pdf-yield`) + seções `.sec-card` (`.sec-head` + `.sec-body` contendo `table.table` — a tabela interna MANTÉM `table.table`, não vira `table.rt` colgroup porque não tem proporção-fixa como Receita; totalizador `.pdf-footer` "Página 1/1"). Reuso puro: tokens design-system existentes (`:root` imutável), classes `.sec-card`/`.sec-body`/`.pdf-footer`/`.pdf-yield` já definidas em `design-system.css` para Calculadora — zero CSS novo. (5) **Cabeçalho atualizado** `src/export/print.ts` (L1–50): cita seções spec §8 (impressão), §14.3–§14.7 (histórico), issue 043, novo pdfPageV2 genérico, recipePageV2 agora wrapper. (6) **design-system.html corrigido**: parágrafo ~linhas 529–530 estava dizendo "Histórico não usa nada disso — continua em h2.pdf-section/table.table" — FALSO após 043. Atualizado para refletir: "Histórico agora usa pdfPageV2/.sec-card/.pdf-footer como a Calculadora; só a tabela de listagem interna segue em table.table (não table.rt, sem colgroup fixo)." |
+| **Hash do commit** | (aguardando commit) |
+| **Testes** | Vitest: **417 passed** (suíte completa, nenhuma regressão, testes de print válidos para novo layout). `npm run build` verde; `tsc --noEmit` limpo. Snapshots `print.test.ts` atualizados para novos seletores `.sec-card`/`.sec-body`/`.pdf-footer` (era `.page-card`/`.card-section` — removidos). Golden §12 intacto (números não mudam, só apresentação visual). |
+| **Reviews** | N/A (issue 043 é refactor estrutural — TDD de snapshot cobre seletores, nenhum comportamento novo além de rearranjo de classes existentes; sem re-review no loop conforme memória "Fixes sem re-review"). |
+| **Observações** | **Decisão 043.1 — Reuso total pdfPageV2**: novo helper genérico evita duplicação (Calculadora já tinha recipePageV2, Histórico usava pageCard; 043 unifica ambos sob pdfPageV2, refactor §3 "Reuse tudo"). Teste golden §12 assegura Histórico não regrediu (mesmos números, só visual muda). **Pendentes adiados para issue 044** (a criar): (a) polir densidade tabela.table do Histórico (padding 2× maior que table.rt, só tokens); (b) remover CSS órfão #print-root h2.pdf-section (~linhas 622–628 design-system.css — zero uso após 043). Cabeçalho `print.ts` atualiza com "issue 043"; `architecture.md` tabela atualizada (export/print módulo). |
 
 ---
 

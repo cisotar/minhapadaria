@@ -12,9 +12,11 @@
  *  - `renderRecipeCostsPrintView` — Custos v2 (base = Receita v2 + coluna
  *    Custo à direita por seção, "Custo Total" no lugar de Hidratação,
  *    Precificação mantida depois — mockups/pdf-custos-v2.html, issue 034).
- *  - `renderHistoryPrintView` — Fornadas (produção/vendas, ZERO $) — INTOCADA.
+ *  - `renderHistoryPrintView` — Fornadas (produção/vendas, ZERO $) — estilo v2
+ *    por reuso (`pdfPageV2`+`secCard`, badge "N fornadas") desde a issue 043.
  *  - `renderHistoryCostsPrintView` — Financeiro do período (custo/faturamento/
- *    lucro, prejuízo por fornada) — INTOCADA.
+ *    lucro, prejuízo por fornada) — estilo v2 por reuso (badge conta só
+ *    confirmadas, §14.4) desde a issue 043.
  * `mountPrintButton(actionsRoot, onPrint?, label?)` cria o botão que chama
  * `onPrint` (default `window.print()`) SÓ no clique (§8: nunca automático).
  *
@@ -110,20 +112,6 @@ function kvTable(rows: [string, HTMLElement][]): HTMLElement {
   return table;
 }
 
-/** `.card` "página" do PDF: h1 + `.pdf-meta` + corpo (seções). */
-function pageCard(title: string, meta: string, body: HTMLElement[]): HTMLElement {
-  const card = h('section', { className: 'card' });
-  card.appendChild(h('h1', {}, [title]));
-  card.appendChild(h('div', { className: 'pdf-meta' }, [meta]));
-  for (const el of body) card.appendChild(el);
-  return card;
-}
-
-/** `<h2 class="pdf-section">` (título em maiúsculas via CSS `text-transform`) — só Histórico (v2 usa `secCard`). */
-function section(title: string): HTMLElement {
-  return h('h2', { className: 'pdf-section' }, [title]);
-}
-
 const generatedMeta = (): string => `Gerado em ${formatDate(new Date())} · Calculadora de Pão`;
 
 // ===== Helpers v2 (issue 034 — cards por seção, `table.rt` alinhada) =====
@@ -140,18 +128,34 @@ function secCard(title: string, content: HTMLElement | HTMLElement[]): HTMLEleme
 }
 
 /**
- * "Página" do PDF v2: `.pdf-head` (h1 + `.pdf-meta` + badge `.pdf-yield` "Rende
- * N pães", req 5) seguido das seções e do rodapé — substitui `pageCard` (que
- * segue servindo o Histórico, inalterado).
+ * "Página" do PDF v2 GENÉRICA (issue 043 — reuso pela Calculadora E pelo
+ * Histórico): `<section.card>` → `.pdf-head` (h1 + `.pdf-meta` + `badge`
+ * opcional, ex.: `.pdf-yield`) + `...sections` (`.sec-card`) + rodapé
+ * `.pdf-footer` "Página 1/1". `badge === null` renderiza só o `headText`
+ * (parâmetro fica para simetria — o Histórico sempre passa a contagem).
  */
-function recipePageV2(title: string, meta: string, yieldQty: number, sections: HTMLElement[]): HTMLElement {
+function pdfPageV2(title: string, meta: string, badge: HTMLElement | null, sections: HTMLElement[]): HTMLElement {
   const card = h('section', { className: 'card' });
   const headText = h('div', {}, [h('h1', {}, [title]), h('div', { className: 'pdf-meta' }, [meta])]);
-  const yieldBadge = h('div', { className: 'pdf-yield' }, ['Rende ', h('strong', {}, [String(yieldQty)]), ' pães']);
-  card.appendChild(h('div', { className: 'pdf-head' }, [headText, yieldBadge]));
+  const headChildren = badge === null ? [headText] : [headText, badge];
+  card.appendChild(h('div', { className: 'pdf-head' }, headChildren));
   for (const el of sections) card.appendChild(el);
   card.appendChild(h('div', { className: 'pdf-footer' }, ['Página 1/1']));
   return card;
+}
+
+/**
+ * "Página" do PDF v2 da Calculadora: wrapper fino de `pdfPageV2` que monta o
+ * badge `.pdf-yield` "Rende N pães" (req 5). Saída idêntica à do refactor 034.
+ */
+function recipePageV2(title: string, meta: string, yieldQty: number, sections: HTMLElement[]): HTMLElement {
+  const yieldBadge = h('div', { className: 'pdf-yield' }, ['Rende ', h('strong', {}, [String(yieldQty)]), ' pães']);
+  return pdfPageV2(title, meta, yieldBadge, sections);
+}
+
+/** Badge `.pdf-yield` "N fornadas" do Histórico (análogo de "Rende N pães" — sem pluralização, issue 043). */
+function fornadasBadge(count: number): HTMLElement {
+  return h('div', { className: 'pdf-yield' }, [h('strong', {}, [String(count)]), ' fornadas']);
 }
 
 /** Uma linha de `table.rt`: nome (colspan=2) + célula %/Proporção + célula Peso [+ célula Custo]. */
@@ -406,20 +410,21 @@ const periodMeta = (summary: BakeHistorySummary): string =>
  */
 export function renderHistoryPrintView(root: HTMLElement, opts: HistoryPrintViewOptions): void {
   const { entries, summary } = opts;
-  const body: HTMLElement[] = [];
+  const sections: HTMLElement[] = [];
 
   // Resumo do período (§14.4) — planejadas já ficam fora do `summary`.
-  body.push(section('Resumo do período'));
-  body.push(
-    kvTable([
-      ['Produzido', td(`${summary.totalProduced} un.`)],
-      ['Vendido', td(`${summary.totalSold} un.`)],
-      ['Desperdício', td(pct(summary.wastageRate))],
-    ]),
+  sections.push(
+    secCard(
+      'Resumo do período',
+      kvTable([
+        ['Produzido', td(`${summary.totalProduced} un.`)],
+        ['Vendido', td(`${summary.totalSold} un.`)],
+        ['Desperdício', td(pct(summary.wastageRate))],
+      ]),
+    ),
   );
 
   // Listagem cronológica (§14.5) — inclusive planejadas, marcadas (§14.6).
-  body.push(section('Fornadas'));
   const table = h('table', { className: 'table' });
   table.appendChild(
     h('thead', {}, [
@@ -444,10 +449,12 @@ export function renderHistoryPrintView(root: HTMLElement, opts: HistoryPrintView
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
-  body.push(table);
-  body.push(h('div', { className: 'pdf-footer' }, ['Calculadora de Pão']));
+  sections.push(secCard('Fornadas', table));
 
-  root.appendChild(pageCard('Histórico de Fornadas', periodMeta(summary), body));
+  // Badge conta TODAS as fornadas exibidas (§14.6: planejadas entram na listagem).
+  root.appendChild(
+    pdfPageV2('Histórico de Fornadas', periodMeta(summary), fornadasBadge(entries.length), sections),
+  );
 }
 
 /**
@@ -458,21 +465,22 @@ export function renderHistoryPrintView(root: HTMLElement, opts: HistoryPrintView
  */
 export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrintViewOptions): void {
   const { entries, summary } = opts;
-  const body: HTMLElement[] = [];
+  const sections: HTMLElement[] = [];
 
   // Resumo financeiro (§14.4).
-  body.push(section('Resumo financeiro'));
-  body.push(
-    kvTable([
-      ['Custo total', td(money(summary.totalCost), { cls: 'pdf-debit' })],
-      ['Faturamento', td(money(summary.totalRevenue), { cls: 'pdf-credit' })],
-      ['Lucro', signedMoneyTd(summary.totalProfit, false)],
-      ['Margem média', td(pct(summary.averageProfitMargin))], // métrica — neutra
-    ]),
+  sections.push(
+    secCard(
+      'Resumo financeiro',
+      kvTable([
+        ['Custo total', td(money(summary.totalCost), { cls: 'pdf-debit' })],
+        ['Faturamento', td(money(summary.totalRevenue), { cls: 'pdf-credit' })],
+        ['Lucro', signedMoneyTd(summary.totalProfit, false)],
+        ['Margem média', td(pct(summary.averageProfitMargin))], // métrica — neutra
+      ]),
+    ),
   );
 
   // Listagem financeira (§14.5) — só confirmadas (planejadas fora dos números).
-  body.push(section('Fornadas'));
   const table = h('table', { className: 'table' });
   table.appendChild(
     h('thead', {}, [
@@ -508,10 +516,13 @@ export function renderHistoryCostsPrintView(root: HTMLElement, opts: HistoryPrin
       ]),
     ]),
   );
-  body.push(table);
-  body.push(h('div', { className: 'pdf-footer' }, ['Calculadora de Pão']));
+  sections.push(secCard('Fornadas', table));
 
-  root.appendChild(pageCard('Financeiro — Histórico de Fornadas', periodMeta(summary), body));
+  // Badge conta só CONFIRMADAS — planejadas ficam fora do financeiro (§14.4/§14.6).
+  const confirmedCount = entries.filter((e) => e.planned !== true).length;
+  root.appendChild(
+    pdfPageV2('Financeiro — Histórico de Fornadas', periodMeta(summary), fornadasBadge(confirmedCount), sections),
+  );
 }
 
 /**
