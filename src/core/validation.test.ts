@@ -138,13 +138,13 @@ describe('validation §5 — camada de mensagens sobre predicados puros', () => 
     expect(validateSourdoughProportion(20)).toBeNull();
   });
 
-  // 9. §5.C margem 0–99,9 (reusa MARGIN_MIN/MARGIN_MAX)
-  it('§5.C: margem 100 bloqueia; 99,9 é OK; -1 bloqueia', () => {
-    const high = validateMargin(100);
-    expect(high?.level).toBe('block');
-    expect(high?.message).toBe('A margem deve estar entre 0% e 99,9%.');
-    expect(validateMargin(99.9)).toBeNull();
-    expect(validateMargin(-1)?.level).toBe('block');
+  // 9. §5.C % de lucro (markup sobre custo, issue 041): sem teto; bloqueia só negativo
+  it('§5.C: % de lucro 100 é OK; 200 é OK; -1 bloqueia (sem teto após issue 041)', () => {
+    expect(validateMargin(100)).toBeNull();
+    expect(validateMargin(200)).toBeNull();
+    const neg = validateMargin(-1);
+    expect(neg?.level).toBe('block');
+    expect(neg?.message).toBe('% de lucro não pode ser negativa.');
   });
 
   // 10. §5.C preço ≤ custo unitário → aviso (reusa isLoss)

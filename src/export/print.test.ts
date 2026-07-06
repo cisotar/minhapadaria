@@ -22,7 +22,7 @@
  * hidratação real 71,87%, Farinha Real Consumida 1.066,7g; custo Farinha R$8,00,
  * Sal R$0,06, Água R$0,00; fermento: Isca R$0,00, Farinha R$0,53,
  * Água R$0,00, Total de fermento R$0,53; custo total (fornada) R$8,59, custo/un
- * R$4,30, preço R$7,16, margem 40,00%, lucro/un R$2,86, lucro fornada R$5,73.
+ * R$4,30, preço R$6,02, % de lucro 40,00%, lucro/un R$1,72, lucro fornada R$3,44 (markup, issue 041).
  * Rende (pricing.quantity) = 2.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -287,7 +287,7 @@ describe('renderRecipeCostsPrintView (Custos v2 — coluna Custo, Custo Total, P
   it('9. Precificação após Custo Total: Preço/Lucros crédito (feliz), Margem neutra, sem alerta', () => {
     const root = renderCosts();
     const preco = kvCell(root, 'Preço de venda (un.)');
-    expect(preco!.textContent).toBe('R$ 7,16');
+    expect(preco!.textContent).toBe('R$ 6,02'); // markup 40%: 4,30 × 1,40 (issue 041)
     expect(preco!.classList.contains('pdf-credit')).toBe(true);
 
     const margem = kvCell(root, 'Margem de lucro');
@@ -296,11 +296,11 @@ describe('renderRecipeCostsPrintView (Custos v2 — coluna Custo, Custo Total, P
     expect(margem!.classList.contains('pdf-debit')).toBe(false);
 
     const lucroPao = kvCell(root, 'Lucro por pão');
-    expect(lucroPao!.textContent).toBe('R$ 2,86');
+    expect(lucroPao!.textContent).toBe('R$ 1,72'); // 4,30 × 0,40 (issue 041)
     expect(lucroPao!.classList.contains('pdf-credit')).toBe(true);
 
     const lucroFornada = kvCell(root, 'Lucro da fornada');
-    expect(lucroFornada!.textContent).toBe('R$ 5,73');
+    expect(lucroFornada!.textContent).toBe('R$ 3,44'); // markup 40%: lucro/un 1,718 × 2 (issue 041)
     expect(lucroFornada!.classList.contains('pdf-credit')).toBe(true);
 
     expect(root.querySelector('.pdf-alert')).toBeNull();

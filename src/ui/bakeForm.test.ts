@@ -47,7 +47,7 @@ function setAndBlur(input: HTMLInputElement, value: string): void {
 }
 
 describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
-  it('1. select de receitas populado; escolher pré-preenche Custo/Preço unitário (seed com Isca=1, 2026-07-06: 4,30/7,16)', () => {
+  it('1. select de receitas populado; escolher pré-preenche Custo/Preço unitário (seed com Isca=1, 2026-07-06: 4,30/6,02 — markup 40%)', () => {
     const { root, recipe } = mount();
     const select = root.querySelector('select[aria-label="Receita"]') as HTMLSelectElement;
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
@@ -62,7 +62,7 @@ describe('bakeForm (jsdom) — §14.2/§14.6/§5.D', () => {
     // preço unitário da receita (golden-example.test.ts mantém isca 0 e os
     // números originais da §12 à parte, fixture próprio).
     expect(costInput.value).toBe('4,30');
-    expect(priceInput.value).toBe('7,16');
+    expect(priceInput.value).toBe('6,02'); // markup 40%: 4,30 × 1,40 = 6,02 (issue 041)
   });
 
   it('2. data default = formatDate(now()) com now injetado fixo 2026-07-05', () => {

@@ -1,31 +1,37 @@
 /**
  * pricing.ts — Precificação: custo unitário, três modos de entrada
- * sincronizados, totais e faixa de status da margem (spec §3.E/§4/§5.C/§12,
- * decisão 4).
+ * sincronizados por MARKUP-SOBRE-CUSTO (% de lucro), totais e faixa de status
+ * (spec §3.E/§4/§5.C/§12 — semântica sobrescrita pela issue 041).
  *
  * O que faz: dado o Custo Total da Receita (pronto de costs.ts, §3.E) e a
  * quantidade, deriva o Custo Unitário e, a partir de qualquer um dos três pontos
- * de entrada — Preço Fixo, Margem% ou Lucro Fixo — reconstrói o trio consistente
+ * de entrada — Preço Fixo, % de Lucro ou Lucro Fixo — reconstrói o trio consistente
  * {salePrice, profitMargin, profitPerUnit} (§3.E). Calcula os totais de produção,
  * receita e lucro (§3.E), classifica a margem em faixas de status (§4) e sinaliza
  * prejuízo quando o preço não cobre o custo (§5.C, aviso não bloqueante).
+ *
+ * Definição de precificação (issue 041 — sobrescreve §3.E/§12 antigos): o campo de
+ * percentual é a TAXA DE LUCRO sobre o CUSTO (markup), não a margem sobre o preço.
+ *   preço = custo × (1 + p/100) ; lucro = custo × p/100 ;
+ *   profitMargin = custo > 0 ? (lucro/custo) × 100 : 0.
+ * Fórmula linear e finita: não explode perto de 100% e aceita p > 100% (o divisor
+ * `1 − m/100` da fórmula margem-sobre-preço deixou de existir, então não há mais
+ * teto 99,9% nem clamp). Ex. do cliente: custo 100, p 20 → preço 120, lucro 20.
  *
  * Regras da spec respeitadas:
  *  - 100% lógica pura: sem DOM, sem localStorage, sem I/O (pasta core/).
  *  - SEM arredondamento interno (§9): valores devolvidos crus; format.ts arredonda
  *    só na exibição (não importado aqui).
- *  - Sem mutação; sem throw: entradas inválidas viram clamp ou guarda de ÷0,
+ *  - Sem mutação; sem throw: entradas inválidas viram guarda de ÷0 (custo 0),
  *    NUNCA NaN/Infinity — o recalc em lote (issue 008) não pode ser interrompido.
- *  - Margem limitada a [0, 99.9] (§5.C, decisão 4); quantidade ≥ 1 (§5.C).
+ *  - % de lucro com piso 0 (MARGIN_MIN, §5.C); quantidade ≥ 1 (§5.C).
  *  - Não recalcula o Custo Total da Receita: consome o number de costs.ts (§3.E).
  *
- * Seções implementadas: §3.E, §4, §5.C, §12, decisão 4.
+ * Seções implementadas: §3.E, §4, §5.C, §12 (precificação recomputada pela issue 041).
  */
 
-/** Piso da margem — §5.C: margem não pode ser negativa por esta via. */
+/** Piso da % de lucro — §5.C: não pode ser negativa por esta via. */
 export const MARGIN_MIN = 0;
-/** Teto da margem — §5.C, decisão 4: 99,9% evita ÷0 em 1 − margem/100. */
-export const MARGIN_MAX = 99.9;
 
 export type MarginStatus = 'green' | 'yellow' | 'red';
 
@@ -41,11 +47,6 @@ export interface PricingTotals {
   totalProfit: number;
 }
 
-/** Clamp da margem a [MARGIN_MIN, MARGIN_MAX]. §5.C, decisão 4. */
-export function clampMargin(margin: number): number {
-  return Math.min(MARGIN_MAX, Math.max(MARGIN_MIN, margin)); // §5.C, decisão 4
-}
-
 /** Quantidade efetiva ≥ 1 — rede de segurança contra ÷0 no custo unitário. §5.C. */
 export function effectiveQuantity(quantity: number): number {
   return Math.max(1, quantity); // §5.C: quantidade ≥ 1 (UI já bloqueia; core protege)
@@ -57,34 +58,37 @@ export function unitCost(totalRecipeCost: number, quantity: number): number {
 }
 
 /**
- * Modo Preço Fixo: dado o preço de venda, deriva lucro e margem. §3.E.
- * salePrice ≤ 0 → profitMargin 0 (guarda ÷0, §5.C), sem NaN.
+ * Modo Preço Fixo: dado o preço de venda, deriva lucro e % de lucro. §3.E.
+ * % de lucro tem o CUSTO como denominador (markup, issue 041):
+ * profitMargin = unitCost > 0 ? (profitPerUnit / unitCost) × 100 : 0 (guarda ÷0, §5.C).
  */
 export function priceFromSalePrice(unitCost: number, salePrice: number): PricingBreakdown {
   const profitPerUnit = salePrice - unitCost; // §3.E
-  const profitMargin = salePrice > 0 ? (profitPerUnit / salePrice) * 100 : 0; // §5.C: guarda ÷0
+  const profitMargin = unitCost > 0 ? (profitPerUnit / unitCost) * 100 : 0; // issue 041: denom CUSTO, guarda ÷0
   return { salePrice, profitMargin, profitPerUnit };
 }
 
 /**
- * Modo Margem%: dado o percentual de margem, deriva preço e lucro. §3.E, decisão 4.
- * Preço = CustoUnit / (1 − margem/100); margem sofre clamp a [0, 99.9] (evita ÷0).
- * profitMargin devolvido = margem já saneada (auto-consistente: profit/price = m).
+ * Modo % de Lucro (markup sobre custo, issue 041): dado o percentual de lucro p,
+ * deriva preço e lucro linearmente. preço = custo × (1 + p/100); lucro = custo × p/100.
+ * profitMargin devolvido = p (auto-consistente: lucro/custo = p/100). Sem teto/clamp
+ * (divisor `1 − m/100` não existe mais) → p livre em [0, +∞). Custo 0 → preço/lucro 0,
+ * finito, profitMargin = p (custo não é denominador aqui, §5.C).
  */
 export function priceFromMargin(unitCost: number, margin: number): PricingBreakdown {
-  const m = clampMargin(margin); // §5.C, decisão 4: teto 99.9 evita divisor 0
-  const salePrice = unitCost / (1 - m / 100); // §3.E: margem sobre o preço
-  const profitPerUnit = salePrice - unitCost; // §3.E
-  return { salePrice, profitMargin: m, profitPerUnit }; // profit/price = m por construção
+  const salePrice = unitCost * (1 + margin / 100); // issue 041: markup sobre o custo
+  const profitPerUnit = unitCost * (margin / 100); // = salePrice − unitCost
+  return { salePrice, profitMargin: margin, profitPerUnit }; // lucro/custo = margin por construção
 }
 
 /**
- * Modo Lucro Fixo: dado o lucro por unidade, deriva preço e margem. §3.E.
- * salePrice ≤ 0 → profitMargin 0 (guarda ÷0, §5.C).
+ * Modo Lucro Fixo: dado o lucro por unidade, deriva preço e % de lucro. §3.E.
+ * % de lucro tem o CUSTO como denominador (markup, issue 041):
+ * profitMargin = unitCost > 0 ? (profitPerUnit / unitCost) × 100 : 0 (guarda ÷0, §5.C).
  */
 export function priceFromProfit(unitCost: number, profitPerUnit: number): PricingBreakdown {
   const salePrice = unitCost + profitPerUnit; // §3.E
-  const profitMargin = salePrice > 0 ? (profitPerUnit / salePrice) * 100 : 0; // §5.C: guarda ÷0
+  const profitMargin = unitCost > 0 ? (profitPerUnit / unitCost) * 100 : 0; // issue 041: denom CUSTO, guarda ÷0
   return { salePrice, profitMargin, profitPerUnit };
 }
 

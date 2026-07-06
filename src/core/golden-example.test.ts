@@ -10,8 +10,12 @@
  *   - F_total 1000 · Fermento 200 (Isca 0 / FarinhaFerm 100 / ÁguaFerm 100) ·
  *     H_ferm 100% · Farinha Real Consumida 1100 · Custo total R$ 8,86 ·
  *     Hidratação Nominal 70% · Hidratação Real ≈ 72,7273%.
- *   - 2 unidades, 40% margem: unit 4,43 · preço ≈ 7,3833 · lucro ≈ 2,9533 ·
- *     custo total produção 8,86 · receita ≈ 14,7666 · lucro total ≈ 5,9066.
+ *   - Precificação recomputada para markup-sobre-custo (% de lucro, issue 041):
+ *     2 unidades, 40% de lucro sobre o MESMO custo unitário 4,43.
+ *     preço = 4,43 × 1,40 = 6,202 · lucro = 4,43 × 0,40 = 1,772 · profitMargin 40 ·
+ *     custo total produção = 4,43 × 2 = 8,86 · receita = 6,202 × 2 = 12,404 ·
+ *     lucro total = 12,404 − 8,86 = 3,544 (= 1,772 × 2). Substitui os números do
+ *     §12 antigo (margem-sobre-preço: 7,3833 / 2,9533 / 14,7666 / 5,9066).
  */
 import { describe, it, expect } from 'vitest';
 import { recalculate } from './recalc';
@@ -78,16 +82,16 @@ describe('golden example (spec §12) — ponta a ponta via recalculate', () => {
     expect(summary.totalCost).toBeCloseTo(8.86, 2);
   });
 
-  it('precificação (2 un, 40% margem): unit 4,43 · preço ≈7,3833 · lucro ≈2,9533', () => {
+  it('precificação (2 un, 40% de lucro/markup): unit 4,43 · preço 4,43×1,40=6,202 · lucro 4,43×0,40=1,772', () => {
     expect(summary.costPerUnit).toBeCloseTo(4.43, 9);
-    expect(summary.salePrice).toBeCloseTo(7.38333, 4);
-    expect(summary.profitPerUnit).toBeCloseTo(2.95333, 4);
+    expect(summary.salePrice).toBeCloseTo(6.202, 6);
+    expect(summary.profitPerUnit).toBeCloseTo(1.772, 6);
     expect(summary.profitMargin).toBeCloseTo(40, 9);
   });
 
-  it('totais: custo produção 8,86 · receita ≈14,7666 · lucro total ≈5,9066', () => {
-    expect(summary.totalProductionCost).toBeCloseTo(8.86, 2);
-    expect(summary.totalRevenue).toBeCloseTo(14.76666, 4);
-    expect(summary.totalProfit).toBeCloseTo(5.90666, 4);
+  it('totais: custo produção 4,43×2=8,86 · receita 6,202×2=12,404 · lucro 12,404−8,86=3,544', () => {
+    expect(summary.totalProductionCost).toBeCloseTo(8.86, 6);
+    expect(summary.totalRevenue).toBeCloseTo(12.404, 6);
+    expect(summary.totalProfit).toBeCloseTo(3.544, 6);
   });
 });

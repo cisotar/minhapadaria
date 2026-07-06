@@ -23,7 +23,7 @@ import type { SourdoughFlour, SourdoughParts } from './types';
 // Reuso (regras de ouro #1/#2): donos únicos da aritmética/predicados.
 import { percentagesSumTo100 } from './bakers';
 import { isValidSourdoughParts, sourdoughFlourProportionSum } from './sourdough';
-import { MARGIN_MIN, MARGIN_MAX, isLoss } from './pricing';
+import { MARGIN_MIN, isLoss } from './pricing';
 import { formatDate, formatPercent } from './format';
 
 export type ValidationLevel = 'block' | 'warn';
@@ -143,10 +143,14 @@ export function validateSourdoughProportion(percentage: number): ValidationResul
   return null;
 }
 
-/** Margem na faixa [0, 99,9] (§5.C) — reusa MARGIN_MIN/MARGIN_MAX (dono único). */
+/**
+ * % de lucro (markup sobre custo, issue 041): sem teto — bloqueia só negativa.
+ * Reusa MARGIN_MIN (piso, dono único); o teto 99,9% saiu junto com a fórmula
+ * margem-sobre-preço (não há mais divisor `1 − m/100` a proteger).
+ */
 export function validateMargin(margin: number): ValidationResult {
-  if (margin >= MARGIN_MIN && margin <= MARGIN_MAX) return null; // §5.C
-  return block('A margem deve estar entre 0% e 99,9%.');
+  if (margin >= MARGIN_MIN) return null; // §5.C: piso 0, sem teto (issue 041)
+  return block('% de lucro não pode ser negativa.');
 }
 
 /** Preço ≤ custo unitário → aviso de prejuízo (§5.C) — reusa isLoss (break-even inclusivo). */

@@ -4,6 +4,26 @@
 
 ## Decisões da noite
 
+### Encerramento da noite — 2026-07-06 07:43
+
+**Issue 041 (mudança de semântica precificação) concluída nesta rodada — DIVERGÊNCIA CONSCIENTE E DELIBERADA DA SPEC V5.**
+
+**Estado final:** 408 testes 100% verde, `npm run build` ok, Golden §12 recomputado com novos números (custo unit. 4,43 → preço 6,202, não 7,3833 antigo).
+
+**Decisão crítica — Issue 041.1 (contraria spec v5 §3.E/§12)**: Mudança de **semântica de precificação** altera a fórmula do campo de % de lucro:
+- **Antigo (spec v5)**: margem-sobre-preço `preço = custo/(1−m/100)`, com clamp teto 99,9% (decisão 4)
+- **Novo (041, autoridade cliente 2026-07-06)**: markup-sobre-custo `preço = custo × (1 + p/100)`, sem teto (p ≥ 0, aceptando p > 100%)
+- Ambos: `profitMargin = lucro/custo × 100` (denominador SEMPRE custo), guarda ÷0 em custo 0
+- Mudanças no código: `priceFromMargin`, `priceFromSalePrice`, `priceFromProfit` todas reescritas com aritmética nova; `MARGIN_MAX` e `clampMargin` eliminados de `pricing.ts` (variáveis/funções deixam de existir); `validateMargin` bloqueia só negativos (sem teto)
+- Golden §12 nova verdade: custo unit. 4,43, p 40 → preço 6,202 (não 7,3833), lucro 1,772 (não 2,9533), totais 8,86/12,404/3,544 (recomputado com novos números)
+- **Teste de conformidade**: `golden-example.test.ts` travou novo gabarito conforme issue 041 cenários (caso "feliz" cliente: custo 100, p 20 → preço 120, lucro 20); markup alto sem explodir testado (p 200 permitido)
+
+**Decisão autônoma — Issue 041.2 (documentação de spec)**: Cabeçalho de `src/core/pricing.ts` (L1–31) atualizado com advertência clara: "spec §3.E/§12 — semântica sobrescrita pela issue 041" + fórmula nova documentada em português com exemplos concretos. Idêntico em `src/core/validation.ts` L147–154.
+
+**Revisão humana importante (Morning debrief)**: Esta decisão 041 CONTRARIA EXPLICITAMENTE o exemplo validado da spec v5 §12 (margem 40% = R$ 7,3833 antigo). A nova definição é declarada FONTE DA VERDADE DO PRODUTO pelo cliente em 2026-07-06 (ver `spec.md` ciclo bugfix precificação). Especificação v5 arquivo fica como-está (somente-leitura); implementação do produto (2026-07-06 adiante) reflete esta mudança. **Recomendação**: revisor-spec auditar a decisão 041.1 contra ciclo bugfix (spec.md) para verificar consistência com pedido cliente.
+
+---
+
 ### Encerramento da noite — 2026-07-05 22:51
 
 **Issue 040 (refino de 036, pedido do cliente) concluída nesta rodada.**
@@ -117,6 +137,20 @@ Resumo entregue:
 4. **REFACTOR ACHADO ALTO: AZEITE EM "SAL E EXTRAS" NÃO "GORDURAS" (issue 028, validado TDD antes de implementação)**: Mockup pdf-refactor.html aprovado dividia ingredientes assim: FARINHAS / LÍQUIDOS / SAL E EXTRAS (Sal + Azeite) / FERMENTO. Implementação 028 respeitou exatamente. Achado guardiao-design (revisão alta) constatou divergência do mockup aprovado — azeite renderizado em seção "Gorduras" separada. Corrigido nesta mesma iteração (TDD primeira): `renderRecipePrintView` e `renderRecipeCostsPrintView` agrupam por categoria (`ingredients` filtrados por tipo), azeite (category='fat') agora renderizado com sal (category='salt'), formando bloco "Sal e Extras" único sem "Gorduras" órfã. Suíte 342/342 verde após correção. Revisão guardiao-design: aprovada, ZERO achados remanescentes (reprovado→corrigido). Revisão revisor-spec: aprovado (com achados MÉDIOS registrados em issue 029 TODO: calculadora sem teste do gate showCosts; design-system.html desatualizado seção "Impressão/PDF").
 
 5. **CLASSES `.PDF-*` NOVAS, CLASSES `.PRINT-*` MORTAS (issue 028, refactor layout)**: `print.ts` e `design-system.css` marcam fim de `.print-view/.print-title/.print-section/.print-line/.print-label/.print-value` — layout velho lista rótulo→valor. Novo layout `.card` (borda fina `--print-border`) contendo `.table`/`.kv` (classes compartilhadas com tela, regra 2). Classes `.pdf-*` novas: `.pdf-meta` (metadados página gerada), `.pdf-section` (h2 uppercase), `.kv` (key-value pairs vertical, anterior `.metric-pair` batchPanel), `.pdf-credit/.pdf-debit` (semântica cor), `.pdf-muted-row` (planejada cinza itálico §14.6), `.pdf-alert` (alerta prejuízo, box vermelha, icon). Snapshot de classes em `print.test.ts` trava à migração (caso 2: `.card` + `table.table thead/tbody/tfoot`, zero `.print-*`). Motivo: visual consistente tela↔PDF, reutilização design-system (zero CSS duplicado), manutenção centrada.
+
+---
+
+## Iteração 041 — 2026-07-06 07:43 (mudança precificação: markup-sobre-custo em vez margem-sobre-preço)
+
+| Campo | Valor |
+|-------|-------|
+| **Issue** | 041-fix-precificacao-markup-sobre-custo |
+| **Timestamp** | 2026-07-06 07:43 |
+| **O que foi feito** | **Mudança de semântica precificação (CONTRARIA spec v5 §3.E/§12): de margem-sobre-preço para markup-sobre-custo (% de lucro). Nova fórmula: `preço = custo × (1 + p/100)` e `profitMargin = lucro/custo × 100` com denominador SEMPRE custo (não preço). Remoção de teto 99,9%.** (1) `src/core/pricing.ts` reescrito (L1–121): **Cabeçalho atualizado (L1–31)** cita spec v5 §3.E/§12 como "semântica sobrescrita pela issue 041" + fórmula nova em português com exemplos. **Três funções sincronizadas reescritas**: `priceFromMargin(uc, p)` → `salePrice = uc × (1 + p/100)`, `profitPerUnit = uc × p/100`, devolve `profitMargin: p` (sem clamp, p livre ≥ 0). `priceFromSalePrice(uc, salePrice)` → `profitPerUnit = salePrice − uc`, `profitMargin = uc > 0 ? (profitPerUnit/uc)×100 : 0` (denominador muda de `salePrice` para `uc`, com guarda ÷0). `priceFromProfit(uc, profitPerUnit)` → `salePrice = uc + profitPerUnit`, `profitMargin = uc > 0 ? (profitPerUnit/uc)×100 : 0` (denominador custo, guarda ÷0). **Remoção símbolos**: `MARGIN_MAX` (99,9) e função `clampMargin` deletados (variáveis/função deixam de existir). `MARGIN_MIN = 0` mantido (piso, sem lucro negativo por esta via). Documentação: comentários das três funções (L60–93) reescritos com fórmulas novas e notas sobre denominador custo (issue 041). (2) `src/core/validation.ts` (L1–195): **Cabeçalho atualizado (L1–21)** sem mudança (mantém seções implementadas). **`validateMargin` refatorada (L151–154)**: remoção do teto 99,9%. Bloqueia **só** `margin < MARGIN_MIN` (= 0, negativo). Mensagem ajustada: `"% de lucro não pode ser negativa."` (remove referência a teto). Import de `MARGIN_MAX`/`clampMargin` removido (funções deixaram de existir); `MARGIN_MIN` continua importado (piso). Documentação: comentário da função (L147–154) agora cita "issue 041 — sobrescreve §3.E/§12 antigos" e nota que divisor `1 − m/100` saiu, logo sem teto. (3) **Testes reescritos** (TDD conforme issue 041 plano): `pricing.test.ts` casos 1–9 recomputados com novos números (caso 1: `priceFromMargin(5, 20)` → `{6, 1, 20}`; caso 2: markup 200 sem explodir → preço 15; casos 3–9: golden 4,43, sincronia trio, guarda ÷0, §9 sem arredondamento); importar `MARGIN_MAX`/`clampMargin` removido. `golden-example.test.ts` recomputado: custo unit 4,43, p 40 → salePrice ≈ 6,202, profitPerUnit ≈ 1,772, profitMargin 40 (novo gabarito, não 7,3833/2,9533 antigo); totais novo gabarito 8,86/12,404/3,544. `validation.test.ts` caso 9 (`validateMargin(100)` → null OK agora; `-1` → block). Suíte: **408/408 pass** (`recalc.test.ts` intacto, herda novos números; nenhuma regressão). `tsc --noEmit` limpo. `npm run build` sem erro. |
+| **Hash do commit** | (pendente — aguardando commit) |
+| **Testes** | Vitest: **408/408 pass** (novo gabarito golden §12: unitCost 4,43, salePrice 6,202, profitPerUnit 1,772, profitMargin 40, totals 8,86/12,404/3,544 — recomputado vs antigo 7,3833/2,9533/14,76666/5,90666). pricing.test.ts: 9 casos novos marcação markup-sobre-custo com asserções certos; remover asserção `MARGIN_MAX === 99.9` (símbolo deixa de existir). golden-example.test.ts: 1 caso ponta-a-ponta com novo gabarito, documentando a conta. validation.test.ts: `validateMargin` bloqueia negativo, permite ≥0 (caso 100 OK). recalc.test.ts: dispatch por `priceInputMode` continua correto (sem edição, herda números). `npm run build` verde. |
+| **Reviews** | N/A (issue 041 é fix — implementação TDD cobre todas ACs, sem re-review no loop conforme memória "Fixes sem re-review"). |
+| **Observações** | **Decisão crítica 041.1** (registrada em "Decisões da noite" acima): mudança CONTRARIA spec v5 §3.E e exemplo validado §12. Nova definição é **fonte da verdade do produto** (cliente autoridade 2026-07-06, ver `spec.md` ciclo bugfix precificação). Implementação TDD garante conformidade AC (3 modos sincronizados, sem teto, guarda ÷0, §9 sem arredondamento, custo 0 fluem). **Cabeçalhos de referência**: `pricing.ts` (L1–31) cita spec v5 §3.E/§12 "sobrescrita issue 041" com fórmula nova; `validation.ts` (L147–154) cita issue 041 e nota teto saiu. Nenhum novo módulo. Nenhuma mudança em `costs.ts` (custo unitário inalterado), `recalc.ts` (dispatch intacto), `pricingPanel.ts`/UI (validateMargin assinatura preservada → UI continua funcionando). Semântica `profitMargin` como campo muda (custo é sempre denom, nunca preço) — `export/*`/`storage/*` usam profitMargin como número (sem migração localStorage necessária, semantica numérica é compatível). |
 
 ---
 

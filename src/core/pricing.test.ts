@@ -1,23 +1,19 @@
 /**
- * pricing.test.ts — Testes de precificação: 3 modos sincronizados, clamp de
- * margem (0–99,9%), custo unitário, totais e faixas de status (spec §3.E/§4/§5.C/§12,
- * decisão 4).
+ * pricing.test.ts — Testes de precificação: 3 modos sincronizados por
+ * MARKUP-SOBRE-CUSTO (% de lucro), custo unitário, totais e faixas de status
+ * (spec §3.E/§4/§5.C/§12 — semântica sobrescrita pela issue 041).
  *
- * Cobre: CustoUnitário = CustoTotalReceita/Qtd com guarda de ÷0 (§3.E/§5.C),
- * os três modos de entrada (Preço Fixo, Margem%, Lucro Fixo) convergindo para o
- * mesmo trio {salePrice, profitMargin, profitPerUnit} (§3.E), clamp de margem a
- * [0, 99.9] sem Infinity/NaN (§5.C, decisão 4), totais (§3.E — resolução da
- * inconsistência: totalProductionCost = unitCost×Qtd, golden §12 fonte da verdade),
- * faixas de status 30/15 (§4) e flag de prejuízo inclusiva (§5.C).
- * §9: nenhum arredondamento interno — comparação crua (7,3833… NÃO é 7,38).
+ * Fonte da verdade NOVA (issue 041): `preço = custo × (1 + p/100)`,
+ * `lucro = custo × p/100`, `profitMargin = custo > 0 ? (lucro/custo)×100 : 0`.
+ * Não há mais teto 99,9% nem clamp (o divisor `1 − m/100` deixou de existir),
+ * então `p` é livre em [0, +∞). Guarda de ÷0 em custo 0 nos modos onde o custo é
+ * denominador (Preço Fixo / Lucro Fixo). §9: nenhum arredondamento interno.
  *
- * TDD: estes casos são escritos ANTES da implementação (issue 007).
+ * TDD: casos reescritos ANTES da implementação (issue 041).
  */
 import { describe, it, expect } from 'vitest';
 import {
   MARGIN_MIN,
-  MARGIN_MAX,
-  clampMargin,
   effectiveQuantity,
   unitCost,
   priceFromSalePrice,
@@ -38,22 +34,9 @@ describe('unitCost (spec §3.E — CustoTotalReceita / Quantidade)', () => {
   });
 });
 
-describe('clampMargin / effectiveQuantity (spec §5.C, decisão 4)', () => {
-  it('3a. constantes de domínio: MARGIN_MIN=0, MARGIN_MAX=99.9', () => {
+describe('MARGIN_MIN / effectiveQuantity (spec §5.C)', () => {
+  it('3a. constante de domínio: MARGIN_MIN=0 (piso; sem teto após issue 041)', () => {
     expect(MARGIN_MIN).toBe(0);
-    expect(MARGIN_MAX).toBe(99.9);
-  });
-
-  it('3b. clampMargin(40) → 40 (dentro da faixa)', () => {
-    expect(clampMargin(40)).toBe(40);
-  });
-
-  it('3c. clampMargin(100) → 99.9 (teto, decisão 4)', () => {
-    expect(clampMargin(100)).toBe(99.9);
-  });
-
-  it('3d. clampMargin(-5) → 0 (piso, §5.C)', () => {
-    expect(clampMargin(-5)).toBe(0);
   });
 
   it('3e. effectiveQuantity: 2→2, 0→1, -3→1 (§5.C: quantidade ≥ 1)', () => {
@@ -63,49 +46,64 @@ describe('clampMargin / effectiveQuantity (spec §5.C, decisão 4)', () => {
   });
 });
 
-describe('priceFromMargin (spec §3.E — modo Margem%, decisão 4)', () => {
-  it('4. golden §12: priceFromMargin(4.43, 40) → {7.3833, 2.9533, 40}', () => {
+describe('priceFromMargin (spec §3.E — modo % de lucro / markup sobre custo, issue 041)', () => {
+  it('4a. exemplo do cliente: priceFromMargin(5, 20) → {6, 1, 20}', () => {
+    const r = priceFromMargin(5, 20);
+    expect(r.salePrice).toBeCloseTo(6, 9);
+    expect(r.profitPerUnit).toBeCloseTo(1, 9);
+    expect(r.profitMargin).toBe(20);
+  });
+
+  it('4b. golden §12 recomputado: priceFromMargin(4.43, 40) → {6.202, 1.772, 40}', () => {
     const r = priceFromMargin(4.43, 40);
-    expect(r.salePrice).toBeCloseTo(7.3833, 3);
-    expect(r.profitPerUnit).toBeCloseTo(2.9533, 3);
+    expect(r.salePrice).toBeCloseTo(6.202, 6);
+    expect(r.profitPerUnit).toBeCloseTo(1.772, 6);
     expect(r.profitMargin).toBe(40);
   });
 
-  it('5. margem 100 → clamp 99.9: salePrice≈4430 finito, sem Infinity', () => {
-    const r = priceFromMargin(4.43, 100);
-    expect(r.salePrice).toBeCloseTo(4430, 3);
+  it('5. markup alto sem explodir: priceFromMargin(5, 200) → {15, 10, 200} finito', () => {
+    const r = priceFromMargin(5, 200);
+    expect(r.salePrice).toBeCloseTo(15, 9);
+    expect(r.profitPerUnit).toBeCloseTo(10, 9);
+    expect(r.profitMargin).toBe(200);
     expect(Number.isFinite(r.salePrice)).toBe(true);
-    expect(r.profitMargin).toBe(99.9);
   });
 });
 
-describe('priceFromSalePrice (spec §3.E — modo Preço Fixo)', () => {
-  it('6. priceFromSalePrice(4, 10) → {profitMargin:60, profitPerUnit:6}', () => {
-    const r = priceFromSalePrice(4, 10);
-    expect(r.salePrice).toBe(10);
-    expect(r.profitMargin).toBeCloseTo(60, 9);
-    expect(r.profitPerUnit).toBeCloseTo(6, 9);
+describe('priceFromSalePrice (spec §3.E — modo Preço Fixo, denominador CUSTO)', () => {
+  it('6. priceFromSalePrice(5, 6) → {profitPerUnit:1, profitMargin:20}', () => {
+    const r = priceFromSalePrice(5, 6);
+    expect(r.salePrice).toBe(6);
+    expect(r.profitPerUnit).toBeCloseTo(1, 9);
+    expect(r.profitMargin).toBeCloseTo(20, 9);
   });
 
-  it('7. salePrice 0 → guarda ÷0: profitMargin 0 (sem NaN), profitPerUnit -4.43', () => {
-    const r = priceFromSalePrice(4.43, 0);
+  it('7. custo 0 → guarda ÷0: profitMargin 0 (sem NaN), profitPerUnit 6', () => {
+    const r = priceFromSalePrice(0, 6);
     expect(r.profitMargin).toBe(0);
     expect(Number.isNaN(r.profitMargin)).toBe(false);
-    expect(r.profitPerUnit).toBeCloseTo(-4.43, 9);
+    expect(r.profitPerUnit).toBeCloseTo(6, 9);
   });
 });
 
-describe('priceFromProfit (spec §3.E — modo Lucro Fixo)', () => {
-  it('8. priceFromProfit(4.43, 3) → salePrice 7.43, profitMargin≈40.377', () => {
-    const r = priceFromProfit(4.43, 3);
-    expect(r.salePrice).toBeCloseTo(7.43, 9);
-    expect(r.profitPerUnit).toBe(3);
-    expect(r.profitMargin).toBeCloseTo(40.377, 3);
+describe('priceFromProfit (spec §3.E — modo Lucro Fixo, denominador CUSTO)', () => {
+  it('8. priceFromProfit(5, 1) → {salePrice:6, profitMargin:20}', () => {
+    const r = priceFromProfit(5, 1);
+    expect(r.salePrice).toBeCloseTo(6, 9);
+    expect(r.profitPerUnit).toBe(1);
+    expect(r.profitMargin).toBeCloseTo(20, 9);
+  });
+
+  it('8b. custo 0 → guarda ÷0: profitMargin 0 (sem NaN), salePrice 1', () => {
+    const r = priceFromProfit(0, 1);
+    expect(r.profitMargin).toBe(0);
+    expect(Number.isNaN(r.profitMargin)).toBe(false);
+    expect(r.salePrice).toBeCloseTo(1, 9);
   });
 });
 
 describe('Sincronização dos 3 modos (spec §3.E — mesmo trio produz estado idêntico)', () => {
-  it('9. unitCost 4.43 alimentado por margin 40 / salePrice 7.3833… / profit 2.9533… → triples iguais', () => {
+  it('9. uc 4.43: margin 40 / salePrice 6.202 / profit 1.772 → triples iguais {6.202, 1.772, 40}', () => {
     const uc = 4.43;
     const byMargin = priceFromMargin(uc, 40);
     const bySalePrice = priceFromSalePrice(uc, byMargin.salePrice);
@@ -116,21 +114,37 @@ describe('Sincronização dos 3 modos (spec §3.E — mesmo trio produz estado i
       expect(r.profitMargin).toBeCloseTo(byMargin.profitMargin, 6);
       expect(r.profitPerUnit).toBeCloseTo(byMargin.profitPerUnit, 6);
     }
+    expect(byMargin.salePrice).toBeCloseTo(6.202, 6);
+    expect(byMargin.profitPerUnit).toBeCloseTo(1.772, 6);
+    expect(byMargin.profitMargin).toBe(40);
   });
 });
 
-describe('pricingTotals (spec §3.E / §12 — trava a resolução da inconsistência)', () => {
-  it('10. pricingTotals(4.43, 7.3833…, 2) → {8.86, 14.7666, 5.9066}', () => {
-    const r = pricingTotals(4.43, 7.383333333333333, 2);
-    expect(r.totalProductionCost).toBeCloseTo(8.86, 4);
-    expect(r.totalRevenue).toBeCloseTo(14.7666, 3);
-    expect(r.totalProfit).toBeCloseTo(5.9066, 3);
+describe('Guarda de ÷0 nos três modos (§5.C — custo 0, sem NaN/Infinity)', () => {
+  it('9b. priceFromMargin(0, 20) → salePrice 0, profitPerUnit 0, profitMargin 20 (custo não é denominador)', () => {
+    const r = priceFromMargin(0, 20);
+    expect(r.salePrice).toBeCloseTo(0, 9);
+    expect(r.profitPerUnit).toBeCloseTo(0, 9);
+    expect(r.profitMargin).toBe(20);
+    for (const v of [r.salePrice, r.profitPerUnit, r.profitMargin]) {
+      expect(Number.isNaN(v)).toBe(false);
+      expect(Number.isFinite(v)).toBe(true);
+    }
+  });
+});
+
+describe('pricingTotals (spec §3.E / §12 recomputado — issue 041)', () => {
+  it('10. pricingTotals(4.43, 6.202, 2) → {8.86, 12.404, 3.544}', () => {
+    const r = pricingTotals(4.43, 6.202, 2);
+    expect(r.totalProductionCost).toBeCloseTo(8.86, 6);
+    expect(r.totalRevenue).toBeCloseTo(12.404, 6);
+    expect(r.totalProfit).toBeCloseTo(3.544, 6);
   });
 
   it('10b. quantity 0 → clamp 1 (sem quebrar totais)', () => {
-    const r = pricingTotals(4.43, 7.38, 0);
+    const r = pricingTotals(4.43, 6.202, 0);
     expect(r.totalProductionCost).toBeCloseTo(4.43, 9);
-    expect(r.totalRevenue).toBeCloseTo(7.38, 9);
+    expect(r.totalRevenue).toBeCloseTo(6.202, 9);
   });
 });
 
@@ -156,7 +170,7 @@ describe('isLoss (spec §5.C/§4 — salePrice ≤ unitCost, break-even inclusiv
 describe('Pureza (spec §9 — sem arredondamento interno)', () => {
   it('13. priceFromMargin devolve valores crus, não os arredondados de exibição', () => {
     const r = priceFromMargin(4.43, 40);
-    expect(r.salePrice).not.toBe(7.38); // §9: format.ts arredonda depois
-    expect(r.profitPerUnit).not.toBe(2.95);
+    expect(r.salePrice).not.toBe(6.2); // §9: valor cru 6.202, format.ts arredonda depois
+    expect(r.profitPerUnit).not.toBe(1.77); // valor cru 1.772
   });
 });

@@ -111,13 +111,13 @@ function bakeB(): BakeEntry {
 }
 
 describe('buildRecipeWorkbook', () => {
-  it('1. golden §12 com custos: células numéricas 1000, 8.86, 7.38 presentes', async () => {
+  it('1. golden §12 com custos: células numéricas 1000, 8.86, 6.20 presentes', async () => {
     const { state, summary } = recalculate(goldenRecipe());
     const wb = await reload(buildRecipeWorkbook(state, summary, { includeCosts: true }));
     const nums = allNumbers(wb);
     expect(nums).toContain(1000); // F_total (§12)
     expect(nums).toContain(8.86); // custo total (§12)
-    expect(nums).toContain(7.38); // preço de venda (§12: 7,3833 → 2 casas §9)
+    expect(nums).toContain(6.20); // preço de venda (markup 40%: custo unit. 4,43 × 1,40 = 6,202 → 2 casas §9; issue 041)
   });
 
   it('2. sem custos: nenhuma coluna/valor financeiro, sem "R$", sem Precificação', async () => {

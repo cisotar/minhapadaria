@@ -10,7 +10,8 @@
  * Ajuste do cliente (§5.1, 2026-07-06): o seed passou a usar Isca=1 (era 0) —
  * denom global do fermento 1+1+1=3 — então os números não são mais os
  * literais da §12 (que usava Isca 0): Custo unitário agora R$4,30 (era 4,43),
- * margem 40% → Preço R$7,16 (era 7,38), Lucro R$2,86 (era 2,95). Valores
+ * markup 40% → Preço R$6,02 (= 4,30 × 1,40), Lucro R$1,72 (= 4,30 × 0,40)
+ * — issue 041 trocou margem-sobre-preço por markup-sobre-custo. Valores
  * RECALCULADOS pelo engine para o seed atual (`golden-example.test.ts` mantém
  * fixture próprio com Isca 0 para validar as fórmulas da §12 à parte — AC25).
  */
@@ -39,7 +40,7 @@ function mount(mutate?: (r: ReturnType<typeof goldenSeedNoFat>) => void) {
 }
 
 describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
-  it('7. editar Margem 40 → Preço 7,16 e Lucro 2,86 (seed com Isca=1, 2026-07-06); campo em foco não é sobrescrito', () => {
+  it('7. editar % de lucro 40 → Preço 6,02 e Lucro 1,72 (seed com Isca=1, 2026-07-06); campo em foco não é sobrescrito', () => {
     const { root } = mount();
     const marginInput = root.querySelector('input[aria-label="Margem %"]') as HTMLInputElement;
     const priceInput = root.querySelector('input[aria-label="Preço de venda"]') as HTMLInputElement;
@@ -48,8 +49,8 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
     marginInput.value = '40';
     marginInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-    expect(priceInput.value).toBe('7,16');
-    expect(profitInput.value).toBe('2,86');
+    expect(priceInput.value).toBe('6,02'); // markup 40%: 4,30 × 1,40 (issue 041)
+    expect(profitInput.value).toBe('1,72'); // 4,30 × 0,40
     expect(marginInput.value).toBe('40'); // campo em edição não é reformatado/sobrescrito
   });
 
@@ -69,16 +70,23 @@ describe('pricingPanel (jsdom, fixture §12 sem Azeite)', () => {
     expect(root.querySelector('.loss')).not.toBeNull();
   });
 
-  it('9. editar Margem 150 → blur bloqueia (aria-invalid) e reverte ao último valor válido', () => {
+  it('9. editar % de lucro 150 → aceito (sem teto, markup); negativo bloqueia e reverte (issue 041)', () => {
     const { root } = mount();
     const marginInput = root.querySelector('input[aria-label="Margem %"]') as HTMLInputElement;
     expect(marginInput.value).toBe('40,00');
 
+    // 150% de lucro é válido agora (markup não tem teto de 99,9%).
     marginInput.value = '150';
     marginInput.dispatchEvent(new Event('input', { bubbles: true }));
     marginInput.dispatchEvent(new Event('blur', { bubbles: true }));
+    expect(marginInput.getAttribute('aria-invalid')).not.toBe('true');
+    expect(marginInput.value).toBe('150,00'); // aceito e formatado
 
+    // Negativo continua bloqueado (único limite restante: p ≥ 0).
+    marginInput.value = '-10';
+    marginInput.dispatchEvent(new Event('input', { bubbles: true }));
+    marginInput.dispatchEvent(new Event('blur', { bubbles: true }));
     expect(marginInput.getAttribute('aria-invalid')).toBe('true');
-    expect(marginInput.value).toBe('40,00'); // reverte — nunca 150 nem NaN
+    expect(marginInput.value).toBe('150,00'); // reverte ao último válido
   });
 });
