@@ -56,8 +56,15 @@ function waterPercentage(recipe: ReturnType<RecipeStore['get']>): number {
 }
 
 beforeEach(() => {
-  // Shell mínimo de index.html (spec §2.F): #app é o único ponto de montagem.
-  document.body.innerHTML = '<div id="app"></div>';
+  // Shell real de `receitas.html` (issue 036: header estático com o `<h1>`
+  // trocado em runtime pelo nome editável quando há receita carregada) +
+  // `#app`, único ponto de montagem dos cards (§2.F). Inócuo aos testes 1-4
+  // pré-existentes (nenhum deles inspeciona o header).
+  document.body.innerHTML =
+    '<header class="page-header"><div class="inner">' +
+    '<h1>🍞 Calculadora de Pão com Fermento Natural</h1>' +
+    '<p class="subtitle">Calcule custos, proporções e preços da sua receita.</p>' +
+    '</div></header><div id="app"></div>';
 });
 
 afterEach(() => {
@@ -194,5 +201,172 @@ describe('initCalculadora — integração ?recipe=<id> (jsdom, §2.F)', () => {
     toggleInput.dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(printCustos!.classList.contains('hidden')).toBe(true);
+  });
+});
+
+describe('initCalculadora — nome da receita editável no header (issue 036, §2.F)', () => {
+  const STATIC_H1 = '🍞 Calculadora de Pão com Fermento Natural';
+
+  function pageH1(): HTMLHeadingElement {
+    return document.querySelector('.page-header h1') as HTMLHeadingElement;
+  }
+
+  it('1. ?recipe=<id> válido → h1 do header mostra o nome da receita; h1 estático some', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    expect(pageH1().textContent).toBe('Pão Salvo');
+    expect(document.body.textContent).not.toContain(STATIC_H1);
+  });
+
+  it('2. sem ?recipe (golden seed) → h1 estático permanece; sem input no header', () => {
+    initCalculadora({ recipeStore: makeStore(), prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '' });
+
+    expect(pageH1().textContent).toBe(STATIC_H1);
+    expect(document.querySelector('.page-header input')).toBeNull();
+  });
+
+  it('3. ?recipe=<id> inexistente → banner de aviso + h1 estático permanece; sem input', () => {
+    initCalculadora({ recipeStore: makeStore(), prefs: createPrefsStore({ storage: createMemoryStorage() }), search: '?recipe=inexistente' });
+
+    expect(document.querySelector('.chip-warn')).not.toBeNull();
+    expect(pageH1().textContent).toBe(STATIC_H1);
+    expect(document.querySelector('.page-header input')).toBeNull();
+  });
+
+  it('4. clique no h1 → vira input com valor atual, focado', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Pão Salvo');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('5. Enter com nome novo válido → h1 atualizado de imediato; recipeStore reflete só após o debounce', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    input.value = 'Pão Editado';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(pageH1().textContent).toBe('Pão Editado');
+    expect(document.querySelector('.page-header input')).toBeNull();
+
+    vi.advanceTimersByTime(399);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+    vi.advanceTimersByTime(1);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Editado');
+  });
+
+  it('6. blur com nome novo válido → mesmo resultado do Enter', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    input.value = 'Pão Blur';
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    expect(pageH1().textContent).toBe('Pão Blur');
+    vi.advanceTimersByTime(400);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Blur');
+  });
+
+  it('7. Esc → nome restaurado ao original; nada gravado mesmo após avançar os timers', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    input.value = 'Xyz';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(pageH1().textContent).toBe('Pão Salvo');
+    vi.advanceTimersByTime(5000);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+  });
+
+  it('8. nome vazio ou igual ao atual ao confirmar → não altera recipe.name', () => {
+    vi.useFakeTimers();
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    let input = document.querySelector('.page-header input') as HTMLInputElement;
+    input.value = '';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(pageH1().textContent).toBe('Pão Salvo');
+    vi.advanceTimersByTime(400);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+
+    pageH1().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    input = document.querySelector('.page-header input') as HTMLInputElement;
+    input.value = 'Pão Salvo';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(pageH1().textContent).toBe('Pão Salvo');
+    vi.advanceTimersByTime(400);
+    expect(recipeStore.get(saved.id)!.name).toBe('Pão Salvo');
+  });
+
+  it('9. XSS: nome <img src=x onerror> renderizado como texto literal, sem nó <img>', () => {
+    const recipeStore = makeStore();
+    const evil = '<img src=x onerror=alert(1)>';
+    const saved = recipeStore.create({ ...goldenSeed(), name: evil });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    expect(document.querySelector('.page-header h1 img')).toBeNull();
+    expect(pageH1().textContent).toBe(evil);
+  });
+
+  it('10. h1 renomeável é acessível por teclado: tabindex, role e aria-label', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    const h1 = pageH1();
+    expect(h1.getAttribute('tabindex')).toBe('0');
+    expect(h1.getAttribute('role')).toBe('button');
+    expect(h1.getAttribute('aria-label')).toBeTruthy();
+  });
+
+  it('11. keydown Enter no h1 (foco por teclado) abre o input de edição, igual ao clique', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Pão Salvo');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('12. keydown Espaço no h1 abre o input de edição, igual ao clique', () => {
+    const recipeStore = makeStore();
+    const saved = recipeStore.create({ ...goldenSeed(), name: 'Pão Salvo' });
+    initCalculadora({ recipeStore, prefs: createPrefsStore({ storage: createMemoryStorage() }), search: `?recipe=${saved.id}` });
+
+    pageH1().dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+
+    const input = document.querySelector('.page-header input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Pão Salvo');
   });
 });

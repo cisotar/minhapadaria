@@ -37,7 +37,7 @@
 | 033 | Renomear receita vira edição inline (sem prompt/modal) | ui | 017 | done | 72e443a |
 | 034 | Refactor impressão Receita/Custos v2 — cards, fermento, coluna custo | export | 019, 028, 030 | done | 6486296 |
 | 035 | "+ Nova receita" abre modal de nome antes de criar; seed sem Azeite | ui | 017 | done | ff615e1 |
-| 036 | Calculadora exibe e permite editar o nome da receita carregada | ui | 014, 033 | todo | — |
+| 036 | Calculadora exibe e permite editar o nome da receita carregada | ui | 014, 033 | done | PENDING |
 | 037 | Fix — achado da revisão da issue 029 (nota de reatividade do PDF Financeiro) | fix | 029 | todo | — |
 | 038 | Fix — resíduo de doc da issue 031/030 (Água "1 L" → "1 kg" no guia vivo) | fix | 031 | todo | — |
 | 039 | Fix — achado da revisão da issue 035 (aria-label redundante no modal) | fix | 035 | todo | — |

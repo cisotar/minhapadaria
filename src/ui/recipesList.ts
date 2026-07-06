@@ -82,6 +82,7 @@ import { goldenSeed } from './seed';
 import { h, clear, on } from './dom';
 import { marginChipClass } from './cellHelpers';
 import { openPromptModal } from './modal';
+import { startInlineNameEdit } from './inlineNameEdit';
 
 export interface RecipesListDeps {
   recipeStore: RecipeStore;
@@ -231,60 +232,22 @@ export function renderRecipesList(root: HTMLElement, deps: RecipesListDeps): voi
   }
 
   /**
-   * Edição inline do nome (issue 033, refactor II §134): substitui o `<h3>`
-   * do card por um `<input class="cell-input">` (§4.1 "sinal invertido" —
-   * campo editável vira box, molde reusado de `ingredientsTable.ts:237-246`),
-   * sem `window.prompt`/modal. Enter/blur confirmam; Esc cancela. Mesma
-   * tripla guarda do antigo prompt: vazio/igual ao atual → não grava.
+   * Edição inline do nome (issue 033, refactor II §134; extraída para
+   * `startInlineNameEdit` na issue 036 — regra de ouro 2, a mecânica é
+   * reusada tal-qual pelo `<h1>` editável da Calculadora). Wrapper fino:
+   * exibição = `<h3>`, caminho de escrita = `recipeStore.rename` direto
+   * (card não passa pelo pipeline de autosave da Calculadora).
    */
   function startInlineEdit(nameRef: { el: HTMLHeadingElement }, recipe: Recipe): void {
-    const originalName = recipe.name;
-    let settled = false; // evita blur pós Enter/Esc reprocessar a confirmação
-
-    const input = h('input', {
-      type: 'text',
-      className: 'cell-input',
-      value: originalName,
-      'aria-label': 'Novo nome da receita',
-    }) as HTMLInputElement;
-
-    function toH3(name: string): HTMLHeadingElement {
-      return h('h3', {}, [name]) as HTMLHeadingElement; // textContent — escapa XSS (regra 3)
-    }
-
-    function restore(name: string): void {
-      const h3 = toH3(name);
-      input.replaceWith(h3);
-      nameRef.el = h3; // reatribui a referência para o próximo clique em "Renomear"
-    }
-
-    function confirmEdit(): void {
-      if (settled) return;
-      settled = true;
-      const value = input.value;
-      if (value === '' || value === originalName) {
-        restore(originalName); // vazio/sem mudança — restaura, sem gravar
-        return;
-      }
-      recipeStore.rename(recipe.id, value);
-      restore(value);
-    }
-
-    function cancelEdit(): void {
-      if (settled) return;
-      settled = true;
-      restore(originalName);
-    }
-
-    on(input, 'keydown', (e) => {
-      if (e.key === 'Enter') confirmEdit();
-      else if (e.key === 'Escape') cancelEdit();
+    startInlineNameEdit({
+      target: nameRef.el,
+      currentName: recipe.name,
+      makeDisplay: (name) => h('h3', {}, [name]) as HTMLHeadingElement, // textContent — escapa XSS (regra 3)
+      onCommit: (value) => recipeStore.rename(recipe.id, value),
+      onDisplayChange: (display) => {
+        nameRef.el = display as HTMLHeadingElement; // reatribui para o próximo clique em "Renomear"
+      },
     });
-    on(input, 'blur', () => confirmEdit());
-
-    nameRef.el.replaceWith(input);
-    input.focus();
-    input.select();
   }
 
   function deleteRecipe(id: string, name: string): void {

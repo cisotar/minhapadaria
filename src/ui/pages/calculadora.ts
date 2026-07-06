@@ -1,5 +1,5 @@
 /**
- * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028/029.
+ * calculadora.ts — Composition root da página Calculadora (receitas.html após issue 032), issues 014/015/016/017/028/029/036.
  *
  * O que faz: instancia `createPrefsStore` (011), o estado inicial via
  * `goldenSeed` (§12) + `createAppState` (§1.6) — com o `normalize` opcional
@@ -41,6 +41,19 @@
  * plano (§2.F): id válido + auto-save após debounce, id inexistente (banner
  * + sem persistir) e flush em `visibilitychange` (aba escondida).
  *
+ * Nome editável no header (issue 036): quando `autosaveEnabled` (receita
+ * carregada via `?recipe=<id>` válido), o `<h1>` estático do shell
+ * (`receitas.html`) é substituído em runtime pelo nome da receita
+ * (`store.getState().recipe.name`), editável inline no MESMO padrão sem
+ * `window.prompt`/modal do card de `recipesList.ts` (issue 033) — mecânica
+ * genérica extraída para `startInlineNameEdit` (`inlineNameEdit.ts`, regra de
+ * ouro 2: mesma lógica, dois pontos parametrizados). Escrita SEMPRE via
+ * `store.update((draft) => { draft.name = value; })` — nunca
+ * `recipeStore.rename` direto — para que a persistência passe pelo MESMO
+ * pipeline de autosave (debounce + flush) descrito acima, sem duplicar
+ * caminho de escrita. Sem `?recipe` ou id inexistente: `<h1>` estático
+ * permanece (comportamento inalterado).
+ *
  * Seções implementadas: §1–2 (composição da tela), §1.3, §1.5, §2.B, §2.C,
  * §2.D, §2.E, §2.F, §3.D, §3.E, §4, §9–10 (app 100% client-side).
  */
@@ -57,6 +70,7 @@ import { renderSourdoughTable, inheritSourdoughFlourCosts } from '../sourdoughTa
 import { renderHydrationPanel } from '../hydrationPanel';
 import { renderPricingPanel } from '../pricingPanel';
 import { h, clear, on } from '../dom';
+import { startInlineNameEdit } from '../inlineNameEdit';
 import { formatDate } from '../../core/format';
 import { workbookToBlob, downloadBlob } from '../../export/download';
 import { renderRecipePrintView, renderRecipeCostsPrintView, mountPrintButton } from '../../export/print';
@@ -217,6 +231,54 @@ export function initCalculadora(deps: InitCalculadoraDeps = {}): void {
   }
 
   if (autosaveEnabled) {
+    // Nome editável no header (issue 036): só quando a tela foi aberta por
+    // uma receita real (`?recipe=<id>` válido) o `<h1>` estático do shell
+    // (`receitas.html`) vira o nome da receita, editável inline no MESMO
+    // padrão sem `window.prompt`/modal do card (`recipesList.ts`, issue 033)
+    // — mecânica reusada via `startInlineNameEdit` (regra de ouro 2).
+    // Escrita SEMPRE via `store.update` (nunca `recipeStore.rename` direto):
+    // `notify()` dispara o pipeline de autosave já existente logo abaixo,
+    // evitando um segundo caminho de gravação (decisão 2 do Plano Técnico).
+    const staticH1 = document.querySelector('.page-header h1');
+    if (staticH1) {
+      // Achado ALTO (revisão issue 036, guardiao-design): `<h1>` é elemento
+      // não-interativo — só `click` deixava usuários de teclado sem meio de
+      // renomear (o `title` é dica mouse-only). Correção: `tabindex="0"` +
+      // `role="button"` + `aria-label` tornam o título focável/anunciado por
+      // leitor de tela, e o `keydown` (Enter/Espaço) dispara a MESMA
+      // `startInlineNameEdit` do clique — nenhuma classe/token novo, só
+      // atributos ARIA/teclado (spec §10 "navegação por teclado").
+      const makeName = (name: string): HTMLHeadingElement => {
+        const el = h('h1', {
+          title: 'Clique para renomear',
+          tabindex: 0,
+          role: 'button',
+          'aria-label': 'Renomear receita — pressione Enter',
+        }, [name]) as HTMLHeadingElement; // textContent — escapa XSS (regra 3)
+        const openEdit = (): void => {
+          startInlineNameEdit({
+            target: el,
+            currentName: store.getState().recipe.name,
+            makeDisplay: makeName,
+            onCommit: (value) => {
+              store.update((draft) => {
+                draft.name = value;
+              });
+            },
+          });
+        };
+        on(el, 'click', openEdit);
+        on(el, 'keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault(); // Espaço não deve rolar a página (MDN KeyboardEvent)
+            openEdit();
+          }
+        });
+        return el;
+      };
+      staticH1.replaceWith(makeName(store.getState().recipe.name));
+    }
+
     const AUTOSAVE_DEBOUNCE_MS = 400; // §10 "debounce em inputs"
     let timer: ReturnType<typeof setTimeout> | null = null;
     const flush = (): void => {
