@@ -46,4 +46,4 @@
 | 042 | Card Precificação — custo read-only topo, campos empilhados, rótulo "% de lucro" | fix | 041, 016 | done | ac455ea |
 | 043 | Relatórios do Histórico no estilo v2 (cards por seção) dos da Calculadora | export | 028, 034 | done | c393843 |
 | 044 | Polir densidade da listagem do Histórico (paridade table.rt) + remover CSS órfã pdf-section | fix | 043 | done | 4fa2ab2 |
-| 045 | Aba BALANÇO — visão financeira por fornada (seção só-leitura no Histórico) | mista | 013, 018, 044 | todo | — |
+| 045 | Aba BALANÇO — visão financeira por fornada (seção só-leitura no Histórico) | mista | 013, 018, 044 | done | 99b3f7c |

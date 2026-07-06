@@ -3,7 +3,7 @@ id: "045"
 titulo: Aba BALANÇO — visão financeira por fornada (seção só-leitura no Histórico)
 tipo: mista
 deps: ["013", "018", "044"]
-status: todo
+status: done
 ---
 
 ## Contexto
