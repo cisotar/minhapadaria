@@ -40,6 +40,10 @@ export interface RecipeStore {
   // Substituição total do conjunto (usado pela restauração de backup, issue 012).
   // Preserva id/datas originais das receitas (nunca regenera como create()).
   replaceAll(recipes: Recipe[]): void;
+  // Reordena o array persistido por id (drag-and-drop dos cards da aba Receitas).
+  // A ordem do array JÁ É a ordem de exibição de list() — reordenar = regravar.
+  // Não é edição: preserva updatedAt/id/datas (delega ao mesmo writeAll).
+  reorder(orderedIds: string[]): void;
 }
 
 // Default válido e mínimo para create(): merge da semente por cima disto.
@@ -247,5 +251,28 @@ export function createRecipeStore(opts: RecipeStoreOptions = {}): RecipeStore {
     writeAll(recipes);
   }
 
-  return { list, get, create, update, rename, duplicate, remove, replaceAll };
+  // Reordena por id sem mexer no conteúdo das receitas (não altera updatedAt —
+  // reordenar ≠ editar). Ids inexistentes são ignorados; ids duplicados contam
+  // uma vez (Set de já-colocados); receitas fora de orderedIds seguem após, na
+  // ordem relativa original — nenhuma some. Delega ao mesmo writeAll (Date→ISO).
+  function reorder(orderedIds: string[]): void {
+    const all = readAll();
+    const byId = new Map(all.map((r) => [r.id, r]));
+    const placed = new Set<string>();
+    const next: Recipe[] = [];
+    for (const id of orderedIds) {
+      if (placed.has(id)) continue; // duplicado: já colocado
+      const r = byId.get(id);
+      if (r === undefined) continue; // id inexistente: ignora
+      next.push(r);
+      placed.add(id);
+    }
+    // Preserva as receitas omitidas, na ordem original, após as reordenadas.
+    for (const r of all) {
+      if (!placed.has(r.id)) next.push(r);
+    }
+    writeAll(next);
+  }
+
+  return { list, get, create, update, rename, duplicate, remove, replaceAll, reorder };
 }

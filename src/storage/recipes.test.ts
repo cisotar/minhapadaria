@@ -320,4 +320,58 @@ describe('recipes store', () => {
     expect(got.ingredients[0]).not.toHaveProperty('inputUnit');
     expect(got.sourdough.waterPackageCost.packageUnit).toBe('kg');
   });
+
+  // reorder (drag-and-drop dos cards, parte core/storage): a ordem do array
+  // persistido JÁ É a ordem de exibição de list(); reordenar = regravar na nova
+  // ordem por id, delegando ao mesmo writeAll (sem tocar updatedAt).
+  function threeStore(backend = createMemoryStorage()) {
+    const store = makeStore(backend);
+    const a = store.create({ ...seed(), name: 'A' });
+    const b = store.create({ ...seed(), name: 'B' });
+    const c = store.create({ ...seed(), name: 'C' });
+    return { store, a, b, c };
+  }
+
+  it('15. reorder reordena a lista retornada por list() na ordem pedida', () => {
+    const { store, a, b, c } = threeStore();
+    store.reorder([c.id, a.id, b.id]);
+    expect(store.list().map((r) => r.id)).toEqual([c.id, a.id, b.id]);
+  });
+
+  it('16. ids inexistentes em orderedIds são ignorados sem erro', () => {
+    const { store, a, b, c } = threeStore();
+    expect(() => store.reorder([c.id, 'fantasma', a.id, b.id])).not.toThrow();
+    expect(store.list().map((r) => r.id)).toEqual([c.id, a.id, b.id]);
+  });
+
+  it('17. receita omitida de orderedIds é preservada depois, na ordem relativa original', () => {
+    const { store, a, b, c } = threeStore();
+    // Só reordena B; A e C ficam após, na ordem relativa original (A antes de C).
+    store.reorder([b.id]);
+    expect(store.list().map((r) => r.id)).toEqual([b.id, a.id, c.id]);
+  });
+
+  it('18. reorder NÃO altera updatedAt de nenhuma receita', () => {
+    const { store, a, b, c } = threeStore();
+    const before = new Map(store.list().map((r) => [r.id, r.updatedAt.getTime()]));
+    store.reorder([c.id, b.id, a.id]);
+    for (const r of store.list()) {
+      expect(r.updatedAt.getTime()).toBe(before.get(r.id));
+    }
+  });
+
+  it('19. ids duplicados em orderedIds não duplicam receita', () => {
+    const { store, a, b, c } = threeStore();
+    store.reorder([b.id, b.id, a.id]);
+    expect(store.list().map((r) => r.id)).toEqual([b.id, a.id, c.id]);
+    expect(store.list()).toHaveLength(3);
+  });
+
+  it('20. orderedIds vazio deixa a lista intacta (ordem e conteúdo)', () => {
+    const { store, a, b, c } = threeStore();
+    const before = store.list();
+    store.reorder([]);
+    expect(store.list().map((r) => r.id)).toEqual([a.id, b.id, c.id]);
+    expect(store.list()).toEqual(before);
+  });
 });

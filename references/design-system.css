@@ -383,14 +383,49 @@ h3 { font-size: var(--fs-sub); font-weight: 600; color: var(--text-2); }
 .recipe-card .stats .stat-value { font-weight: 700; font-variant-numeric: tabular-nums; }
 .recipe-card .actions { display: flex; gap: var(--sp-2); margin-top: auto; flex-wrap: wrap; }
 .recipe-card .actions .btn { font-size: var(--fs-small); padding: 4px 10px; }
-.recipe-card .card-delete-btn {
-  position: absolute; top: var(--sp-2); right: var(--sp-2);
+/* Base compartilhada dos botões-ícone do canto do card (excluir/alça de
+   arraste) — reuso total (regra de ouro 1): mesmas dimensões/posicionamento
+   vertical/aparência neutra; só o lado (`right`/`left`) e o hover mudam,
+   ficam nos modificadores abaixo. */
+.recipe-card .card-icon-btn {
+  position: absolute; top: var(--sp-2);
   width: 28px; height: 28px; padding: 0; line-height: 1;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: 1px solid transparent; color: var(--text-muted);
   border-radius: var(--radius-sm);
 }
+.recipe-card .card-delete-btn { right: var(--sp-2); }
 .recipe-card .card-delete-btn:hover { background: var(--danger); color: var(--creme); border-color: var(--danger); }
+
+/* Alça de arraste (drag handle) — reordenar cards, issue 050. Alça dedicada
+   (não o card inteiro) para não conflitar com os botões de ação/edição
+   inline do nome; canto superior esquerdo, espelhando o botão excluir
+   (canto superior direito). `.recipe-card.has-drag-handle h3` reserva
+   espaço para não sobrepor o texto — `var(--sp-6)`, o MESMO token do
+   `padding-right` do `<h3>` (linha acima) que reserva espaço pro
+   `card-delete-btn` do outro lado (mesmo tamanho, reserva simétrica). Some
+   por completo quando a busca está ativa (reordenar uma lista filtrada é
+   ambíguo) — ver `recipesList.ts`. */
+.recipe-card.has-drag-handle h3 { padding-left: var(--sp-6); }
+/* Revisão UX (feedback do cliente): a alça ficava apagada demais com
+   `--text-muted`/fundo transparente (herdados de `.card-icon-btn`) — o
+   cliente mal enxergava onde arrastar. Affordance visível já em REPOUSO
+   (não só no hover): fundo `--surface-2` + borda `--border` + texto
+   `--text-2` (mesmo trio "campo somente-leitura" já usado em vários
+   componentes do sistema — nada novo). Glyph maior via `--fs-sub` (só
+   token, não há token de tamanho de ícone dedicado). Hover reforça com os
+   tokens de "primário" (mesmo padrão de destaque de `.btn-secondary`
+   variantes ativas), sem competir com o vermelho do `.card-delete-btn`. */
+.recipe-card .recipe-drag-handle {
+  left: var(--sp-2); cursor: grab; font-size: var(--fs-sub);
+  color: var(--text-2); background: var(--surface-2); border-color: var(--border);
+}
+.recipe-card .recipe-drag-handle:hover { background: var(--primary-tint); border-color: var(--primary-soft); color: var(--primary); }
+.recipe-card .recipe-drag-handle:active { cursor: grabbing; }
+.recipe-card .recipe-drag-handle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* Card sendo arrastado: mesma opacidade reduzida já usada em `.app-nav a`
+   (linha ~127 acima) para indicar estado "em trânsito" sem introduzir token novo. */
+.recipe-card.dragging { opacity: .5; }
 
 /* ============ Estado vazio (Seção 2.F, issue 017) ============ */
 .empty-state {
