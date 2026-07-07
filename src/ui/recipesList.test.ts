@@ -652,4 +652,282 @@ describe('recipesList (jsdom)', () => {
     expect(subtitle!.textContent).toBe('1 receita cadastrada');
     expect(root.querySelector('.subtitle')).toBeNull(); // não duplica dentro de root
   });
+
+  describe('reordenar por arrastar (issue 050)', () => {
+    /** Fabrica um `DOMRect` mínimo para mockar `getBoundingClientRect` (jsdom
+     *  não faz layout real — geometria é sempre zero por padrão). `left`/
+     *  `width` permitem modelar cards LADO A LADO (grid de N colunas), não só
+     *  uma pilha vertical — essencial pra cobrir o eixo horizontal do DnD. */
+    function rect(top: number, height: number, left = 0, width = 100): DOMRect {
+      return {
+        top,
+        height,
+        bottom: top + height,
+        left,
+        right: left + width,
+        width,
+        x: left,
+        y: top,
+        toJSON: () => ({}),
+      } as DOMRect;
+    }
+
+    /** Modela um grid de UMA linha com 3 cards lado a lado (o layout real
+     *  `repeat(3, 1fr)`): A|B|C em x=[0,100), [100,200), [200,300), todos no
+     *  mesmo topo. Centros horizontais: A=50, B=150, C=250. */
+    function stubRow(cards: HTMLElement[]): void {
+      cards.forEach((card, i) => {
+        card.getBoundingClientRect = () => rect(100, 50, i * 100, 100);
+      });
+    }
+
+    it('17. alça (`.recipe-drag-handle`) existe em todo card sem busca; some com busca ativa', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Baguete Tradicional' });
+      const { root } = mount({ storage, recipeStore });
+
+      expect(root.querySelectorAll('.recipe-drag-handle')).toHaveLength(2);
+      const handle = root.querySelector('.recipe-drag-handle') as HTMLButtonElement;
+      expect(handle.getAttribute('aria-label')).toContain('Reordenar receita');
+
+      const searchInput = root.querySelector('input[type="search"]') as HTMLInputElement;
+      searchInput.value = 'Baguete';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Busca ativa (lista parcial): reordenar é ambíguo — alça não é renderizada.
+      expect(root.querySelectorAll('.recipe-drag-handle')).toHaveLength(0);
+    });
+
+    it('18. mousedown na alça liga `card.draggable`; mouseup sem drag efetivo desliga de volta', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      const { root } = mount({ storage, recipeStore });
+
+      const card = root.querySelector('.recipe-card') as HTMLElement;
+      const handle = root.querySelector('.recipe-drag-handle') as HTMLElement;
+      expect(card.draggable).toBe(false);
+
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(card.draggable).toBe(true);
+
+      handle.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      expect(card.draggable).toBe(false);
+    });
+
+    it('19. dragstart→dragover→dragend: reorder chamado com a nova ordem; grid re-renderizado consistente com o store', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      expect(cardsBefore.map((c) => c.dataset.id)).toEqual([r1.id, r2.id, r3.id]);
+
+      const dragged = cardsBefore[0]; // Pão A
+      const handle = dragged.querySelector('.recipe-drag-handle') as HTMLElement;
+      const target = cardsBefore[2]; // Pão C — arrasta A para depois de C
+      stubRow(cardsBefore); // A|B|C lado a lado (centros x = 50, 150, 250)
+
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      dragged.dispatchEvent(new Event('dragstart', { bubbles: true }));
+      expect(dragged.classList.contains('dragging')).toBe(true);
+
+      // Ponteiro na METADE DIREITA de C (clientX 260 > centro 250) → depois
+      // de C, na mesma linha → A vai para o FIM. (Antes o eixo horizontal era
+      // ignorado e esse movimento pra direita não acontecia — o bug relatado.)
+      const dragoverEvent = new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 260, clientY: 125 });
+      target.dispatchEvent(dragoverEvent);
+      expect(dragoverEvent.defaultPrevented).toBe(true); // preventDefault habilita o drop
+
+      dragged.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+      expect(reorderSpy).toHaveBeenCalledWith([r2.id, r3.id, r1.id]);
+      expect(dragged.draggable).toBe(false); // reset ao final do gesto
+
+      const cardsAfter = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      expect(cardsAfter.map((c) => c.dataset.id)).toEqual([r2.id, r3.id, r1.id]);
+      expect(recipeStore.list().map((r) => r.id)).toEqual([r2.id, r3.id, r1.id]); // store é a fonte da verdade
+    });
+
+    it('20. dragover na metade ESQUERDA do alvo → insere ANTES dele', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      const dragged = cardsBefore[2]; // Pão C
+      const handle = dragged.querySelector('.recipe-drag-handle') as HTMLElement;
+      const target = cardsBefore[0]; // Pão A — arrasta C para antes de A
+      stubRow(cardsBefore); // A|B|C lado a lado (centros x = 50, 150, 250)
+
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      dragged.dispatchEvent(new Event('dragstart', { bubbles: true }));
+
+      // Ponteiro na METADE ESQUERDA de A (clientX 40 < centro 50) → insere
+      // ANTES de "Pão A".
+      target.dispatchEvent(new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 40, clientY: 125 }));
+      dragged.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+      expect(reorderSpy).toHaveBeenCalledWith([r3.id, r1.id, r2.id]);
+      const cardsAfter = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      expect(cardsAfter.map((c) => c.dataset.id)).toEqual([r3.id, r1.id, r2.id]);
+    });
+
+    it('21. busca ativa: sem alça, `dragstart` não faz nada (card não é `draggable`, `reorder` não chamado)', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão Rústico' });
+      recipeStore.create({ ...goldenSeedNoFat(), name: 'Baguete Tradicional' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const searchInput = root.querySelector('input[type="search"]') as HTMLInputElement;
+      searchInput.value = 'Baguete';
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const card = root.querySelector('.recipe-card') as HTMLElement;
+      expect(card.draggable).toBe(false);
+      card.dispatchEvent(new Event('dragstart', { bubbles: true }));
+      card.dispatchEvent(new Event('dragend', { bubbles: true }));
+      expect(reorderSpy).not.toHaveBeenCalled();
+    });
+
+    it('22. swap imediato ao cruzar o meio horizontal de um vizinho DIRETO (revisão UX): não precisa ultrapassar o bloco inteiro', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      const dragged = cardsBefore[0]; // Pão A
+      const handle = dragged.querySelector('.recipe-drag-handle') as HTMLElement;
+      const target = cardsBefore[1]; // Pão B — vizinho DIRETO de A
+      stubRow(cardsBefore); // A|B|C lado a lado (centros x = 50, 150, 250)
+
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      dragged.dispatchEvent(new Event('dragstart', { bubbles: true }));
+
+      // Só 10px além do centro de B (160 > 150) — bem longe de "ultrapassar o
+      // bloco inteiro" (que iria até 200) — já basta pra trocar A↔B de lugar.
+      target.dispatchEvent(new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 160, clientY: 125 }));
+      dragged.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+      expect(reorderSpy).toHaveBeenCalledWith([r2.id, r1.id, r3.id]);
+      const cardsAfter = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      expect(cardsAfter.map((c) => c.dataset.id)).toEqual([r2.id, r1.id, r3.id]);
+    });
+
+    it('23. thrash guard: `dragover` repetido na MESMA posição não desfaz/duplica o swap', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      const dragged = cardsBefore[0]; // Pão A
+      const handle = dragged.querySelector('.recipe-drag-handle') as HTMLElement;
+      const target = cardsBefore[1]; // Pão B
+      stubRow(cardsBefore); // A|B|C lado a lado (centros x = 50, 150, 250)
+
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      dragged.dispatchEvent(new Event('dragstart', { bubbles: true }));
+
+      // Mesma posição (à direita do centro de B) disparada 3x seguidas —
+      // simula o `dragover` nativo repetindo enquanto o ponteiro fica parado.
+      for (let i = 0; i < 3; i += 1) {
+        target.dispatchEvent(new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 160, clientY: 125 }));
+      }
+      dragged.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+      // Um único resultado consistente — sem "voltar" nem duplicar o swap.
+      expect(reorderSpy).toHaveBeenCalledTimes(1);
+      expect(reorderSpy).toHaveBeenCalledWith([r2.id, r1.id, r3.id]);
+    });
+
+    it('24. `prefers-reduced-motion: reduce` pula a animação FLIP mas a reordenação continua idêntica', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      // jsdom não implementa `matchMedia` por padrão — stub simulando
+      // `prefers-reduced-motion: reduce` ativo, restaurado ao fim do teste.
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: true } as MediaQueryList);
+
+      try {
+        const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+        const dragged = cardsBefore[0]; // Pão A
+        const handle = dragged.querySelector('.recipe-drag-handle') as HTMLElement;
+        const target = cardsBefore[1]; // Pão B
+        stubRow(cardsBefore); // A|B|C lado a lado (centros x = 50, 150, 250)
+
+        handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        dragged.dispatchEvent(new Event('dragstart', { bubbles: true }));
+        expect(() => {
+          target.dispatchEvent(new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 160, clientY: 125 }));
+        }).not.toThrow();
+        dragged.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+        expect(reorderSpy).toHaveBeenCalledWith([r2.id, r1.id, r3.id]);
+        const cardsAfter = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+        expect(cardsAfter.map((c) => c.dataset.id)).toEqual([r2.id, r1.id, r3.id]);
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+
+    it('25. grid de 2 linhas: arrastar um card da linha de cima para a linha de baixo (ordem de leitura 2D)', () => {
+      const storage = createMemoryStorage();
+      const recipeStore = makeStore(storage);
+      const r1 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão A' });
+      const r2 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão B' });
+      const r3 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão C' });
+      const r4 = recipeStore.create({ ...goldenSeedNoFat(), name: 'Pão D' });
+      const { root } = mount({ storage, recipeStore });
+      const reorderSpy = vi.spyOn(recipeStore, 'reorder');
+
+      const cardsBefore = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      // Grid 2×2: linha 0 = A|B (topo 0), linha 1 = C|D (topo 100).
+      //   A: x[0,100) y[0,50)     C: x[0,100) y[100,150)
+      //   B: x[100,200) y[0,50)   D: x[100,200) y[100,150)
+      const [a, b, c, d] = cardsBefore;
+      a.getBoundingClientRect = () => rect(0, 50, 0, 100);
+      b.getBoundingClientRect = () => rect(0, 50, 100, 100);
+      c.getBoundingClientRect = () => rect(100, 50, 0, 100);
+      d.getBoundingClientRect = () => rect(100, 50, 100, 100);
+
+      const handle = a.querySelector('.recipe-drag-handle') as HTMLElement;
+      handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      a.dispatchEvent(new Event('dragstart', { bubbles: true }));
+
+      // Ponteiro na linha de baixo, metade direita de C (clientX 60 > centro
+      // 50, dentro da faixa vertical de C/D) → A entra antes de D.
+      d.dispatchEvent(new MouseEvent('dragover', { bubbles: true, cancelable: true, clientX: 60, clientY: 125 }));
+      a.dispatchEvent(new Event('dragend', { bubbles: true }));
+
+      expect(reorderSpy).toHaveBeenCalledWith([r2.id, r3.id, r1.id, r4.id]);
+      const cardsAfter = Array.from(root.querySelectorAll('.recipe-card')) as HTMLElement[];
+      expect(cardsAfter.map((el) => el.dataset.id)).toEqual([r2.id, r3.id, r1.id, r4.id]);
+    });
+  });
 });
